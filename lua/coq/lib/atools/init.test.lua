@@ -2,8 +2,87 @@ local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 
-T.describe("atools.spawn", function(test)
-  test("captures stdout, stderr, and exit code", function()
+T.describe({ "atools.fs._drainable" }, function(test)
+  local fs = atools.fs
+
+  test({ "invoke dispatches and resolves with whatever the cb passes" }, function()
+    local captured
+    local fake = function(arg, cb)
+      cb(nil, arg .. "!")
+    end
+    async.scope(function()
+      local call, _ = fs._drainable(fake)
+      captured = { call "spot" }
+    end)
+    T.eq(captured, { nil, "spot!" })
+  end)
+
+  test({ "drain is a noop when no call is pending" }, function()
+    local called = false
+    async.scope(function()
+      local _, drain = fs._drainable(function() end)
+      drain()
+      called = true
+    end)
+    T.eq(called, true)
+  end)
+
+  test({ "drain waits non-cancellably for the pending callback" }, function()
+    -- Simulate libuv: cb fires after a vim.schedule tick.
+    local fake = function(cb)
+      vim.schedule(function()
+        cb "fido"
+      end)
+    end
+
+    local drained_value
+    async.scope(function(n)
+      local call, drain = fs._drainable(fake)
+
+      local h = n.spawn(function()
+        -- this await will be cancelled before fake's vim.schedule fires
+        call()
+      end)
+
+      -- Cancel the spawn before the cb has a chance to resolve, then drain.
+      h.cancel()
+
+      -- drain must wait for vim.schedule to flush, then for the cb to fire.
+      drain()
+      -- pending should now be nil; second drain is noop and doesn't error
+      drained_value = "drained"
+      drain()
+    end)
+    T.eq(drained_value, "drained")
+  end)
+
+  test({ "drain is non-cancellable: ignores outer handle cancellation" }, function()
+    local fake = function(cb)
+      vim.schedule(function()
+        cb()
+      end)
+    end
+
+    local survived = false
+    async.scope(function(n)
+      local call, drain = fs._drainable(fake)
+
+      local h = n.spawn(function()
+        call()
+      end)
+      h.cancel()
+
+      -- Even though the parent scope's handle is being torn down, drain
+      -- must complete (cancel = false on its inner await).
+      drain()
+      survived = true
+    end)
+    T.eq(survived, true)
+  end)
+end)
+
+T.describe({ "atools.spawn" }, function(test)
+  test({ "captures stdout, stderr, and exit code" }, function()
     local result
     async.scope(function()
       result = atools.spawn { "sh", "-c", "printf fido; printf lil >&2; exit 7" }
@@ -14,7 +93,7 @@ T.describe("atools.spawn", function(test)
     T.eq(result.stderr, "lil")
   end)
 
-  test("writes stdin and the child reads it back", function()
+  test({ "writes stdin and the child reads it back" }, function()
     local result
     async.scope(function()
       result = atools.spawn({ "cat" }, { stdin = "fido\nlil\nspot" })
@@ -23,7 +102,7 @@ T.describe("atools.spawn", function(test)
     T.eq(result.stdout, "fido\nlil\nspot")
   end)
 
-  test("ambient cancel kills the child before it finishes naturally", function()
+  test({ "ambient cancel kills the child before it finishes naturally" }, function()
     local elapsed_ms
     async.scope(function(n)
       n.spawn(function()
@@ -58,8 +137,8 @@ local drain = function(iter)
   return out
 end
 
-T.describe("atools.fs.scanfile", function(test)
-  test("concatenated chunks reproduce file contents", function()
+T.describe({ "atools.fs.scanfile" }, function(test)
+  test({ "concatenated chunks reproduce file contents" }, function()
     local path = write_tmp "lil\nspot\nfido"
     local chunks
     async.scope(function()
@@ -71,7 +150,7 @@ T.describe("atools.fs.scanfile", function(test)
     T.eq(table.concat(chunks), "lil\nspot\nfido")
   end)
 
-  test("empty file yields nothing", function()
+  test({ "empty file yields nothing" }, function()
     local path = write_tmp ""
     local chunks
     async.scope(function()
@@ -83,7 +162,7 @@ T.describe("atools.fs.scanfile", function(test)
     T.eq(chunks, {})
   end)
 
-  test("missing file yields nothing", function()
+  test({ "missing file yields nothing" }, function()
     local path = vim.fn.tempname() .. "/does-not-exist"
     local chunks
     async.scope(function()
@@ -96,7 +175,7 @@ T.describe("atools.fs.scanfile", function(test)
   end)
 end)
 
-T.describe("atools.fs.scandir", function(test)
+T.describe({ "atools.fs.scandir" }, function(test)
   local mkdir = function(p)
     vim.fn.mkdir(p, "p")
   end
@@ -111,7 +190,7 @@ T.describe("atools.fs.scandir", function(test)
     return p
   end
 
-  test("yields each entry with name and kind", function()
+  test({ "yields each entry with name and kind" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
     mkdir(dir .. "/fido")
@@ -129,7 +208,7 @@ T.describe("atools.fs.scandir", function(test)
     T.eq(seen["fido"], "directory")
   end)
 
-  test("missing path yields nothing", function()
+  test({ "missing path yields nothing" }, function()
     local count
     async.scope(function()
       count = 0
@@ -142,7 +221,7 @@ T.describe("atools.fs.scandir", function(test)
     T.eq(count, 0)
   end)
 
-  test("iter exhausts naturally", function()
+  test({ "iter exhausts naturally" }, function()
     local dir = tmpdir()
     for i = 1, 3 do
       touch(dir .. "/p" .. i .. ".txt")

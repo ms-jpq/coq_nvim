@@ -24,9 +24,11 @@ M.clamp = function(lo, x, hi)
 end
 
 ---@generic K, V
+---@param tbl table<K, V>
+---@param mode? "k" | "v" | "kv"
 ---@return table<K, V>
-M.weak = function()
-  return setmetatable({}, { __mode = "k" })
+M.weak = function(tbl, mode)
+  return setmetatable(tbl, { __mode = mode or "k" })
 end
 
 ---@return string

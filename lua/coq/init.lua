@@ -10,6 +10,7 @@ local events_m = require "coq.completions.events"
 local idle = require "coq.completions.idle"
 local insertion = require "coq.completions.insertion"
 local instrument = require "coq.lib.producers.instrument"
+local lib = require "coq.lib"
 local nvim_options = require "coq.nvim_options"
 local p_buffers = require "coq.producers.buffers"
 local p_lsp = require "coq.producers.lsp"
@@ -24,21 +25,22 @@ local preview = require "coq.completions.preview"
 local resolver_m = require "coq.completions.resolver"
 local statsd_m = require "coq.lib.index.rank.statsd"
 local supervisor = require "coq.lib.producers.supervisor"
+local transition = require "coq.transition"
 local trigger = require "coq.completions.trigger"
 
-local COMPLETEFUNC = "__coq_completefunc__"
-
 local M = {
-  Now = commands.Now,
   deps = commands.deps,
-  Snips = commands.Snips,
   Help = commands.Help,
+  Now = lib.noop,
+  Snips = commands.Snips,
+  Stats = commands.Stats,
 }
 
 ---@generic T
 ---@param cfg? T
 ---@return T?
 M.lsp_ensure_capabilities = function(cfg)
+  transition.lsp_ensure_capabilities()
   return cfg
 end
 
@@ -97,9 +99,9 @@ M.setup = function(opts)
     async.scope(function(n)
       local merged = vim.tbl_deep_extend("force", vim.g.coq_settings or {}, opts or {})
       local settings = config.merged(merged)
+      transition.audit(merged)
 
       atools.scheduled()
-      nvim_options.apply(settings)
 
       local statsd = statsd_m.new(settings)
 
@@ -114,20 +116,13 @@ M.setup = function(opts)
       local events = events_m.new()
       local resolver = resolver_m.new(n)
 
+      nvim_options.apply(settings, events)
+
       trigger.bind(n, settings, statsd, resolver, sup, events)
       preview.bind(n, settings, resolver, events.pum)
       insertion.bind(n, settings, resolver, statsd, events.done)
       idle.bind(n, settings, sup, events)
       commands.bind(settings, statsd, events)
-
-      _G[COMPLETEFUNC] = function(findstart, _)
-        if findstart == 1 then
-          events.trigger.replace { manual = true }
-          return -1
-        end
-        return {}
-      end
-      vim.o.completefunc = "v:lua." .. COMPLETEFUNC
     end)
   end)()
 end

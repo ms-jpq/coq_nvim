@@ -48,39 +48,36 @@ local tracker_of = util.once(function(settings)
       end, buf, previous)
     end,
     reindex = function(_, changes)
-      lib.scope(function(defer)
-        local close, stream = buf_tracker.merged(changes, function(buf, _)
-          return lib.scope(function(d)
-            local c, s = worker.main_stream(function(...)
+      for buf, change in pairs(changes) do
+        async.sleep(0)
+
+        local _, _, curr = unpack(change)
+        index_of(settings).prune { buf = buf }
+        if curr ~= nil then
+          lib.scope(function(d)
+            local c, nodes = worker.main_stream(function(...)
               return require("coq.producers.tree_sitter.request").query(...)
             end, buf)
             d(c)
-            return vim.iter(s --[[@as lib.Iterator<treesitter.Payload>]]):totable()
-          end)
-        end)
-        defer(close)
 
-        for _, entry in stream do
-          async.sleep(0)
-          index_of(settings).prune { buf = entry.buf }
-          if entry.data then
-            for _, payload in pairs(entry.data) do
-              if type(payload.text) == "string" and payload.text ~= "" then
-                index_of(settings).insert {
-                  buf = entry.buf,
-                  filetype = entry.curr.filetype,
-                  filename = entry.curr.filename,
-                  word = payload.text,
-                  kind = payload.kind,
-                  range = payload.range,
-                  parent = payload.parent,
-                  grandparent = payload.grandparent,
-                }
+            for i, node in vim.iter(nodes):enumerate() do
+              index_of(settings).insert {
+                buf = buf,
+                filetype = curr.filetype,
+                filename = curr.filename,
+                word = node.text,
+                kind = node.kind,
+                range = node.range,
+                parent = node.parent,
+                grandparent = node.grandparent,
+              }
+              if i % util.BATCH == 0 then
+                async.sleep(0)
               end
             end
-          end
+          end)
         end
-      end)
+      end
     end,
   }
 end)
@@ -160,7 +157,7 @@ M.matcher = util.batched(function(settings, ctx)
     return
   end
 
-  local raw = index_of(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
+  local raw = index_of(settings).search { filetype = ctx.filetype, match_before = ctx.match_before }
 
   for hit in util.shape(settings, ctx, raw) do
     local lines = vim.iter(doc_iter(settings.clients.tree_sitter, ctx, hit.item)):totable()
@@ -171,6 +168,7 @@ M.matcher = util.batched(function(settings, ctx)
       fuzzy = hit.fuzzy,
       doc = { lines = lines, filetype = ctx.filetype },
     })
+
     if not coroutine.yield(item) then
       return
     end

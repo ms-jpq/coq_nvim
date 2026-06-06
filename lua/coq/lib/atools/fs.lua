@@ -29,35 +29,33 @@ local fs_mkdir = async.awaitify(vim.uv.fs_mkdir)
 ---@type fun(path: string): uv.error_name?, uv.fs_stat.result?
 local fs_stat = async.awaitify(vim.uv.fs_stat)
 
+local M = {}
+
 ---@param fn function
----@return function call
+---@return function invoke
 ---@return fun() drain
-local drainable = function(fn)
+M._drainable = function(fn)
   ---@type async.Future?
-  local pending = nil
+  local f = nil
 
   local invoke = function(...)
-    pending = async.future()
-    local argv = { ... }
-    table.insert(argv, pending.resolve)
-
+    f = async.future()
+    local argv = vim.list_extend({ ... }, { f.resolve })
     fn(unpack(argv))
 
-    local rets = { pending.await() }
-    pending = nil
+    local rets = { f.await() }
+    f = nil
     return unpack(rets)
   end
 
   local drain = function()
-    if pending then
-      pending.await { cancel = false }
+    if f then
+      f.await { cancel = false }
     end
   end
 
   return invoke, drain
 end
-
-local M = {}
 
 ---@param path string
 ---@return uv.error_name? err
@@ -66,7 +64,7 @@ local M = {}
 M.stat = function(path)
   local err, st = fs_stat(path)
   if err or not st then
-    return err, st, false
+    return err, nil, false
   end
   local mask = (st.uid == UID and R_OWNER) or (st.gid == GID and R_GROUP) or R_OTHER
   return nil, st, bit.band(st.mode or 0, mask) ~= 0
@@ -147,7 +145,7 @@ M.scandir = function(path)
     defer(function()
       fs_closedir(dir)
     end)
-    local readdir, drain = drainable(vim.uv.fs_readdir)
+    local readdir, drain = M._drainable(vim.uv.fs_readdir)
     defer(drain)
 
     while true do
@@ -189,7 +187,7 @@ M.spit = function(path, data)
       fs_close(fd)
     end)
 
-    local write, drain = drainable(vim.uv.fs_write)
+    local write, drain = M._drainable(vim.uv.fs_write)
     defer(drain)
 
     return write(fd, data, -1)
@@ -210,7 +208,7 @@ M.scanfile = function(path)
       fs_close(fd)
     end)
 
-    local read, drain = drainable(vim.uv.fs_read)
+    local read, drain = M._drainable(vim.uv.fs_read)
     defer(drain)
 
     local e2, st = fs_fstat(fd)

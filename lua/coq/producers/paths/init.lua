@@ -5,7 +5,6 @@ local lib = require "coq.lib"
 local lib_path = require "coq.lib.path"
 local match = require "coq.lib.index.rank.match"
 local parse = require "coq.producers.paths.parse"
-local tokens = require "coq.lib.index.tokens"
 local util = require "coq.producers.util"
 local wildignore = require "coq.producers.paths.wildignore"
 
@@ -28,18 +27,20 @@ local collect_bases = function(resolution, ctx)
   end)
 end
 
+---@param cwd string
 ---@param bases string[]
 ---@param cand paths.parse.Candidate
 ---@return lib.Iterator<string>
-local cand_dirs = function(bases, cand)
+local cand_dirs = function(cwd, bases, cand)
   return coroutine.wrap(function()
-    if cand.absolute then
+    if cand.anchor == parse.ANCHOR.abs then
       coroutine.yield(cand.resolved_directory)
-      return
-    end
-    for _, base in pairs(bases) do
-      local abs = vim.fs.joinpath(base, cand.resolved_directory)
-      coroutine.yield(abs)
+    elseif cand.anchor == parse.ANCHOR.cwd then
+      coroutine.yield(vim.fs.joinpath(cwd, cand.resolved_directory))
+    else
+      for _, base in pairs(bases) do
+        coroutine.yield(vim.fs.joinpath(base, cand.resolved_directory))
+      end
     end
   end)
 end
@@ -113,29 +114,31 @@ end
 ---@return lib.Iterator<paths.Match> iter
 local matches = function(settings, ctx)
   return closable.iter(function(defer)
-    local cand = parse.candidate(ctx.line_before, {
-      is_windows = lib.is_windows,
-      env = vim.uv.os_environ(),
-      home = lib_path.HOME,
-      isfname = tokens.parse_charset(ctx.isfname),
-    })
-    if not cand then
-      return
-    end
-
     local bases = vim.iter(collect_bases(settings.clients.paths.resolution, ctx)):totable()
     local ignores = wildignore.compile(ctx.wildignore)
-    local iters = {}
-    for dir in cand_dirs(bases, cand) do
-      if atools.fs.is_dir(dir) then
-        table.insert(iters, scan_dir(ignores, dir, cand))
-      end
-    end
 
-    local close, iter = async.merge(iters)
-    defer(close)
-    for _, e in iter do
-      coroutine.yield(e)
+    for cand in
+      parse.candidates(ctx.line_before, {
+        is_windows = lib.is_windows,
+        env = vim.uv.os_environ(),
+        home = lib_path.HOME,
+      })
+    do
+      local iters = {}
+      for dir in cand_dirs(ctx.cwd, bases, cand) do
+        if atools.fs.is_dir(dir) then
+          table.insert(iters, scan_dir(ignores, dir, cand))
+        end
+      end
+
+      if #iters > 0 then
+        local close, iter = async.merge(iters)
+        defer(close)
+        for _, e in iter do
+          coroutine.yield(e)
+        end
+        return
+      end
     end
   end)
 end
@@ -158,6 +161,7 @@ M.matcher = util.batched(function(settings, ctx)
     for m in vim.iter(iter):unique(match_key) do
       local dir_q = m.type == "directory"
       local word = m.name .. (dir_q and m.cand.local_sep or "")
+      local end_col = col + #word - #ctx.keyword_before
 
       local item = util.item(settings, SOURCE, {
         word = word,
@@ -172,7 +176,7 @@ M.matcher = util.batched(function(settings, ctx)
             textEdit = {
               range = {
                 start = { line = line, character = m.cand.start },
-                ["end"] = { line = line, character = col },
+                ["end"] = { line = line, character = end_col },
               },
               newText = m.cand.literal_directory .. word,
             },

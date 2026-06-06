@@ -5,8 +5,8 @@ local handle = require "coq.lib.async._handle"
 local nursery = require "coq.lib.async._nursery"
 local runtime = require "coq.lib.async._runtime"
 
-T.describe("future cancel", function(test)
-  test("await throws cancel when ambient handle already cancelled", function()
+T.describe({ "future cancel" }, function(test)
+  test({ "await throws cancel when ambient handle already cancelled" }, function()
     local h = handle.new()
     local n = nursery.new()
     local _ = h.on_cancel(n.cancel)
@@ -20,7 +20,7 @@ T.describe("future cancel", function(test)
     n.join()
   end)
 
-  test("await throws cancel even when future also resolved", function()
+  test({ "await throws cancel even when future also resolved" }, function()
     local f = async.future()
     f.resolve(2)
 
@@ -37,7 +37,7 @@ T.describe("future cancel", function(test)
     T.eq(cancel.is(err), true)
   end)
 
-  test("await wakes by throwing cancel when cancelled mid-yield", function()
+  test({ "await wakes by throwing cancel when cancelled mid-yield" }, function()
     local h = handle.new()
     local awoke = false
     local ok, err
@@ -57,7 +57,7 @@ T.describe("future cancel", function(test)
     T.eq(cancel.is(err), true)
   end)
 
-  test("resolve after cancel is silent", function()
+  test({ "resolve after cancel is silent" }, function()
     local h = handle.new()
     local resolve
     local n = nursery.new()
@@ -76,8 +76,8 @@ T.describe("future cancel", function(test)
   end)
 end)
 
-T.describe("sleep cancel", function(test)
-  test("returns immediately when handle already cancelled", function()
+T.describe({ "sleep cancel" }, function(test)
+  test({ "returns immediately when handle already cancelled" }, function()
     local h = handle.new()
     local n = nursery.new()
     local _ = h.on_cancel(n.cancel)
@@ -92,7 +92,7 @@ T.describe("sleep cancel", function(test)
     n.join()
   end)
 
-  test("throws cancel when cancelled mid-sleep", function()
+  test({ "throws cancel when cancelled mid-sleep" }, function()
     local h = handle.new()
     local elapsed_ms
     local ok, err
@@ -115,7 +115,7 @@ T.describe("sleep cancel", function(test)
     T.eq(cancel.is(err), true)
   end)
 
-  test("does not leak watchers on the ambient handle", function()
+  test({ "does not leak watchers on the ambient handle" }, function()
     local h = handle.new()
     local live = {}
     local orig_on_cancel = h.on_cancel
@@ -141,8 +141,8 @@ T.describe("sleep cancel", function(test)
   end)
 end)
 
-T.describe("defer async", function(test)
-  test("a future can be awaited inside a defer", function()
+T.describe({ "defer async" }, function(test)
+  test({ "a future can be awaited inside a defer" }, function()
     local f = async.future()
     local got
     local n = nursery.new()
@@ -160,7 +160,7 @@ T.describe("defer async", function(test)
     T.eq(got, "spot")
   end)
 
-  test("an async.wrap can be iterated inside a defer", function()
+  test({ "an async.wrap can be iterated inside a defer" }, function()
     local seen = {}
     local n = nursery.new()
     n.spawn(function(defer)

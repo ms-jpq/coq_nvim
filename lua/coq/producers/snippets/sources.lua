@@ -14,6 +14,7 @@ local path = require "coq.lib.path"
 ---@field filetype string
 
 local BUNDLE_NAME = "coq+snippets+v2.json"
+local USER_DIR = "coq-user-snippets"
 
 ---@param file string
 ---@return string?
@@ -33,7 +34,7 @@ end
 local user_dirs = function(settings, idle_ctx)
   local candidates = async.wrap(function()
     for _, rtp in pairs(idle_ctx.rtps) do
-      local cand = vim.fs.joinpath(rtp, "coq-user-snippets")
+      local cand = vim.fs.joinpath(rtp, USER_DIR)
       coroutine.yield(cand)
     end
 
@@ -54,10 +55,9 @@ end
 
 ---@param filetype? string
 ---@param dirs string[]
----@return fun() close
----@return lib.Iterator<snippets.Source> iter
+---@return lib.Iterator<snippets.Source>
 local bundle = function(filetype, dirs)
-  return closable.iter(function()
+  return async.wrap(function()
     for _, dir in pairs(dirs) do
       local file = vim.fs.joinpath(dir, BUNDLE_NAME)
       local mtime = fs_cache.mtime_ns(file)
@@ -74,10 +74,11 @@ local bundle = function(filetype, dirs)
 end
 
 ---@param filetype? string
+---@param skip? string
 ---@param dirs string[]
 ---@return fun() close
 ---@return lib.Iterator<snippets.Source> iter
-local neosnippet = function(filetype, dirs)
+local neosnippet = function(filetype, skip, dirs)
   return closable.iter(function(defer)
     for _, dir in pairs(dirs) do
       local close, iter = atools.fs.walk(dir)
@@ -85,7 +86,7 @@ local neosnippet = function(filetype, dirs)
 
       for file in iter do
         local file_ft = neosnippet_ft(file)
-        if file_ft and (filetype == nil or file_ft == filetype) then
+        if file_ft and (filetype == nil or file_ft == filetype) and file ~= skip then
           local mtime = fs_cache.mtime_ns(file)
 
           if mtime then
@@ -106,22 +107,37 @@ local M = {}
 
 ---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
+---@return string
+M.write_dir = function(settings, idle_ctx)
+  local user_path = settings.clients.snippets.user_path
+  if user_path and user_path ~= "" then
+    return path.join(idle_ctx.config_dir, vim.fs.normalize(user_path))
+  end
+
+  local rtp = unpack(idle_ctx.rtps)
+  return vim.fs.joinpath(rtp, USER_DIR)
+end
+
+---@param settings config.Settings
+---@param idle_ctx idle.Ctx
 ---@param filetype? string
+---@param skip? string
 ---@return fun() close
 ---@return lib.Iterator<snippets.Source> iter
-M.list = function(settings, idle_ctx, filetype)
+M.list = function(settings, idle_ctx, filetype, skip)
   return closable.iter(function(defer)
     local ft = filetype and string.lower(filetype) or nil
     local user = vim.iter(user_dirs(settings, idle_ctx)):totable()
-    local yieldfrom = function(close, iter)
-      defer(close)
-      for src in iter do
-        coroutine.yield(src)
-      end
+
+    for src in bundle(ft, idle_ctx.rtps) do
+      coroutine.yield(src)
     end
 
-    yieldfrom(bundle(ft, idle_ctx.rtps))
-    yieldfrom(neosnippet(ft, user))
+    local close, iter = neosnippet(ft, skip, user)
+    defer(close)
+    for src in iter do
+      coroutine.yield(src)
+    end
   end)
 end
 

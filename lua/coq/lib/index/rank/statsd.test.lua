@@ -38,50 +38,50 @@ local fresh = function()
   return statsd.new { clients = {}, weights = WEIGHTS }
 end
 
-T.describe("rank.score", function(test)
-  test("with no signals the score is the fuzzy score", function()
+T.describe({ "rank.score" }, function(test)
+  test({ "with no signals the score is the fuzzy score" }, function()
     T.eq(statsd.score(prep(), fido { fuzzy = 7 }), 7)
   end)
 
-  test("proximity multiplies the locality count by weights.proximity * WEIGHT_SCALE", function()
+  test({ "proximity multiplies the locality count by weights.proximity * WEIGHT_SCALE" }, function()
     local base = statsd.score(prep(), fido())
     local boosted = statsd.score(prep { locality = { fido = 2 } }, fido())
     T.eq(boosted - base, 2 * WEIGHTS.proximity * statsd.WEIGHT_SCALE)
   end)
 
-  test("recency multiplies the recency count by weights.recency * WEIGHT_SCALE", function()
+  test({ "recency multiplies the recency count by weights.recency * WEIGHT_SCALE" }, function()
     T.eq(statsd.score(prep { recency = { fido = 3 } }, fido()), 3 * WEIGHTS.recency * statsd.WEIGHT_SCALE)
   end)
 
-  test("custom weights override the multipliers", function()
+  test({ "custom weights override the multipliers" }, function()
     local p = prep { locality = { fido = 1 }, recency = { fido = 1 }, weights = { proximity = 3, recency = 5 } }
     T.eq(statsd.score(p, fido()), (3 + 5) * statsd.WEIGHT_SCALE)
   end)
 
-  test("source bias multiplies the score", function()
+  test({ "source bias multiplies the score" }, function()
     T.eq(statsd.score(prep { source_bias = { BF = 2 } }, fido { fuzzy = 5 }), 10)
   end)
 
-  test("source bias defaults to 1 when the source is absent", function()
+  test({ "source bias defaults to 1 when the source is absent" }, function()
     T.eq(statsd.score(prep { source_bias = { other = 9 } }, fido { fuzzy = 5 }), 5)
   end)
 
-  test("always_on_top adds the ALWAYS_TOP tier last (after bias)", function()
+  test({ "always_on_top adds the ALWAYS_TOP tier last (after bias)" }, function()
     T.eq(
       statsd.score(prep { source_bias = { BF = 2 } }, fido { fuzzy = 1, always_on_top = true }),
       2 + statsd.ALWAYS_TOP
     )
   end)
 
-  test("combines (fuzzy + prox + recen) * bias + tier", function()
+  test({ "combines (fuzzy + prox + recen) * bias + tier" }, function()
     local p = prep { locality = { fido = 2 }, recency = { fido = 1 }, source_bias = { BF = 2 } }
     local expected = (3 + (2 * WEIGHTS.proximity + 1 * WEIGHTS.recency) * statsd.WEIGHT_SCALE) * 2 + statsd.ALWAYS_TOP
     T.eq(statsd.score(p, fido { fuzzy = 3, always_on_top = true }), expected)
   end)
 end)
 
-T.describe("rank.statsd.inserted", function(test)
-  test("inserted(item) bumps recency keyed by filter", function()
+T.describe({ "rank.statsd.inserted" }, function(test)
+  test({ "inserted(item) bumps recency keyed by filter" }, function()
     local s = fresh()
     s.inserted(fido())
     s.inserted(fido())
@@ -91,7 +91,7 @@ T.describe("rank.statsd.inserted", function(test)
     T.eq(s.prepare({ kw = {}, keyword_before = "", buf = 0 } --[[@as ctx.full]]).recency.fido, 2)
   end)
 
-  test("inserted(item) bumps the per-source inserted counter", function()
+  test({ "inserted(item) bumps the per-source inserted counter" }, function()
     local s = fresh()
     s.inserted(fido())
     s.inserted(fido())
@@ -101,8 +101,8 @@ T.describe("rank.statsd.inserted", function(test)
   end)
 end)
 
-T.describe("rank.statsd.record", function(test)
-  test("record.tally + done writes a sample whose items match the tally sum", function()
+T.describe({ "rank.statsd.record" }, function(test)
+  test({ "record.tally + done writes a sample whose items match the tally sum" }, function()
     local s = fresh()
     local rec = s.record "BF"
     rec.tally(3)
@@ -113,7 +113,7 @@ T.describe("rank.statsd.record", function(test)
     T.eq(sum.interrupted, 0)
   end)
 
-  test("done(true) marks the sample interrupted", function()
+  test({ "done(true) marks the sample interrupted" }, function()
     local s = fresh()
     local rec = s.record "BF"
     rec.tally(1)
@@ -121,7 +121,7 @@ T.describe("rank.statsd.record", function(test)
     T.eq(s.summary().BF.interrupted, 1)
   end)
 
-  test("multiple records compose quantiles over items", function()
+  test({ "multiple records compose quantiles over items" }, function()
     local s = fresh()
     for _, n in pairs { 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 } do
       local rec = s.record "BF"
@@ -135,7 +135,7 @@ T.describe("rank.statsd.record", function(test)
     assert(sum.q99_items >= 90, "Q99 should be near the top")
   end)
 
-  test("summary() of an unseen source is absent", function()
+  test({ "summary() of an unseen source is absent" }, function()
     local s = fresh()
     T.eq(s.summary().nobody, nil)
   end)

@@ -1,8 +1,8 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 
-T.describe("all", function(test)
-  test("collects results in order", function()
+T.describe({ "all" }, function(test)
+  test({ "collects results in order" }, function()
     local out = async.all {
       function()
         async.sleep(6 * T.SLOW)

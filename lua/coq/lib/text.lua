@@ -44,6 +44,32 @@ M.is_multiline = function(s)
   return string.find(s, "[\r\n]") ~= nil
 end
 
+---@param haystack string
+---@param needle string
+---@return integer
+M.prefix_overlap = function(haystack, needle)
+  local cap = math.min(#haystack, #needle)
+  for n = cap, 1, -1 do
+    if string.sub(needle, 1, n) == string.sub(haystack, #haystack - n + 1) then
+      return n
+    end
+  end
+  return 0
+end
+
+---@param haystack string
+---@param needle string
+---@return integer
+M.suffix_overlap = function(haystack, needle)
+  local cap = math.min(#haystack, #needle)
+  for n = cap, 1, -1 do
+    if string.sub(needle, #needle - n + 1) == string.sub(haystack, 1, n) then
+      return n
+    end
+  end
+  return 0
+end
+
 ---@param s string
 ---@return string
 M.lstrip = function(s)

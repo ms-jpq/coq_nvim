@@ -4,8 +4,8 @@ local handle = require "coq.lib.async._handle"
 local lib = require "coq.lib"
 local runtime = require "coq.lib.async._runtime"
 
-T.describe("handle", function(test)
-  test("watcher fires once whether registered before or after cancel", function()
+T.describe({ "handle" }, function(test)
+  test({ "watcher fires once whether registered before or after cancel" }, function()
     local h = handle.new()
     local before, after = 0, 0
     local _ = h.on_cancel(function()
@@ -21,7 +21,7 @@ T.describe("handle", function(test)
     T.eq(after, 1)
   end)
 
-  test("unwatch removes a function watcher before cancel", function()
+  test({ "unwatch removes a function watcher before cancel" }, function()
     local h = handle.new()
     local fired = false
     local unwatch = h.on_cancel(function()
@@ -33,14 +33,14 @@ T.describe("handle", function(test)
     T.eq(fired, false)
   end)
 
-  test("unwatch on a cancelled handle is a noop", function()
+  test({ "unwatch on a cancelled handle is a noop" }, function()
     local h = handle.new()
     h.cancel()
     local unwatch = h.on_cancel(lib.noop)
     unwatch()
   end)
 
-  test("parent cancel cascades to child", function()
+  test({ "parent cancel cascades to child" }, function()
     local parent = handle.new()
     local child = handle.new(parent)
     parent.cancel()
@@ -48,7 +48,7 @@ T.describe("handle", function(test)
     T.eq(child.cancelled, true)
   end)
 
-  test("child cancel does not cancel parent", function()
+  test({ "child cancel does not cancel parent" }, function()
     local parent = handle.new()
     local child = handle.new(parent)
     child.cancel()
@@ -56,7 +56,7 @@ T.describe("handle", function(test)
     T.eq(parent.cancelled, false)
   end)
 
-  test("child cancel releases its slot in parent watchers", function()
+  test({ "child cancel releases its slot in parent watchers" }, function()
     local parent = handle.new()
     local child = handle.new(parent)
     child.cancel()
@@ -69,7 +69,7 @@ T.describe("handle", function(test)
     T.eq(parent_fired, 1)
   end)
 
-  test("cancel uses snapshot semantics so mid-fire unwatch is safe", function()
+  test({ "cancel uses snapshot semantics so mid-fire unwatch is safe" }, function()
     local h = handle.new()
     local count = 0
     local unwatch_a, unwatch_b
@@ -86,7 +86,7 @@ T.describe("handle", function(test)
     T.eq(count, 2)
   end)
 
-  test("on_cancel re-entry: watcher registers another watcher mid-fire", function()
+  test({ "on_cancel re-entry: watcher registers another watcher mid-fire" }, function()
     local h = handle.new()
     local fired = {}
     local _ = h.on_cancel(function()
@@ -102,7 +102,7 @@ T.describe("handle", function(test)
 
   -- Watchers are invoked synchronously by cancel(). A watcher must not await:
   -- it can only kick off detached, fire-and-forget async work.
-  test("cancel stays synchronous when a watcher spawns detached async work", function()
+  test({ "cancel stays synchronous when a watcher spawns detached async work" }, function()
     local h = handle.new()
     local f = async.future()
     local order = {}
@@ -126,7 +126,7 @@ T.describe("handle", function(test)
   -- driven from a coroutine, and even then it is a trap: the await suspends
   -- cancel() itself, stalling every watcher queued behind it until it resolves.
   -- From a synchronous caller it errors outright (yield outside a coroutine).
-  test("awaiting directly in a watcher suspends cancel and delays siblings", function()
+  test({ "awaiting directly in a watcher suspends cancel and delays siblings" }, function()
     local h = handle.new()
     local order = {}
 

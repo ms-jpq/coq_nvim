@@ -9,7 +9,7 @@ local M = {}
 M.ROOT = handle.new()
 
 ---@type table<thread, async.Handle>
-local threads = lib.weak()
+local threads = lib.weak {}
 
 ---@param thread thread
 ---@param h async.Handle

@@ -25,6 +25,8 @@ end
 ---@param ctx_overrides table
 ---@return ctx.full
 local ctx_of = function(ctx_overrides)
+  local tokens = require "coq.lib.index.tokens"
+  local iskeyword = tokens.parse_charset "@,48-57,_,192-255"
   local base = {
     win = 0,
     buf = 0,
@@ -37,20 +39,23 @@ local ctx_of = function(ctx_overrides)
     cexpr = "",
     tabstop = 2,
     expandtab = true,
-    iskeyword = require("coq.lib.index.tokens").parse_charset "@,48-57,_,192-255",
-    isfname = "@,48-57,/,.,-,_,+,~,$,@-@,{,}",
+    iskeyword = iskeyword,
     wildignore = "",
     linesep = "\n",
     comment = { "", "" },
     line_count = 1,
     line = "",
     line_before = "",
-    line_after = "",
     keyword_before = "",
     utf16_col = 0,
     utf32_col = 0,
   }
-  return vim.tbl_deep_extend("force", base, ctx_overrides) --[[@as ctx.full]]
+  local merged = vim.tbl_deep_extend("force", base, ctx_overrides)
+  -- derive keyword_before from line_before unless explicitly overridden
+  if ctx_overrides.keyword_before == nil then
+    merged.keyword_before = tokens.trailing_keyword_before(iskeyword, merged.line_before)
+  end
+  return merged --[[@as ctx.full]]
 end
 
 ---@param settings config.Settings
@@ -87,8 +92,8 @@ local words_of = function(items)
   return out
 end
 
-T.describe("paths.matcher", function(test)
-  test("./ lists the cwd as files and folders", function()
+T.describe({ "paths.matcher" }, function(test)
+  test({ "./ lists the cwd as files and folders" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
     vim.fn.mkdir(dir .. "/fido")
@@ -101,7 +106,7 @@ T.describe("paths.matcher", function(test)
     T.eq(words_of(items), { "fido/", "rex/", "spot.txt" })
   end)
 
-  test("kind is Folder for dirs, File for files", function()
+  test({ "kind is Folder for dirs, File for files" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
     vim.fn.mkdir(dir .. "/fido")
@@ -118,7 +123,7 @@ T.describe("paths.matcher", function(test)
     T.eq(kinds["fido/"], "Folder")
   end)
 
-  test("prefix-filters entries within a directory", function()
+  test({ "prefix-filters entries within a directory" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
     touch(dir .. "/scout.txt")
@@ -131,7 +136,7 @@ T.describe("paths.matcher", function(test)
     T.eq(words_of(items), { "spot.txt" })
   end)
 
-  test("prefix match is case-insensitive", function()
+  test({ "prefix match is case-insensitive" }, function()
     local dir = tmpdir()
     touch(dir .. "/Spot.txt")
     touch(dir .. "/Fido.txt")
@@ -143,7 +148,7 @@ T.describe("paths.matcher", function(test)
     T.eq(words_of(items), { "Spot.txt" })
   end)
 
-  test("a non-matching prefix in an existing dir yields nothing, not root", function()
+  test({ "a non-matching prefix in an existing dir yields nothing, not root" }, function()
     -- "b" matches nothing in dir. The parser also emits a bare "/" candidate
     -- (start 1); without the existing-dir guard the matcher would fall through
     -- to it and list root entries like "bin/". The guard commits to dir.
@@ -156,7 +161,7 @@ T.describe("paths.matcher", function(test)
     T.eq(words_of(run_matcher(settings, ctx)), {})
   end)
 
-  test("absolute path lists from /", function()
+  test({ "absolute path lists from /" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
 
@@ -167,7 +172,7 @@ T.describe("paths.matcher", function(test)
     T.eq(words_of(items), { "spot.txt" })
   end)
 
-  test("~ expands to home", function()
+  test({ "~ expands to home" }, function()
     -- Point HOME at a controlled dir; listing the live home is racy (it churns
     -- between the matcher's scandir and the assertion).
     local dir = tmpdir()
@@ -186,7 +191,47 @@ T.describe("paths.matcher", function(test)
     T.eq(words_of(items), { "fido/", "spot.txt" })
   end)
 
-  test("$VAR expands when set", function()
+  test({ "@<path>/ resolves against cwd, not the file's dir" }, function()
+    -- claude-style: `@lua/init.lua` should always anchor to cwd even when the
+    -- file-base resolution is enabled and would otherwise compete.
+    local dir = tmpdir()
+    touch(dir .. "/spot.txt")
+    local fake_file = "/elsewhere/current.lua"
+
+    local settings = settings_with { clients = { paths = { resolution = { "cwd", "file" } } } }
+    local ctx = ctx_of { cwd = dir, filename = fake_file, line_before = "@", line = "@" }
+    -- need a sep for the head pattern to fire
+    ctx.line_before = "@/"
+    ctx.line = "@/"
+
+    local items = run_matcher(settings, ctx)
+    T.eq(words_of(items), { "spot.txt" })
+  end)
+
+  test({ "@<path>/ literal_directory keeps the @ in the textEdit" }, function()
+    local dir = tmpdir()
+    vim.fn.mkdir(dir .. "/lua")
+    touch(dir .. "/lua/spot.txt")
+
+    local settings = settings_with()
+    local ctx = ctx_of {
+      cwd = dir,
+      pos = { 1, 5 },
+      line_before = "@lua/",
+      line = "@lua/",
+      utf16_col = 5,
+    }
+
+    local items = run_matcher(settings, ctx)
+    T.eq(#items, 1)
+    local edit = items[1].meta.lsp.item.textEdit
+    T.eq(edit.range.start.character, 0)
+    -- range.end covers the post-PUM cursor: pre-PUM col 5 + #word 8 - #kw 0 = 13.
+    T.eq(edit.range["end"].character, 13)
+    T.eq(edit.newText, "@lua/spot.txt")
+  end)
+
+  test({ "$VAR expands when set" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
     vim.uv.os_setenv("COQ_TEST_PATHS_DIR", dir)
@@ -200,7 +245,7 @@ T.describe("paths.matcher", function(test)
     vim.uv.os_unsetenv "COQ_TEST_PATHS_DIR"
   end)
 
-  test("file-base resolves to the directory of the current file", function()
+  test({ "file-base resolves to the directory of the current file" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
     touch(dir .. "/fido.txt")
@@ -214,7 +259,7 @@ T.describe("paths.matcher", function(test)
     T.eq(words_of(items), { "spot.txt" })
   end)
 
-  test("emits lsp textEdit spanning the segment, not just the keyword", function()
+  test({ "emits lsp textEdit spanning the segment, not just the keyword" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
 
@@ -235,11 +280,12 @@ T.describe("paths.matcher", function(test)
     local edit = lsp.item.textEdit
     T.eq(edit.range.start.line, 0)
     T.eq(edit.range.start.character, 0)
-    T.eq(edit.range["end"].character, 4)
+    -- range.end covers the post-PUM cursor: pre-PUM col 4 + #word 8 - #kw 2 = 10.
+    T.eq(edit.range["end"].character, 10)
     T.eq(edit.newText, "./spot.txt")
   end)
 
-  test("wildignore filters matching entries end-to-end", function()
+  test({ "wildignore filters matching entries end-to-end" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
     touch(dir .. "/rex.o")

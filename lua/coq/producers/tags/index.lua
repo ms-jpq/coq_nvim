@@ -6,7 +6,7 @@ local util = require "coq.producers.util"
 ---@class ctags.Ctx
 ---@field filetype? string
 ---@field filename? string
----@field keyword_before? string
+---@field match_before? string
 
 local M = {}
 

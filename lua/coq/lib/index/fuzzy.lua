@@ -12,11 +12,13 @@ local M = {}
 ---@param spec index.FuzzySpec<T>
 ---@return index.Searcher<C, T>
 M.new = function(spec)
+  ---@type table<string, { item: any, precomputed: hybrid.Precomputed? }>
   local items = {}
   local fuzzy = {}
 
   fuzzy.insert = function(item)
-    items[spec.insert_key(item)] = item
+    local key = spec.insert_key(item)
+    items[key] = { item = item, precomputed = match.precompute(key) }
   end
 
   fuzzy.prune = function(_)
@@ -27,10 +29,11 @@ M.new = function(spec)
   fuzzy.search = function(ctx)
     return async.wrap(function()
       local token = spec.query_key(ctx) or ""
-      for key, item in pairs(items) do
-        local score = match.score(token, key)
+
+      for key, entry in pairs(items) do
+        local score = match.score(token, key, entry.precomputed)
         if token == "" or score >= spec.cutoff then
-          coroutine.yield { item = item, fuzzy = score }
+          coroutine.yield { item = entry.item, fuzzy = score }
         end
       end
     end)

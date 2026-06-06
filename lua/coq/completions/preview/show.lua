@@ -4,7 +4,9 @@ local lib = require "coq.lib"
 local paths_preview = require "coq.producers.paths.preview"
 local txt = require "coq.lib.text"
 
-local PREVIEW_NS = "coq_preview"
+local PREVIEW_NS = "coq.preview"
+
+local M = {}
 
 ---@param lsp_item lsp.CompletionItem
 ---@return string[]
@@ -42,12 +44,17 @@ local border_w_h = function(border)
   return 1, 1
 end
 
+---@class preview.Screen
+---@field width integer
+---@field height integer
+
 ---@param preview_cfg config.PreviewDisplay
 ---@param ev completions.PumChangedEvent
+---@param screen preview.Screen
 ---@param lines string[]
 ---@return preview.Pos?
-local pick_position = function(preview_cfg, ev, lines)
-  local scr_w, scr_h = vim.o.columns, vim.o.lines
+M._pick_position = function(preview_cfg, ev, screen, lines)
+  local scr_w, scr_h = screen.width, screen.height
   local pum_n = ev.row
   local pum_s = pum_n + ev.height - 1
   local pum_w = ev.col
@@ -138,7 +145,8 @@ local show = function(preview_cfg, ev, lines, filetype)
   end
 
   atools.scheduled()
-  local pos = pick_position(preview_cfg, ev, lines)
+  local scr = { width = vim.o.columns, height = vim.o.lines }
+  local pos = M._pick_position(preview_cfg, ev, scr, lines)
   if not pos then
     return
   end
@@ -220,8 +228,6 @@ local resolve_doc = function(ctx, settings, resolver, item)
 
   return nil, ""
 end
-
-local M = {}
 
 M.close = function()
   float.close(PREVIEW_NS)

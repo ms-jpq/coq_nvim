@@ -1,57 +1,34 @@
 local context = require "coq.lib.context"
 local errs = require "coq.lib.errs"
-local lib = require "coq.lib"
 local lsp_util = require "coq.producers.lsp.util"
 local tokens = require "coq.lib.index.tokens"
+local txt = require "coq.lib.text"
 
 local DEFAULT_ENCODING = "utf-16"
 
 local M = {}
 
----@class completions.EditCtx
----@field cursor_row integer
----@field col integer
----@field after_cursor string
----@field kw_before_col integer
----@field kw_after_len integer
----@field start_row integer
----@field start_line string
----@field end_row integer
----@field end_line string
-
+---@param settings config.Settings
 ---@param ctx ctx.full
+---@param resolver completions.Resolver
 ---@param i completions.Item
----@param range? lsp.Range
----@return completions.EditCtx
-local edit_ctx = function(ctx, i, range)
-  local row, col = unpack(ctx.pos)
-  local cursor_row = row - 1
-  local line_count = vim.api.nvim_buf_line_count(ctx.buf)
-  local line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, cursor_row, row, true))
-
-  local inserted = (i.meta.snippet and i.abbr) or i.word or ""
-  local original_col = math.max(0, col - #inserted)
-  local before_inserted = string.sub(line, 1, original_col)
-  local after_cursor = string.sub(line, col + 1)
-
-  local read_line = function(r)
-    return (r == cursor_row) and line or (vim.api.nvim_buf_get_lines(ctx.buf, r, r + 1, true)[1] or "")
+---@return completions.ItemLspMeta? lsp
+---@return lsp.TextEdit[] edits
+M._resolve = function(settings, ctx, resolver, i)
+  local lsp = i.meta.lsp or {}
+  local edits = (lsp.item and lsp.item.additionalTextEdits) or {}
+  if #edits > 0 then
+    return lsp, edits
   end
 
-  local start_row = lib.clamp(0, (range and range.start.line) or cursor_row, cursor_row)
-  local end_row = (range and range["end"] and math.min(range["end"].line, line_count - 1)) or cursor_row
+  local timeout_ms = math.floor(settings.clients.lsp.resolve_timeout * 1000)
+  lsp = resolver.resolve(ctx, i, timeout_ms) or lsp
+  edits = (lsp.item and lsp.item.additionalTextEdits) or {}
 
-  return {
-    cursor_row = cursor_row,
-    col = col,
-    after_cursor = after_cursor,
-    kw_before_col = original_col - #tokens.trailing_keyword_before(ctx.iskeyword, before_inserted),
-    kw_after_len = #tokens.leading_keyword(ctx.iskeyword, after_cursor),
-    start_row = start_row,
-    start_line = read_line(start_row),
-    end_row = end_row,
-    end_line = read_line(end_row),
-  }
+  if not context.still_valid(ctx) then
+    return nil, {}
+  end
+  return lsp, edits
 end
 
 ---@class completions.Span
@@ -60,33 +37,93 @@ end
 ---@field end_row integer
 ---@field end_col integer
 
----@class completions.WordEdit: completions.Span
----@field text string
+---@class completions.EditCtx
+---@field cursor_row integer
+---@field col integer
+---@field before_inserted string
+---@field after_cursor string
+---@field start_line string
+---@field end_line string
+---@field span? completions.Span
 
+---@param buf integer
 ---@param enc string
+---@param cursor_row integer
+---@param cursor_line string
+---@param range? lsp.Range
+---@return string? start_line
+---@return string? end_line
+---@return completions.Span? span
+local resolve_range = function(buf, enc, cursor_row, cursor_line, range)
+  if not range then
+    return
+  end
+  local s, e = range.start, range["end"]
+  local line_count = vim.api.nvim_buf_line_count(buf)
+  if not (s.line >= 0 and s.line <= cursor_row and e and e.line >= s.line and e.line < line_count) then
+    return
+  end
+
+  local read = function(r)
+    return (r == cursor_row) and cursor_line or (vim.api.nvim_buf_get_lines(buf, r, r + 1, true)[1] or "")
+  end
+  local start_line = read(s.line)
+  local end_line = (e.line == s.line) and start_line or read(e.line)
+
+  local ok_s, start_col = pcall(vim.str_byteindex, start_line, enc, s.character, true)
+  local ok_e, end_col = pcall(vim.str_byteindex, end_line, enc, e.character, true)
+  if not (ok_s and ok_e) then
+    return
+  end
+
+  return start_line, end_line, { start_row = s.line, start_col = start_col, end_row = e.line, end_col = end_col }
+end
+
+---@param ctx ctx.full
+---@param i completions.Item
+---@param enc string
+---@param range? lsp.Range
+---@return completions.EditCtx
+local edit_ctx = function(ctx, i, enc, range)
+  local row, col = unpack(ctx.pos)
+  local cursor_row = row - 1
+  local line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, cursor_row, row, true))
+
+  local inserted = (i.meta.snippet and i.abbr) or i.word or ""
+  local original_col = math.max(0, col - #inserted)
+
+  local start_line, end_line, span = resolve_range(ctx.buf, enc, cursor_row, line, range)
+
+  return {
+    cursor_row = cursor_row,
+    col = col,
+    before_inserted = string.sub(line, 1, original_col),
+    after_cursor = string.sub(line, col + 1),
+    start_line = start_line or line,
+    end_line = end_line or line,
+    span = span,
+  }
+end
+
+---@param iskeyword lib.Set<integer>
 ---@param e_ctx completions.EditCtx
----@param text_edit? lsp.TextEdit | lsp.InsertReplaceEdit
+---@param word string
 ---@return completions.Span
-M._span = function(enc, e_ctx, text_edit)
-  local range = text_edit and (text_edit.range or text_edit.replace)
-  local insert_end = text_edit and text_edit.insert and text_edit.insert["end"]
-  local range_end = range and range["end"]
+M._fallback_span = function(iskeyword, e_ctx, word)
+  local start_col = #e_ctx.before_inserted
+    - math.max(
+      #tokens.trailing_keyword_before(iskeyword, e_ctx.before_inserted),
+      txt.prefix_overlap(e_ctx.before_inserted, word)
+    )
+  local end_col = e_ctx.col
+    + math.max(#tokens.leading_keyword(iskeyword, e_ctx.after_cursor), txt.suffix_overlap(e_ctx.after_cursor, word))
 
-  local start_col = (range and vim.str_byteindex(e_ctx.start_line, enc, range.start.character, false))
-    or e_ctx.kw_before_col
-
-  local end_row, end_col = (function()
-    if insert_end and range_end and insert_end.line == e_ctx.cursor_row then
-      if range_end.line == e_ctx.cursor_row then
-        local units = math.max(0, range_end.character - insert_end.character)
-        return e_ctx.cursor_row, e_ctx.col + vim.str_byteindex(e_ctx.after_cursor, enc, units, false)
-      end
-      return e_ctx.end_row, vim.str_byteindex(e_ctx.end_line, enc, range_end.character, false)
-    end
-    return e_ctx.cursor_row, e_ctx.col + e_ctx.kw_after_len
-  end)()
-
-  return { start_row = e_ctx.start_row, start_col = start_col, end_row = end_row, end_col = end_col }
+  return {
+    start_row = e_ctx.cursor_row,
+    start_col = start_col,
+    end_row = e_ctx.cursor_row,
+    end_col = end_col,
+  }
 end
 
 ---@param i completions.Item
@@ -107,15 +144,45 @@ end
 ---@param ctx ctx.full
 ---@param i completions.Item
 ---@param lsp completions.ItemLspMeta
----@return completions.WordEdit
-M._word_range = function(ctx, i, lsp)
+---@return lsp.TextEdit
+M._main_edit = function(ctx, i, lsp)
   local enc = lsp.position_encoding or DEFAULT_ENCODING
   local text_edit = lsp.item and lsp.item.textEdit
   local range = text_edit and (text_edit.range or text_edit.replace)
 
-  local edit = M._span(enc, edit_ctx(ctx, i, range), text_edit) --[[@as completions.WordEdit]]
-  edit.text = M._replacement(i, range, text_edit)
-  return edit
+  local e_ctx = edit_ctx(ctx, i, enc, range)
+  if not e_ctx.span then
+    text_edit, range = nil, nil
+  end
+
+  local replace_text = M._replacement(i, range, text_edit)
+  local match_text = (i.meta.snippet and (i.word or "")) or replace_text
+  local span = e_ctx.span or M._fallback_span(ctx.iskeyword, e_ctx, match_text)
+
+  return {
+    range = {
+      start = {
+        line = span.start_row,
+        character = vim.str_utfindex(e_ctx.start_line, enc, span.start_col, true),
+      },
+      ["end"] = {
+        line = span.end_row,
+        character = vim.str_utfindex(e_ctx.end_line, enc, span.end_col, true),
+      },
+    },
+    newText = replace_text,
+  }
+end
+
+---@param ctx ctx.full
+---@param i completions.Item
+---@param lsp completions.ItemLspMeta
+---@param additional_edits lsp.TextEdit[]
+M._apply_edits = function(ctx, i, lsp, additional_edits)
+  local enc = lsp.position_encoding or DEFAULT_ENCODING
+  local main_edit = M._main_edit(ctx, i, lsp)
+  local all_edits = vim.list_extend({ main_edit }, additional_edits)
+  vim.lsp.util.apply_text_edits(all_edits, ctx.buf, enc)
 end
 
 -- https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/completion.lua
@@ -125,53 +192,15 @@ end
 ---@param i completions.Item
 ---@return true?
 M.apply = function(settings, ctx, resolver, i)
-  local meta = i.meta
-  local lsp = meta.lsp or {}
-
-  local edits = lsp.item and lsp.item.additionalTextEdits
-  if #(edits or {}) == 0 then
-    local timeout_ms = math.floor(settings.clients.lsp.resolve_timeout * 1000)
-    lsp = resolver.resolve(ctx, i, timeout_ms) or lsp
-    edits = lsp.item and lsp.item.additionalTextEdits
-
-    if not context.still_valid(ctx) then
-      return
-    end
+  local lsp, edits = M._resolve(settings, ctx, resolver, i)
+  if not lsp then
+    return
   end
 
-  do
-    local edit = M._word_range(ctx, i, lsp)
-    local enc = lsp.position_encoding or DEFAULT_ENCODING
-    local start_line = vim.api.nvim_buf_get_lines(ctx.buf, edit.start_row, edit.start_row + 1, true)[1] or ""
-    local end_line = edit.end_row == edit.start_row and start_line
-      or (vim.api.nvim_buf_get_lines(ctx.buf, edit.end_row, edit.end_row + 1, true)[1] or "")
+  M._apply_edits(ctx, i, lsp, edits)
 
-    local all_edits = vim
-      .iter(coroutine.wrap(function()
-        coroutine.yield {
-          range = {
-            start = {
-              line = edit.start_row,
-              character = vim.str_utfindex(start_line, enc, edit.start_col, true),
-            },
-            ["end"] = {
-              line = edit.end_row,
-              character = vim.str_utfindex(end_line, enc, edit.end_col, true),
-            },
-          },
-          newText = edit.text,
-        }
-        for _, e in pairs(edits or {}) do
-          coroutine.yield(e)
-        end
-      end))
-      :totable()
-
-    vim.lsp.util.apply_text_edits(all_edits, ctx.buf, enc)
-  end
-
-  if meta.snippet then
-    errs.with_reporting(vim.snippet.expand)(meta.snippet)
+  if i.meta.snippet then
+    errs.with_reporting(vim.snippet.expand)(i.meta.snippet)
   end
 
   if lsp.item and lsp.item.command then

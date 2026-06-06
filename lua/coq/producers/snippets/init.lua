@@ -26,7 +26,7 @@ local cache_of = util.once(function(settings, idle_ctx)
     fs_root = vim.fs.joinpath(idle_ctx.cache_dir, "snippets"),
     compute = function(filetype)
       return lib.scope(function(defer)
-        local close, iter = sources.list(settings, idle_ctx, filetype)
+        local close, iter = sources.list(settings, idle_ctx, filetype, idle_ctx.ctx.filename)
         defer(close)
 
         local errors = {}
@@ -61,7 +61,7 @@ local closure_of = {}
 ---@return snippets.Cached
 local fetch_ft = function(settings, idle_ctx, target)
   return lib.scope(function(defer)
-    local close, iter = sources.list(settings, idle_ctx, target)
+    local close, iter = sources.list(settings, idle_ctx, target, idle_ctx.ctx.filename)
     defer(close)
 
     local store = cache_of(settings, idle_ctx)
@@ -81,28 +81,22 @@ M.idle = function(settings, idle_ctx)
   local idx = index_of(settings)
   local ft = string.lower(idle_ctx.ctx.filetype)
 
-  local loaded = set.new {}
   ---@type snippets.Extends[]
   local all_extends = {}
 
-  local pending = vim.list_extend({ ft }, extends_m.IMPLICIT)
-  while #pending > 0 do
-    local target = table.remove(pending)
-    if not loaded[target] then
-      local cached = fetch_ft(settings, idle_ctx, target)
+  for target, cached in
+    extends_m.traverse(ft, function(t)
+      return fetch_ft(settings, idle_ctx, t)
+    end)
+  do
+    table.insert(all_extends, { [target] = set.new(cached.extends) })
 
-      do
-        loaded[target] = true
-        table.insert(all_extends, { [target] = set.new(cached.extends) })
-        for _, parent in pairs(cached.extends) do
-          table.insert(pending, parent)
-        end
-      end
-
-      async.sleep(0)
-      idx.prune { filetype = target }
-      for _, item in pairs(cached.items) do
-        idx.insert(item)
+    async.sleep(0)
+    idx.prune { filetype = target }
+    for i, item in ipairs(cached.items) do
+      idx.insert(item)
+      if i % util.BATCH == 0 then
+        async.sleep(0)
       end
     end
   end
@@ -134,7 +128,7 @@ M.matcher = util.batched(function(settings, ctx)
       fts[ft] = true
     end
     for ft in pairs(fts) do
-      for hit in idx.search { filetype = ft, keyword_before = ctx.keyword_before } do
+      for hit in idx.search { filetype = ft, match_before = ctx.match_before } do
         coroutine.yield(hit)
       end
     end

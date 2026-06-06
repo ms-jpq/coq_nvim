@@ -5,15 +5,15 @@ local handle = require "coq.lib.async._handle"
 local nursery = require "coq.lib.async._nursery"
 local runtime = require "coq.lib.async._runtime"
 
-T.describe("race", function(test)
-  test("returns nil for empty fns list", function()
+T.describe({ "race" }, function(test)
+  test({ "returns nil for empty fns list" }, function()
     local idx, val = async.race {}
 
     T.eq(idx, nil)
     T.eq(val, nil)
   end)
 
-  test("returns as soon as winner finishes, not waiting for losers", function()
+  test({ "returns as soon as winner finishes, not waiting for losers" }, function()
     local start = vim.uv.hrtime()
     async.race {
       function()
@@ -30,7 +30,7 @@ T.describe("race", function(test)
     assert(elapsed_ms < 100 * T.SLOW, ("expected ~5ms, got %.1fms"):format(elapsed_ms))
   end)
 
-  test("forwards multiple return values", function()
+  test({ "forwards multiple return values" }, function()
     local idx, a, b, c = async.race {
       function()
         -- race forwards all of a winner's values; the single-T return type can't express it.
@@ -43,7 +43,7 @@ T.describe("race", function(test)
     T.eq({ a, b, c }, { "lil", "fido", "spot" })
   end)
 
-  test("losers are cancelled when a winner emerges", function()
+  test({ "losers are cancelled when a winner emerges" }, function()
     local late_cancelled = false
     local idx, val = async.race {
       function()
@@ -61,7 +61,7 @@ T.describe("race", function(test)
     T.eq(late_cancelled, true)
   end)
 
-  test("loser sees cancellation when a winner emerges", function()
+  test({ "loser sees cancellation when a winner emerges" }, function()
     local loser_cancelled = false
     async.race {
       function()
@@ -79,7 +79,7 @@ T.describe("race", function(test)
     T.eq(loser_cancelled, true)
   end)
 
-  test("external cancel makes race throw cancel", function()
+  test({ "external cancel makes race throw cancel" }, function()
     local outer = handle.new()
     local race_ok, race_err
     local n = nursery.new()
@@ -99,7 +99,7 @@ T.describe("race", function(test)
     T.eq(cancel.is(race_err), true)
   end)
 
-  test("child error propagates and cancels siblings", function()
+  test({ "child error propagates and cancels siblings" }, function()
     local sibling_cancelled = false
     local ok, err = pcall(function()
       async.race {

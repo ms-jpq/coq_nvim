@@ -1,25 +1,28 @@
-local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local help = require "coq.commands.help"
 local lib = require "coq.lib"
-local path_fmt = require "coq.producers.path_fmt"
-local sources = require "coq.producers.snippets.sources"
+local snippets = require "coq.commands.snippets"
 local stats = require "coq.commands.stats"
+local transition = require "coq.transition"
 
 local M = {}
-
-local unimplemented = function(name)
-  return function(...)
-    vim.notify(string.format("coq.%s is not yet implemented in v2", name), vim.log.levels.WARN)
-  end
-end
 
 M.Help = function(...)
   help.run { ... }
 end
 
-M.Now = unimplemented "Now"
-M.deps = unimplemented "deps"
+M.deps = transition.deps
+
+local snips_impl = lib.noop
+local stats_impl = lib.noop
+
+M.Snips = function(...)
+  return snips_impl(...)
+end
+
+M.Stats = function(...)
+  return stats_impl(...)
+end
 
 ---@param settings config.Settings
 ---@param statsd index.Statsd
@@ -27,13 +30,25 @@ M.deps = unimplemented "deps"
 M.bind = function(settings, statsd, events)
   atools.scheduled()
 
+  stats_impl = function()
+    stats.show(statsd)
+  end
+  snips_impl = snippets.bind(settings, events)
+
+  vim.api.nvim_create_user_command("COQnow", lib.noop, { nargs = "*" })
+  vim.api.nvim_create_user_command("COQdeps", M.deps, { nargs = 0 })
+
+  vim.api.nvim_create_user_command("COQstats", function()
+    M.Stats()
+  end, { nargs = 0 })
+
   vim.api.nvim_create_user_command("COQhelp", function(opts)
     help.run(opts.fargs)
   end, {
     nargs = "*",
     complete = function(arglead)
       return vim
-        .iter(help.complete())
+        .iter(vim.tbl_keys(help.TOPICS))
         :filter(function(t)
           return vim.startswith(t, arglead)
         end)
@@ -41,60 +56,19 @@ M.bind = function(settings, statsd, events)
     end,
   })
 
-  vim.api.nvim_create_user_command("COQnow", function(opts)
-    M.Now(unpack(opts.fargs))
-  end, { nargs = "*" })
-
-  vim.api.nvim_create_user_command("COQdeps", function()
-    M.deps()
-  end, { nargs = 0 })
-
-  vim.api.nvim_create_user_command("COQstats", function()
-    stats.show(statsd)
-  end, { nargs = 0 })
-
-  local snips = function()
-    atools.scheduled()
-    local cwd = lib.getcwd()
-    local current = vim.api.nvim_buf_get_name(0)
-
-    ---@diagnostic disable-next-line: missing-fields
-    local idle_ctx = { ---@type idle.Ctx
-      cache_dir = vim.fs.joinpath(vim.fn.stdpath "cache", "coq"),
-      rtps = vim.api.nvim_list_runtime_paths(),
-    }
-
-    local lines = lib.scope(function(defer)
-      local close, iter = sources.list(settings, idle_ctx, nil)
-      defer(close)
+  vim.api.nvim_create_user_command("COQsnips", function(opts)
+    M.Snips(opts.fargs)
+  end, {
+    nargs = "*",
+    complete = function(arglead)
       return vim
-        .iter(iter)
-        :map(function(src)
-          return "~> " .. path_fmt.fmt(cwd, src.path, current)
+        .iter(snippets.SUBCMDS)
+        :filter(function(t)
+          return vim.startswith(t, arglead)
         end)
         :totable()
-    end)
-
-    atools.scheduled()
-    vim.notify(table.concat(lines, "\n"), vim.log.levels.INFO)
-    events.idle.replace { synthetic = true }
-  end
-
-  vim.api.nvim_create_user_command(
-    "COQsnips",
-    async.entry(function()
-      snips()
-    end),
-    { nargs = 0 }
-  )
-
-  vim.api.nvim_create_user_command(
-    "COQeval",
-    async.entry(function()
-      snips()
-    end),
-    { nargs = 0 }
-  )
+    end,
+  })
 end
 
 return M

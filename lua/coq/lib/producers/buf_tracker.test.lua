@@ -64,8 +64,8 @@ local idle_ctx = function(updated, removed)
   } --[[@as idle.Ctx]]
 end
 
-T.describe("buf_tracker", function(test)
-  test("first-time update reindexes, does not prune (no prior state)", function()
+T.describe({ "buf_tracker" }, function(test)
+  test({ "first-time update reindexes, does not prune (no prior state)" }, function()
     local tracker, trace = mk()
 
     async.scope(function()
@@ -79,7 +79,7 @@ T.describe("buf_tracker", function(test)
     T.eq(trace.settings_seen, { SETTINGS })
   end)
 
-  test("update with unchanged tick (compare returns nil) is a no-op", function()
+  test({ "update with unchanged tick (compare returns nil) is a no-op" }, function()
     local tracker, trace = mk {
       compare = function()
         return nil
@@ -95,7 +95,7 @@ T.describe("buf_tracker", function(test)
     T.eq(trace.reindexes, {})
   end)
 
-  test("remove after prior update prunes with the prior meta", function()
+  test({ "remove after prior update prunes with the prior meta" }, function()
     local tracker, trace = mk()
 
     async.scope(function()
@@ -109,7 +109,7 @@ T.describe("buf_tracker", function(test)
     T.eq(trace.prunes[1].meta.tick, 1)
   end)
 
-  test("second update prunes prior meta and forwards prior tick", function()
+  test({ "second update prunes prior meta and forwards prior tick" }, function()
     local tracker, trace = mk()
 
     async.scope(function()
@@ -125,7 +125,7 @@ T.describe("buf_tracker", function(test)
     T.eq(trace.prunes[1].meta.tick, 1)
   end)
 
-  test("mixed batch handles each buf independently", function()
+  test({ "mixed batch handles each buf independently" }, function()
     local tracker, trace = mk()
 
     async.scope(function()
@@ -140,7 +140,7 @@ T.describe("buf_tracker", function(test)
     T.eq(trace.prunes, {})
   end)
 
-  test("remove without prior update is a no-op", function()
+  test({ "remove without prior update is a no-op" }, function()
     local tracker, trace = mk()
 
     async.scope(function()
@@ -153,7 +153,7 @@ T.describe("buf_tracker", function(test)
 
   -- a run cancelled during index must NOT advance state, so the carried-over buf
   -- is recomputed (and re-indexed) on the next run rather than skipped forever.
-  test("a cancelled index leaves state uncommitted so the buf is recomputed", function()
+  test({ "a cancelled index leaves state uncommitted so the buf is recomputed" }, function()
     local prev_ticks, fail = {}, true
     local tracker = buf_tracker.new {
       compare = function(_, previous)

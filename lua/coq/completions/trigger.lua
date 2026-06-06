@@ -59,7 +59,6 @@ M.bind = function(n, settings, statsd, resolver, sup, events)
     if M._should_skip(settings, ctx, prev) then
       return
     end
-    prev = M._dedup_key(ctx)
 
     if ev.manual and settings.completion.sticky_manual then
       sticky = true
@@ -71,6 +70,8 @@ M.bind = function(n, settings, statsd, resolver, sup, events)
       defer(close)
       insertion.complete(ctx, settings, statsd, iter)
     end)
+
+    prev = M._dedup_key(ctx)
   end)
 end
 

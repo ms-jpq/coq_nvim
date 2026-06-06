@@ -33,14 +33,14 @@ local collect = function(opts, cwd, path)
   return out or {}
 end
 
-T.describe("paths.preview.lines", function(test)
-  test("nonexistent path yields a stat error line", function()
+T.describe({ "paths.preview.lines" }, function(test)
+  test({ "nonexistent path yields a stat error line" }, function()
     local lines = collect({ max_lines = 10 }, nil, "/no/such/path/4242")
     T.eq(#lines, 1)
     assert(string.match(lines[1], "^%(stat: "), "expected stat-error line, got: " .. lines[1])
   end)
 
-  test("directory yields sorted entries with / on subdirs", function()
+  test({ "directory yields sorted entries with / on subdirs" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
     mkdir(dir .. "/fido")
@@ -49,7 +49,7 @@ T.describe("paths.preview.lines", function(test)
     T.eq(collect({ max_lines = 10 }, nil, dir), { "airedale.md", "fido/", "spot.txt" })
   end)
 
-  test("directory renders via fmt_path when cwd is given", function()
+  test({ "directory renders via fmt_path when cwd is given" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
     mkdir(dir .. "/fido")
@@ -57,7 +57,7 @@ T.describe("paths.preview.lines", function(test)
     T.eq(collect({ max_lines = 10 }, dir, dir), { "./fido/", "./spot.txt" })
   end)
 
-  test("directory emits ellipsis after max_lines entries on truncation", function()
+  test({ "directory emits ellipsis after max_lines entries on truncation" }, function()
     local dir = tmpdir()
     for i = 1, 5 do
       touch(dir .. "/p" .. i .. ".txt")
@@ -67,7 +67,7 @@ T.describe("paths.preview.lines", function(test)
     T.eq(lines, { "p1.txt", "p2.txt", "p3.txt", "…" })
   end)
 
-  test("directory at exact max_lines emits all entries, no ellipsis", function()
+  test({ "directory at exact max_lines emits all entries, no ellipsis" }, function()
     local dir = tmpdir()
     for i = 1, 3 do
       touch(dir .. "/p" .. i .. ".txt")
@@ -77,7 +77,7 @@ T.describe("paths.preview.lines", function(test)
     T.eq(lines, { "p1.txt", "p2.txt", "p3.txt" })
   end)
 
-  test("file yields rstripped lines", function()
+  test({ "file yields rstripped lines" }, function()
     local dir = tmpdir()
     local path = dir .. "/dogs.txt"
     touch(path, "labrador  \nlily\t\nspot")
@@ -85,7 +85,7 @@ T.describe("paths.preview.lines", function(test)
     T.eq(collect({ max_lines = 10 }, nil, path), { "labrador", "lily", "spot" })
   end)
 
-  test("file emits ellipsis on truncation", function()
+  test({ "file emits ellipsis on truncation" }, function()
     local dir = tmpdir()
     local path = dir .. "/dogs.txt"
     touch(path, "labrador\nlily\nspot\nfido\nrex")
@@ -94,7 +94,7 @@ T.describe("paths.preview.lines", function(test)
     T.eq(lines, { "labrador", "lily", "spot", "…" })
   end)
 
-  test("empty file yields (empty) marker", function()
+  test({ "empty file yields (empty) marker" }, function()
     local dir = tmpdir()
     local path = dir .. "/empty.txt"
     touch(path, "")
@@ -102,7 +102,7 @@ T.describe("paths.preview.lines", function(test)
     T.eq(collect({ max_lines = 10 }, nil, path), { "(empty)" })
   end)
 
-  test("binary file yields (binary) marker", function()
+  test({ "binary file yields (binary) marker" }, function()
     local dir = tmpdir()
     local path = dir .. "/blob.bin"
     touch(path, "labrador\0\1\2\3spot")

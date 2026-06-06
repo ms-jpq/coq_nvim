@@ -34,8 +34,8 @@ local collect = function(iter)
   return out
 end
 
-T.describe("trie", function(test)
-  test("search yields every item whose key starts with the prefix", function()
+T.describe({ "trie" }, function(test)
+  test({ "search yields every item whose key starts with the prefix" }, function()
     local t = trie.new(spec)
     t.insert { word = "lil" }
     t.insert { word = "lilx" }
@@ -45,7 +45,7 @@ T.describe("trie", function(test)
     T.eq(collect(t.search { prefix = "li" }), { "lil", "lilx", "liy" })
   end)
 
-  test("buckets by the first two chars: a longer prefix yields the whole bucket", function()
+  test({ "buckets by the first two chars: a longer prefix yields the whole bucket" }, function()
     local t = trie.new(vim.tbl_extend("force", spec, { prefix = 2 }))
     t.insert { word = "labrador" }
     t.insert { word = "lazy" } -- same "la" bucket, diverges at char 3
@@ -58,7 +58,7 @@ T.describe("trie", function(test)
     T.eq(collect(t.search { prefix = "l" }), { "labrador", "lazy", "lily" })
   end)
 
-  test("prefix length is configurable at construction", function()
+  test({ "prefix length is configurable at construction" }, function()
     local one = trie.new(vim.tbl_extend("force", spec, { prefix = 1 }))
     one.insert { word = "labrador" }
     one.insert { word = "lily" }
@@ -76,7 +76,7 @@ T.describe("trie", function(test)
     T.eq(collect(three.search { prefix = "labrador" }), { "label", "labrador" })
   end)
 
-  test("search includes the prefix key itself when it has an item", function()
+  test({ "search includes the prefix key itself when it has an item" }, function()
     local t = trie.new(spec)
     t.insert { word = "lil" }
     t.insert { word = "lilx" }
@@ -84,7 +84,7 @@ T.describe("trie", function(test)
     T.eq(collect(t.search { prefix = "lil" }), { "lil", "lilx" })
   end)
 
-  test("search on nil prefix yields every item", function()
+  test({ "search on nil prefix yields every item" }, function()
     local t = trie.new(spec)
     t.insert { word = "lil" }
     t.insert { word = "spot" }
@@ -92,14 +92,14 @@ T.describe("trie", function(test)
     T.eq(collect(t.search {}), { "lil", "spot" })
   end)
 
-  test("search on absent prefix yields nothing", function()
+  test({ "search on absent prefix yields nothing" }, function()
     local t = trie.new(spec)
     t.insert { word = "lil" }
 
     T.eq(collect(t.search { prefix = "spot" }), {})
   end)
 
-  test("insert with the same key overwrites the previous item", function()
+  test({ "insert with the same key overwrites the previous item" }, function()
     local t = trie.new(spec)
     t.insert { word = "lil", buf = 1 }
     t.insert { word = "lil", buf = 2 }
@@ -111,7 +111,7 @@ T.describe("trie", function(test)
     T.eq(seen, { 2 })
   end)
 
-  test("prune removes every item under the prefix", function()
+  test({ "prune removes every item under the prefix" }, function()
     local t = trie.new(spec)
     t.insert { word = "lil" }
     t.insert { word = "lilx" }
@@ -123,7 +123,7 @@ T.describe("trie", function(test)
     T.eq(collect(t.search {}), { "spot" })
   end)
 
-  test("prune on absent prefix is a no-op", function()
+  test({ "prune on absent prefix is a no-op" }, function()
     local t = trie.new(spec)
     t.insert { word = "lil" }
 
@@ -132,7 +132,7 @@ T.describe("trie", function(test)
     T.eq(collect(t.search {}), { "lil" })
   end)
 
-  test("prune with nil key wipes the trie", function()
+  test({ "prune with nil key wipes the trie" }, function()
     local t = trie.new(spec)
     t.insert { word = "lil" }
     t.insert { word = "spot" }
@@ -142,7 +142,7 @@ T.describe("trie", function(test)
     T.eq(collect(t.search {}), {})
   end)
 
-  test("key bucketing is case insensitive in both directions", function()
+  test({ "key bucketing is case insensitive in both directions" }, function()
     local t = trie.new(vim.tbl_extend("force", spec, { prefix = 2 }))
     t.insert { word = "Labrador" } -- upper-cased word, lower-cased query
     t.insert { word = "poodle" } -- lower-cased word, upper-cased query
@@ -151,7 +151,7 @@ T.describe("trie", function(test)
     T.eq(collect(t.search { prefix = "PO" }), { "poodle" })
   end)
 
-  test("prune matches the bucket regardless of query case", function()
+  test({ "prune matches the bucket regardless of query case" }, function()
     local t = trie.new(vim.tbl_extend("force", spec, { prefix = 2 }))
     t.insert { word = "labrador" }
     t.insert { word = "spot" }
@@ -161,7 +161,7 @@ T.describe("trie", function(test)
     T.eq(collect(t.search {}), { "spot" })
   end)
 
-  test("instances are independent", function()
+  test({ "instances are independent" }, function()
     local a, b = trie.new(spec), trie.new(spec)
     a.insert { word = "lil", which = "a" }
     b.insert { word = "lil", which = "b" }

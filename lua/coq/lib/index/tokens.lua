@@ -1,8 +1,11 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local buffers = require "coq.lib.buffers"
+local set = require "coq.lib.set"
 
 local M = {}
+
+M.WHITES = set.new { string.byte " ", string.byte "\t", string.byte "\n", string.byte "\r" }
 
 ---@param s string
 ---@return integer
@@ -19,11 +22,15 @@ local ranges_of = function(entry)
   end
 
   if entry == "@" then
-    return { { 65, 90 }, { 97, 122 }, { 128, 255 } }
+    return {
+      { string.byte "A", string.byte "Z" },
+      { string.byte "a", string.byte "z" },
+      { 128, 255 },
+    }
   end
 
   if entry == "@-@" then
-    return { { 64, 64 } }
+    return { { string.byte "@", string.byte "@" } }
   end
 
   local lo, hi = string.match(entry, "^(.-)%-(.+)$")
@@ -40,23 +47,32 @@ local ranges_of = function(entry)
   return { { b, b } }
 end
 
----@param spec string
----@return lib.Set<integer>
-M.parse_charset = function(spec)
-  local kw = {}
+do
+  local charset_cache = {}
 
-  for entry in vim.gsplit(spec, ",", { plain = true }) do
-    local exclude = string.sub(entry, 1, 1) == "^" and #entry > 1
+  ---@param spec string
+  ---@return lib.Set<integer>
+  M.parse_charset = function(spec)
+    local hit = charset_cache[spec]
+    if hit then
+      return hit
+    end
 
-    for _, range in pairs(ranges_of(exclude and string.sub(entry, 2) or entry)) do
-      local lo, hi = unpack(range)
-      for b = math.max(0, lo), math.min(255, hi) do
-        kw[b] = not exclude or nil
+    local kw = {}
+    for entry in vim.gsplit(spec, ",", { plain = true }) do
+      local exclude = string.sub(entry, 1, 1) == "^" and #entry > 1
+
+      for _, range in pairs(ranges_of(exclude and string.sub(entry, 2) or entry)) do
+        local lo, hi = unpack(range)
+        for b = math.max(0, lo), math.min(255, hi) do
+          kw[b] = not exclude or nil
+        end
       end
     end
-  end
 
-  return kw
+    charset_cache[spec] = kw
+    return kw
+  end
 end
 
 ---@param kw lib.Set<integer>
@@ -64,31 +80,62 @@ end
 ---@return lib.Iterator<string>
 M.keywords = function(kw, text)
   return async.wrap(function()
-    local acc = {}
-    local flush = function()
-      if next(acc) then
-        coroutine.yield(table.concat(acc))
-        acc = {}
+    ---@param b integer
+    ---@return "kw" | "sym" | "ws"
+    local classify = function(b)
+      if kw[b] then
+        return "kw"
+      elseif M.WHITES[b] then
+        return "ws"
+      else
+        return "sym"
       end
     end
+
+    local pending_sym = nil
+
+    ---@param kind "kw" | "sym" | "ws"
+    ---@param run string
+    local yield = function(kind, run)
+      if kind == "kw" then
+        coroutine.yield(run)
+        if pending_sym then
+          coroutine.yield(pending_sym .. run)
+        end
+        pending_sym = nil
+      elseif kind == "sym" then
+        pending_sym = run
+      else
+        pending_sym = nil
+      end
+    end
+
+    local acc_kind, acc = nil, {}
 
     for chunk in text do
       local i, n = 1, #chunk
       while i <= n do
+        local kind = classify(string.byte(chunk, i))
         local start = i
-        while i <= n and kw[string.byte(chunk, i)] do
+        while i <= n and classify(string.byte(chunk, i)) == kind do
           i = i + 1
         end
-        if i > start then
-          table.insert(acc, string.sub(chunk, start, i - 1))
-        end
-        if i <= n then
-          flush()
-          i = i + 1
+        local piece = string.sub(chunk, start, i - 1)
+
+        if kind == acc_kind then
+          table.insert(acc, piece)
+        else
+          if acc_kind then
+            yield(acc_kind, table.concat(acc))
+          end
+          acc_kind, acc = kind, { piece }
         end
       end
     end
-    flush()
+
+    if acc_kind then
+      yield(acc_kind, table.concat(acc))
+    end
   end)
 end
 
@@ -98,6 +145,32 @@ end
 M.trailing_keyword_before = function(kw, line)
   local i = #line
   while i > 0 and kw[string.byte(line, i)] do
+    i = i - 1
+  end
+  return string.sub(line, i + 1)
+end
+
+---@param kw lib.Set<integer>
+---@param line string
+---@return string
+M.match_prefix = function(kw, line)
+  local k = M.trailing_keyword_before(kw, line)
+  if k ~= "" then
+    return k
+  end
+  return M.trailing_symbol_before(kw, line)
+end
+
+---@param kw lib.Set<integer>
+---@param line string
+---@return string
+M.trailing_symbol_before = function(kw, line)
+  local i = #line
+  while i > 0 do
+    local b = string.byte(line, i)
+    if kw[b] or M.WHITES[b] then
+      break
+    end
     i = i - 1
   end
   return string.sub(line, i + 1)

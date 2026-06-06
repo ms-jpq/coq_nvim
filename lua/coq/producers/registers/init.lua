@@ -140,7 +140,7 @@ M.matcher = util.batched(function(settings, ctx)
     return
   end
 
-  local raw = index_of(settings).search { keyword_before = ctx.keyword_before }
+  local raw = index_of(settings).search { match_before = ctx.match_before }
 
   for hit in util.shape(settings, ctx, raw) do
     local doc_line = settings.clients.registers.short_name

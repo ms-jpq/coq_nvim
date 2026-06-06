@@ -38,42 +38,61 @@ end
 
 local kinds = vim.lsp.protocol.CompletionTriggerKind
 
----@class lsp.CompletionTracker
----@field trigger_kind integer
----@field parse_items fun(value: lsp.CompletionList|lsp.CompletionItem[]|nil): lsp.CompletionItem[]
----@field commit fun()
+---@param client_id integer
+---@return string
+local incomplete_var_of = function(client_id)
+  return "__coq_lsp_incomplete_" .. client_id
+end
 
 ---@param client vim.lsp.Client
+---@param ctx ctx.full
+---@return string?
+local trigger_char_of = function(client, ctx)
+  local cap = client.server_capabilities
+  local triggers = cap and cap.completionProvider and cap.completionProvider.triggerCharacters
+
+  if not triggers then
+    return nil
+  end
+  for _, t in pairs(triggers) do
+    if t ~= "" and vim.endswith(ctx.line_before, t) then
+      return t
+    end
+  end
+  return nil
+end
+
 ---@param buf integer
----@return lsp.CompletionTracker
-local completion_tracker = function(client, buf)
-  local incomplete_var = "__coq_lsp_incomplete_" .. client.id
-  local incomplete = false
-
-  ---@diagnostic disable-next-line: missing-fields
-  local tracker = {} ---@type lsp.CompletionTracker
-
-  tracker.trigger_kind = vim.b[buf][incomplete_var] and kinds.TriggerForIncompleteCompletions or kinds.Invoked
-
-  tracker.parse_items = function(value)
-    if type(value) ~= "table" then
-      return {}
-    end
-    incomplete = incomplete or value.isIncomplete == true
-    if value.items ~= nil then
-      return value.items
-    end
-    return value
+---@param client_id integer
+---@param trigger_char string?
+---@return integer
+local trigger_kind_of = function(buf, client_id, trigger_char)
+  if trigger_char then
+    return kinds.TriggerCharacter
   end
-
-  tracker.commit = function()
-    atools.scheduled()
-    if vim.api.nvim_buf_is_valid(buf) then
-      vim.b[buf][incomplete_var] = incomplete or nil
-    end
+  if vim.b[buf][incomplete_var_of(client_id)] then
+    return kinds.TriggerForIncompleteCompletions
   end
+  return kinds.Invoked
+end
 
-  return tracker
+---@param client vim.lsp.Client
+---@param ctx ctx.full
+---@param td_params lsp.TextDocumentIdentifier
+---@param trigger_char string?
+---@param token string
+---@return lsp.CompletionParams
+M._params_of = function(client, ctx, td_params, trigger_char, token)
+  local row = unpack(ctx.pos)
+  return {
+    position = { line = row - 1, character = col_for(ctx.pos, client.offset_encoding) },
+    textDocument = td_params,
+    context = {
+      triggerKind = trigger_kind_of(ctx.buf, client.id, trigger_char),
+      triggerCharacter = trigger_char,
+    },
+    partialResultToken = token,
+  }
 end
 
 ---@param client vim.lsp.Client
@@ -86,16 +105,27 @@ local query_1 = function(client, ctx, td_params)
     atools.scheduled()
 
     local token = "coq.lsp." .. client.id .. "." .. next_token_id()
-    local tracker = completion_tracker(client, ctx.buf)
-    defer(tracker.commit)
-    local row = ctx.pos[1]
+    local trigger_char = trigger_char_of(client, ctx)
+    local incomplete = false
 
-    local params = {
-      position = { line = row - 1, character = col_for(ctx.pos, client.offset_encoding) },
-      textDocument = td_params,
-      context = { triggerKind = tracker.trigger_kind },
-      partialResultToken = token,
-    }
+    ---@param value lsp.CompletionList|lsp.CompletionItem[]|nil
+    ---@return lsp.CompletionItem[]
+    local items_of = function(value)
+      if type(value) ~= "table" then
+        return {}
+      end
+      incomplete = incomplete or value.isIncomplete == true
+      return value.items or value
+    end
+
+    defer(function()
+      atools.scheduled()
+      if vim.api.nvim_buf_is_valid(ctx.buf) then
+        vim.b[ctx.buf][incomplete_var_of(client.id)] = incomplete or nil
+      end
+    end)
+
+    local params = M._params_of(client, ctx, td_params, trigger_char, token)
 
     ---@type channels.Mpmc<lsp.CompletionItem[]>
     local chan = mpmc.new(math.huge)
@@ -107,13 +137,13 @@ local query_1 = function(client, ctx, td_params)
       group = group,
       callback = function(args)
         if args.data.client_id == client.id and args.data.params.token == token then
-          chan.push(tracker.parse_items(args.data.params.value))
+          chan.push(items_of(args.data.params.value))
         end
       end,
     })
     defer(function()
       atools.scheduled()
-      vim.api.nvim_del_autocmd(autocmd_id)
+      pcall(vim.api.nvim_del_autocmd, autocmd_id)
     end)
 
     local final = async.wrap(function()
@@ -122,7 +152,7 @@ local query_1 = function(client, ctx, td_params)
       if err or not result then
         return
       end
-      coroutine.yield(tracker.parse_items(result))
+      coroutine.yield(items_of(result))
     end)
 
     local close, merged = async.merge { chan.pull, final }

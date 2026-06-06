@@ -102,7 +102,7 @@ local probe = function(ft)
   return iskeyword, expected
 end
 
-T.test("tokens.parity across all filetypes", function()
+T.test({ "tokens.parity across all filetypes" }, function()
   local failures = {}
 
   for _, ft in pairs(enumerate_filetypes()) do
@@ -110,7 +110,14 @@ T.test("tokens.parity across all filetypes", function()
     local iskeyword, expected = probe(ft)
     local kw = tokens.parse_charset(iskeyword)
     local lines = vim.iter(CORPUS) --[[@as lib.Iterator<string>]]
-    local actual = vim.iter(tokens.keywords(kw, itertools.intersperse("\n", lines))):totable()
+    -- M.keywords also yields `<symbol><keyword>` forms; filter to pure-keyword
+    -- runs for parity against vim's `\k+`.
+    local actual = vim
+      .iter(tokens.keywords(kw, itertools.intersperse("\n", lines)))
+      :filter(function(w)
+        return kw[string.byte(w, 1)] ~= nil
+      end)
+      :totable()
     if not vim.deep_equal(actual, expected) then
       table.insert(failures, { ft = ft, iskeyword = iskeyword, expected = expected, actual = actual })
     end
@@ -119,30 +126,116 @@ T.test("tokens.parity across all filetypes", function()
   T.eq(failures, {})
 end)
 
-T.describe("tokens.trailing_keyword_before", function(test)
+T.describe({ "tokens.keywords with symbol prefixes" }, function(test)
   local kw = tokens.parse_charset "@,48-57,_"
 
-  test("empty line returns empty", function()
+  ---@param text string
+  ---@return string[]
+  local toks = function(text)
+    return vim.iter(tokens.keywords(kw, vim.iter { text } --[[@as lib.Iterator<string>]])):totable()
+  end
+
+  test({ "plain keyword yields just itself" }, function()
+    T.eq(toks "foo", { "foo" })
+  end)
+
+  test({ "adjacent symbol prefix yields plain and prefixed form" }, function()
+    T.eq(toks "@foo", { "foo", "@foo" })
+    T.eq(toks "->bar", { "bar", "->bar" })
+  end)
+
+  test({ "multi-char symbol run forms the full prefix" }, function()
+    T.eq(toks "@@foo", { "foo", "@@foo" })
+    T.eq(toks "-->bar", { "bar", "-->bar" })
+  end)
+
+  test({ "whitespace between symbol and keyword drops the prefix" }, function()
+    T.eq(toks "@ foo", { "foo" })
+    T.eq(toks "@\tfoo", { "foo" })
+  end)
+
+  test({ "bare symbol run emits nothing" }, function()
+    T.eq(toks "->", {})
+    T.eq(toks "@@@", {})
+  end)
+
+  test({ "keyword followed by symbol does not get suffix" }, function()
+    T.eq(toks "foo->", { "foo" })
+  end)
+
+  test({ "keyword-symbol-keyword: prefix attaches only to the trailing keyword" }, function()
+    T.eq(toks "foo->bar", { "foo", "bar", "->bar" })
+  end)
+
+  test({ "whitespace-separated keywords are independent" }, function()
+    T.eq(toks "bar @foo", { "bar", "foo", "@foo" })
+  end)
+
+  test({ "input split across chunks preserves correctness" }, function()
+    local result = vim.iter(tokens.keywords(kw, vim.iter { "@", "foo" } --[[@as lib.Iterator<string>]])):totable()
+    T.eq(result, { "foo", "@foo" })
+  end)
+end)
+
+T.describe({ "tokens.trailing_keyword_before" }, function(test)
+  local kw = tokens.parse_charset "@,48-57,_"
+
+  test({ "empty line returns empty" }, function()
     T.eq(tokens.trailing_keyword_before(kw, ""), "")
   end)
 
-  test("returns the trailing keyword substring", function()
+  test({ "returns the trailing keyword substring" }, function()
     T.eq(tokens.trailing_keyword_before(kw, "hello"), "hello")
     T.eq(tokens.trailing_keyword_before(kw, "foo bar"), "bar")
     T.eq(tokens.trailing_keyword_before(kw, "obj.method"), "method")
   end)
 
-  test("non-keyword tail returns empty", function()
+  test({ "non-keyword tail returns empty" }, function()
     T.eq(tokens.trailing_keyword_before(kw, "hello "), "")
     T.eq(tokens.trailing_keyword_before(kw, "foo."), "")
   end)
 
-  test("respects iskeyword: hyphen excluded by default", function()
+  test({ "respects iskeyword: hyphen excluded by default" }, function()
     T.eq(tokens.trailing_keyword_before(kw, "kebab-case"), "case")
   end)
 
-  test("respects iskeyword: hyphen included when configured", function()
+  test({ "respects iskeyword: hyphen included when configured" }, function()
     local with_dash = tokens.parse_charset "@,48-57,_,-"
     T.eq(tokens.trailing_keyword_before(with_dash, "kebab-case"), "kebab-case")
+  end)
+end)
+
+T.describe({ "tokens.trailing_symbol_before" }, function(test)
+  local kw = tokens.parse_charset "@,48-57,_"
+
+  test({ "empty line returns empty" }, function()
+    T.eq(tokens.trailing_symbol_before(kw, ""), "")
+  end)
+
+  test({ "keyword tail returns empty (symbol and keyword are disjoint)" }, function()
+    T.eq(tokens.trailing_symbol_before(kw, "foo"), "")
+    T.eq(tokens.trailing_symbol_before(kw, "foo->bar"), "")
+  end)
+
+  test({ "returns the trailing symbol run" }, function()
+    T.eq(tokens.trailing_symbol_before(kw, "foo->"), "->")
+    T.eq(tokens.trailing_symbol_before(kw, "foo::"), "::")
+    T.eq(tokens.trailing_symbol_before(kw, "foo=>"), "=>")
+    T.eq(tokens.trailing_symbol_before(kw, "."), ".")
+  end)
+
+  test({ "stops at whitespace (space)" }, function()
+    T.eq(tokens.trailing_symbol_before(kw, "foo "), "")
+    T.eq(tokens.trailing_symbol_before(kw, "= ->"), "->")
+  end)
+
+  test({ "stops at tab" }, function()
+    T.eq(tokens.trailing_symbol_before(kw, "foo\t->"), "->")
+    T.eq(tokens.trailing_symbol_before(kw, "->\t"), "")
+  end)
+
+  test({ "stops at keyword boundary" }, function()
+    T.eq(tokens.trailing_symbol_before(kw, "foo->bar->"), "->")
+    T.eq(tokens.trailing_symbol_before(kw, "(spot)"), ")")
   end)
 end)

@@ -1,4 +1,8 @@
-local CE = vim.keycode [[<c-e>]]
+local COMPLETEFUNC = "coq_completefunc"
+
+local M = {}
+
+M.CE = vim.keycode [[<c-e>]]
 
 local function has_text_before_cursor()
   local _, col = unpack(vim.api.nvim_win_get_cursor(0))
@@ -25,7 +29,7 @@ local recommended_keymaps = function(keymap)
 
   for _, key in pairs { "<esc>", "<c-c>", "<bs>", "<c-w>", "<c-u>" } do
     vim.keymap.set({ "i" }, key, function()
-      return (vim.fn.pumvisible() == 1 and CE or "") .. key
+      return (vim.fn.pumvisible() == 1 and M.CE or "") .. key
     end, expr)
   end
 
@@ -85,14 +89,26 @@ local manual_complete = function(keymap)
   end
 end
 
-local M = {}
+---@param events completions.Events
+local complete_func = function(events)
+  _G[COMPLETEFUNC] = function(findstart, _)
+    if findstart == 1 then
+      events.trigger.replace { manual = true }
+      return -1
+    end
+    return {}
+  end
+  vim.o.completefunc = "v:lua." .. COMPLETEFUNC
+end
 
 ---@param settings config.Settings
-M.apply = function(settings)
+---@param events completions.Events
+M.apply = function(settings, events)
   completeopt(settings.keymap)
   recommended_keymaps(settings.keymap)
   manual_complete(settings.keymap)
   jump_to_mark(settings.keymap)
+  complete_func(events)
 end
 
 return M
