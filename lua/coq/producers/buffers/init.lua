@@ -18,16 +18,16 @@ local worker = require "coq.lib.worker"
 ---@field iskeyword string
 
 local SOURCE = "buffers"
-local MAX_BYTES = 1024 * 1024
 
 local index_of = util.once(index_m.new)
 
 local M = {}
 
+---@param max_bytes integer
 ---@param buf integer
 ---@param previous? buffer.Meta
 ---@return buffer.Meta?
-M.buffer_meta = function(buf, previous)
+M.buffer_meta = function(max_bytes, buf, previous)
   if not buffers.is_live(buf) then
     return nil
   end
@@ -42,7 +42,7 @@ M.buffer_meta = function(buf, previous)
     filetype = vim.bo[buf].filetype,
     filename = vim.api.nvim_buf_get_name(buf),
     iskeyword = vim.bo[buf].iskeyword,
-    lines = (vim.bo[buf].modified and buffers.buf_size(buf) <= MAX_BYTES) and buffers.lines_around_cursor(buf) or nil,
+    lines = (vim.bo[buf].modified and buffers.buf_size(buf) <= max_bytes) and buffers.lines_around_cursor(buf) or nil,
   }
 end
 
@@ -52,7 +52,7 @@ local tracker_of = util.once(function(settings)
     compare = function(buf, previous)
       return worker.main(function(...)
         return require("coq.producers.buffers").buffer_meta(...)
-      end, buf, previous)
+      end, settings.clients.buffers.max_bytes, buf, previous)
     end,
     reindex = function(_, changes)
       for buf, change in pairs(changes) do

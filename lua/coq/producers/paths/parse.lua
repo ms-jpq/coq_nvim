@@ -136,8 +136,7 @@ end
 ---@param opts paths.parse.Opts
 ---@return lib.Iterator<paths.parse.Candidate>
 M.candidates = function(line_before, opts)
-  local separators = path.seps(opts.is_windows)
-  local sep_fallback = opts.is_windows and "\\" or "/"
+  local separators, sep_fallback = path.seps(opts.is_windows)
 
   return coroutine.wrap(function()
     for pos, token in M._find_starts(opts.is_windows, separators, line_before) do

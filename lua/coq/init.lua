@@ -25,6 +25,7 @@ local preview = require "coq.completions.preview"
 local resolver_m = require "coq.completions.resolver"
 local statsd_m = require "coq.lib.index.rank.statsd"
 local supervisor = require "coq.lib.producers.supervisor"
+local toggle = require "coq.lib.producers.toggle"
 local transition = require "coq.transition"
 local trigger = require "coq.completions.trigger"
 
@@ -108,7 +109,7 @@ M.setup = function(opts)
       local p = vim
         .iter(producers(settings.clients))
         :map(function(prod)
-          return instrument.wrap(statsd, prod)
+          return toggle.wrap(instrument.wrap(statsd, prod))
         end)
         :totable()
       local sup = supervisor.new(p)
@@ -127,7 +128,9 @@ M.setup = function(opts)
   end)()
 end
 
-M.setup {}
+if vim.g.coq_settings then
+  M.setup {}
+end
 
 return setmetatable(M, {
   __call = function()

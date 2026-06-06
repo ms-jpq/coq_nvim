@@ -29,8 +29,14 @@ M._should_skip = function(settings, ctx, prev)
     return true
   end
 
+  local row, _ = unpack(ctx.pos)
+
   for _, suffix in pairs(settings.completion.skip_after) do
-    if suffix ~= "" and string.sub(ctx.line_before, -#suffix) == suffix then
+    if suffix == "\n" or suffix == "\r\n" then
+      if row > 1 and string.match(ctx.line_before, "^%s*$") then
+        return true
+      end
+    elseif suffix ~= "" and string.sub(ctx.line_before, -#suffix) == suffix then
       return true
     end
   end

@@ -3,6 +3,7 @@ local M = {
     buffers = {
       always_on_top = false,
       enabled = true,
+      max_bytes = 8 * 1024 * 1024,
       parent_scope = " ⇊",
       same_filetype = false,
       short_name = "BF",
