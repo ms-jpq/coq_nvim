@@ -146,3 +146,38 @@ T.describe({ "tokens.trailing_keyword_before" }, function(test)
     T.eq(tokens.trailing_keyword_before(with_dash, "kebab-case"), "kebab-case")
   end)
 end)
+
+T.describe({ "tokens.trailing_symbol_before" }, function(test)
+  local kw = tokens.parse_charset "@,48-57,_"
+
+  test({ "empty line returns empty" }, function()
+    T.eq(tokens.trailing_symbol_before(kw, ""), "")
+  end)
+
+  test({ "keyword tail returns empty (symbol and keyword are disjoint)" }, function()
+    T.eq(tokens.trailing_symbol_before(kw, "foo"), "")
+    T.eq(tokens.trailing_symbol_before(kw, "foo->bar"), "")
+  end)
+
+  test({ "returns the trailing symbol run" }, function()
+    T.eq(tokens.trailing_symbol_before(kw, "foo->"), "->")
+    T.eq(tokens.trailing_symbol_before(kw, "foo::"), "::")
+    T.eq(tokens.trailing_symbol_before(kw, "foo=>"), "=>")
+    T.eq(tokens.trailing_symbol_before(kw, "."), ".")
+  end)
+
+  test({ "stops at whitespace (space)" }, function()
+    T.eq(tokens.trailing_symbol_before(kw, "foo "), "")
+    T.eq(tokens.trailing_symbol_before(kw, "= ->"), "->")
+  end)
+
+  test({ "stops at tab" }, function()
+    T.eq(tokens.trailing_symbol_before(kw, "foo\t->"), "->")
+    T.eq(tokens.trailing_symbol_before(kw, "->\t"), "")
+  end)
+
+  test({ "stops at keyword boundary" }, function()
+    T.eq(tokens.trailing_symbol_before(kw, "foo->bar->"), "->")
+    T.eq(tokens.trailing_symbol_before(kw, "(spot)"), ")")
+  end)
+end)

@@ -55,13 +55,18 @@ local REMOVED_OPTIONS = {
   { "limits.tokenization_limit" },
   { "limits.download_retries" },
   { "limits.download_timeout" },
-  { "display.statusline" },
+  { "display.statusline", "build your own via `vim.o.statusline` — v2 ships no statusline integration." },
   { "display.mark_highlight_group", "use `vim.api.nvim_set_hl(0, 'SnippetTabstop', ...)` — v2 uses neovim's built-in `vim.snippet`." },
   { "display.mark_applied_notify" },
   { "display.time_fmt" },
+  { "display.pum.fast_close" },
+  { "display.pum.kind_context" },
+  { "display.pum.x_max_len" },
+  { "display.pum.x_truncate_len" },
+  { "display.pum.y_max_len", "use `vim.o.pumheight = N` — neovim's built-in PUM row cap." },
+  { "display.pum.y_ratio", "compute yourself: `vim.o.pumheight = math.floor(vim.o.lines * 0.3)`." },
   { "keymap.eval_snips", "bind a key to `:COQsnips compile` yourself." },
   { "keymap.repeat" },
-  { "clients.snippets.warn" },
 }
 
 ---@type [string, string?][]
@@ -79,6 +84,9 @@ local CLIENT_SPECIFIC_REMOVED = {
   buffers = { "match_syms" },
   registers = { "max_yank_size", "match_syms" },
   paths = { "path_seps" },
+  tmux = { "match_syms" },
+  tree_sitter = { "slow_threshold" },
+  snippets = { "warn" },
 }
 
 ---@param tbl table

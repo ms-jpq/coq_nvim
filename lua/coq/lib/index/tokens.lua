@@ -1,8 +1,11 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local buffers = require "coq.lib.buffers"
+local set = require "coq.lib.set"
 
 local M = {}
+
+M.whitespace = set.new { string.byte(" "), string.byte("\t"), string.byte("\n"), string.byte("\r") }
 
 ---@param s string
 ---@return integer
@@ -98,6 +101,21 @@ end
 M.trailing_keyword_before = function(kw, line)
   local i = #line
   while i > 0 and kw[string.byte(line, i)] do
+    i = i - 1
+  end
+  return string.sub(line, i + 1)
+end
+
+---@param kw lib.Set<integer>
+---@param line string
+---@return string
+M.trailing_symbol_before = function(kw, line)
+  local i = #line
+  while i > 0 do
+    local b = string.byte(line, i)
+    if kw[b] or M.whitespace[b] then
+      break
+    end
     i = i - 1
   end
   return string.sub(line, i + 1)
