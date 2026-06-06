@@ -45,7 +45,6 @@ M.deps = function()
   noop_api("coq.deps / :COQdeps", "There is no python runtime to install. Remove the call from your bootstrap.")
 end
 
----Each entry: { dotted-path, optional alternative/hint }.
 ---@type [string, string?][]
 local REMOVED_OPTIONS = {
   { "auto_start" },
@@ -96,8 +95,6 @@ local CLIENT_SPECIFIC_REMOVED = {
   snippets = { "warn" },
 }
 
----Look up a dotted path inside a nested table. Returns nil if any segment is
----absent or if a non-table is reached mid-walk.
 ---@param tbl table
 ---@param path string
 ---@return any
@@ -114,56 +111,53 @@ end
 
 ---@class transition.Finding
 ---@field kind "option"|"client"
----@field path string                       -- dotted path (option) or client name (client)
+---@field path string
 ---@field hint? string
 
----Pure audit: diff user opts against the removed-surface catalog. Returns
----findings without firing any warnings. M.audit consumes this to drive notify.
 ---@param opts? table
----@return transition.Finding[]
+---@return lib.Iterator<transition.Finding>
 M.audit_findings = function(opts)
-  local findings = {}
-  if type(opts) ~= "table" then
-    return findings
-  end
-
-  for _, entry in pairs(REMOVED_OPTIONS) do
-    local path, hint = entry[1], entry[2]
-    if M.path_get(opts, path) ~= nil then
-      table.insert(findings, { kind = "option", path = path, hint = hint })
+  return coroutine.wrap(function()
+    if type(opts) ~= "table" then
+      return
     end
-  end
 
-  for _, entry in pairs(REMOVED_CLIENTS) do
-    local name, hint = entry[1], entry[2]
-    if M.path_get(opts, "clients." .. name) ~= nil then
-      table.insert(findings, { kind = "client", path = name, hint = hint })
+    for _, entry in pairs(REMOVED_OPTIONS) do
+      local path, hint = entry[1], entry[2]
+      if M.path_get(opts, path) ~= nil then
+        coroutine.yield { kind = "option", path = path, hint = hint }
+      end
     end
-  end
 
-  if type(opts.clients) == "table" then
-    for name, client_opts in pairs(opts.clients) do
-      if type(client_opts) == "table" then
-        for _, knob in pairs(PER_CLIENT_REMOVED) do
-          if client_opts[knob] ~= nil then
-            table.insert(findings, { kind = "option", path = "clients." .. name .. "." .. knob })
+    for _, entry in pairs(REMOVED_CLIENTS) do
+      local name, hint = entry[1], entry[2]
+      if M.path_get(opts, "clients." .. name) ~= nil then
+        coroutine.yield { kind = "client", path = name, hint = hint }
+      end
+    end
+
+    if type(opts.clients) == "table" then
+      for name, client_opts in pairs(opts.clients) do
+        if type(client_opts) == "table" then
+          for _, knob in pairs(PER_CLIENT_REMOVED) do
+            if client_opts[knob] ~= nil then
+              coroutine.yield { kind = "option", path = "clients." .. name .. "." .. knob }
+            end
           end
-        end
-        for _, knob in pairs(CLIENT_SPECIFIC_REMOVED[name] or {}) do
-          if client_opts[knob] ~= nil then
-            table.insert(findings, { kind = "option", path = "clients." .. name .. "." .. knob })
+          for _, knob in pairs(CLIENT_SPECIFIC_REMOVED[name] or {}) do
+            if client_opts[knob] ~= nil then
+              coroutine.yield { kind = "option", path = "clients." .. name .. "." .. knob }
+            end
           end
         end
       end
     end
-  end
-
-  return findings
+  end)
 end
 
 ---@param opts? table
 M.audit = function(opts)
-  for _, f in pairs(M.audit_findings(opts)) do
+  for f in M.audit_findings(opts) do
     if f.kind == "option" then
       removed_option(f.path, f.hint)
     else
