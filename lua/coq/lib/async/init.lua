@@ -148,8 +148,7 @@ end
 M.awaitify = function(fn, opts)
   return function(...)
     local f = runtime.future()
-    local argv = { ... }
-    table.insert(argv, f.resolve)
+    local argv = vim.list_extend({ ... }, { f.resolve })
 
     fn(unpack(argv))
     return f.await(opts)

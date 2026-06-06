@@ -24,20 +24,32 @@ local T_CAMEL = 2 ^ 24
 
 local LEN_CAP = 1024
 
+local BYTE_A = string.byte "A"
+local BYTE_Z = string.byte "Z"
+local BYTE_a = string.byte "a"
+local BYTE_z = string.byte "z"
+local BYTE_0 = string.byte "0"
+local BYTE_9 = string.byte "9"
+local BYTE_HIGH = 128 -- first byte of any multi-byte UTF-8 codepoint
+
 -- ============================================================================
 -- Helpers
 -- ============================================================================
 
 local function is_upper(b)
-  return b >= 65 and b <= 90
+  return b >= BYTE_A and b <= BYTE_Z
 end
 
 local function is_lower(b)
-  return b >= 97 and b <= 122
+  return b >= BYTE_a and b <= BYTE_z
+end
+
+local function is_digit(b)
+  return b >= BYTE_0 and b <= BYTE_9
 end
 
 local function to_lower(b)
-  return is_upper(b) and b + 32 or b
+  return is_upper(b) and b + (BYTE_a - BYTE_A) or b
 end
 
 -- Per-character smart-case predicate. The driver of the case rule:
@@ -79,19 +91,18 @@ end
 -- "BatchAgnSelector"     -> "BAS"
 local function initials(s)
   local out = {}
-  local prev = 32 -- start of string treated as whitespace
+  local prev = string.byte " " -- start of string treated as whitespace
   for i = 1, #s do
     local b = string.byte(s, i)
-    local prev_lower = is_lower(prev) or (prev >= 48 and prev <= 57)
-    local prev_word = prev_lower or is_upper(prev)
+    local prev_word = is_lower(prev) or is_digit(prev) or is_upper(prev)
     if is_upper(b) and is_lower(prev) then
       table.insert(out, b)
-    elseif not prev_word and (is_upper(b) or is_lower(b) or (b >= 48 and b <= 57)) then
+    elseif not prev_word and (is_upper(b) or is_lower(b) or is_digit(b)) then
       table.insert(out, b)
     end
     prev = b
   end
-  return string.char((table.unpack or unpack)(out))
+  return string.char(unpack(out))
 end
 
 -- fzf v2 character classes
@@ -103,8 +114,8 @@ local CLASS_UPPER = 5
 local CLASS_LETTER = 6
 local CLASS_NUMBER = 7
 
-local DELIMITERS = set.new { 47, 44, 58, 59, 124 } -- / , : ; |
-local WHITES = set.new { 32, 9, 10, 13 } -- space, tab, \n, \r
+local DELIMITERS = set.new { string.byte "/", string.byte ",", string.byte ":", string.byte ";", string.byte "|" }
+local WHITES = set.new { string.byte " ", string.byte "\t", string.byte "\n", string.byte "\r" }
 
 local function classify(b)
   if WHITES[b] then
@@ -113,16 +124,16 @@ local function classify(b)
   if DELIMITERS[b] then
     return CLASS_DELIM
   end
-  if b >= 97 and b <= 122 then
+  if is_lower(b) then
     return CLASS_LOWER
   end
-  if b >= 65 and b <= 90 then
+  if is_upper(b) then
     return CLASS_UPPER
   end
-  if b >= 48 and b <= 57 then
+  if is_digit(b) then
     return CLASS_NUMBER
   end
-  if b >= 128 then
+  if b >= BYTE_HIGH then
     return CLASS_LETTER
   end
   return CLASS_NONWORD
@@ -139,6 +150,18 @@ local BONUS_CONSECUTIVE = 4
 local BONUS_FIRST_CHAR_MULT = 2
 local BONUS_BOUNDARY_WHITE = 10
 local BONUS_BOUNDARY_DELIM = 9
+
+-- Tier-overlap invariant. Bounds derived from the per-stage score formulas:
+--   try_prefix max = T_PREFIX + full_bonus(LEN_CAP) + (LEN_CAP - m)  - 0
+--   try_camel  max = T_CAMEL  + (LEN_CAP - m)
+--   try_fuzzy  max = SCORE_MATCH * BONUS_FIRST_CHAR_MULT * LEN_CAP + LEN_CAP*0.001
+-- Future LEN_CAP / tier bumps trip these at module load.
+do
+  local FUZZY_MAX = SCORE_MATCH * BONUS_FIRST_CHAR_MULT * LEN_CAP + LEN_CAP
+  assert(T_PREFIX + 2 * LEN_CAP < T_EXACT, "try_prefix can overlap T_EXACT")
+  assert(T_CAMEL + LEN_CAP < T_PREFIX, "try_camel can overlap T_PREFIX")
+  assert(FUZZY_MAX < T_CAMEL, "try_fuzzy can overlap T_CAMEL")
+end
 
 local function bonus_for(prev, curr)
   if curr == CLASS_LOWER or curr == CLASS_LETTER or curr == CLASS_UPPER or curr == CLASS_NUMBER then
@@ -167,47 +190,44 @@ local function bonus_for(prev, curr)
   return 0
 end
 
----fzf v2 Smith-Waterman DP. Returns the maximum alignment score or nil
----when no subsequence match exists.
+---Subsequence pre-check — true iff every needle byte appears in order in
+---haystack. Cheap rejection before the O(n·m) DP.
 ---@param probe hybrid.Probe
----@return integer?
-local function fzf_score(probe)
+---@return boolean
+local function is_subsequence(probe)
   local needle, haystack, n, m = probe.needle, probe.haystack, probe.n, probe.m
-
-  local function nmatch(i, j)
-    return smart_eq(string.byte(needle, i), string.byte(haystack, j))
-  end
-
-  -- subsequence pre-check
-  do
-    local i = 1
-    for j = 1, m do
-      if nmatch(i, j) then
-        i = i + 1
-        if i > n then
-          break
-        end
+  local i = 1
+  for j = 1, m do
+    if smart_eq(string.byte(needle, i), string.byte(haystack, j)) then
+      i = i + 1
+      if i > n then
+        return true
       end
     end
-    if i <= n then
-      return nil
-    end
   end
+  return false
+end
 
-  -- precompute haystack classes
+---Pre-classify each haystack byte once; the DP reads from this table by index.
+---@param haystack string
+---@param m integer
+---@return integer[]
+local function classify_haystack(haystack, m)
   local hclass = {}
   for j = 1, m do
     hclass[j] = classify(string.byte(haystack, j))
   end
+  return hclass
+end
 
-  local function bclass_at(j)
-    if j == 0 then
-      return CLASS_WHITE
-    end
-    return hclass[j]
-  end
+---fzf v2 Smith-Waterman DP. Two matrices: H (best score), C (consecutive-run
+---length). Returns the maximum alignment score over the final row.
+---@param probe hybrid.Probe
+---@param hclass integer[]
+---@return integer
+local function dp_score(probe, hclass)
+  local needle, haystack, n, m = probe.needle, probe.haystack, probe.n, probe.m
 
-  -- DP with two matrices: H (best score) and C (consecutive-run length).
   local H, C = {}, {}
   for i = 0, n do
     H[i] = {}
@@ -220,24 +240,26 @@ local function fzf_score(probe)
     C[0][j] = 0
   end
 
-  local best = -1
+  local best = 0
   for i = 1, n do
     local in_gap = false
     for j = 1, m do
-      local left = H[i][j - 1] or 0
+      local left = H[i][j - 1]
       local s2 = left + (in_gap and SCORE_GAP_EXTENSION or SCORE_GAP_START)
       local s1 = 0
       local consec = 0
 
-      if nmatch(i, j) then
-        local b = bonus_for(bclass_at(j - 1), hclass[j])
+      if smart_eq(string.byte(needle, i), string.byte(haystack, j)) then
+        local prev_class = (j == 1) and CLASS_WHITE or hclass[j - 1]
+        local b = bonus_for(prev_class, hclass[j])
         if i == 1 then
           b = b * BONUS_FIRST_CHAR_MULT
         end
-        local diag = H[i - 1][j - 1] or 0
-        consec = (C[i - 1][j - 1] or 0) + 1
+        local diag = H[i - 1][j - 1]
+        consec = C[i - 1][j - 1] + 1
         if consec > 1 then
-          local first_b = bonus_for(bclass_at(j - consec), hclass[j - consec + 1])
+          local run_prev_class = (j - consec == 0) and CLASS_WHITE or hclass[j - consec]
+          local first_b = bonus_for(run_prev_class, hclass[j - consec + 1])
           if i == 1 then
             first_b = first_b * BONUS_FIRST_CHAR_MULT
           end
@@ -274,10 +296,18 @@ local function fzf_score(probe)
     end
   end
 
-  if best < 0 then
+  return best
+end
+
+---fzf v2 Smith-Waterman score, or nil if the needle isn't a subsequence.
+---@param probe hybrid.Probe
+---@return integer?
+local function fzf_score(probe)
+  if not is_subsequence(probe) then
     return nil
   end
-  return best
+  local hclass = classify_haystack(probe.haystack, probe.m)
+  return dp_score(probe, hclass)
 end
 
 ---A needle-haystack pair that has passed length validation. Each stage
@@ -357,6 +387,11 @@ local function try_fuzzy(probe)
   if f == nil then
     return nil
   end
+  -- 0.001 length tiebreak deliberately lives below integer granularity, so
+  -- the fractional part can never tie or exceed the next-higher integer
+  -- score. Two haystacks with the same fzf score sort by length asc.
+  -- This is the one stage whose `number?` is a float; the other tiers are
+  -- always integer. Pipeline comparisons mix cleanly under Lua semantics.
   return f + (LEN_CAP - probe.m) * 0.001
 end
 
@@ -375,8 +410,8 @@ M.score = function(needle, haystack)
   if probe == nil then
     return nil
   end
-  for i = 1, #STAGES do
-    local s = STAGES[i](probe)
+  for _, stage in ipairs(STAGES) do
+    local s = stage(probe)
     if s ~= nil then
       return s
     end
@@ -384,23 +419,13 @@ M.score = function(needle, haystack)
   return nil
 end
 
----Wrap a stage so it accepts raw `(needle, haystack)` instead of a Probe.
----Used by the test surface — callers still go through `M.score`.
----@param stage hybrid.Stage
----@return fun(needle: string, haystack: string): number?
-local function via_probe(stage)
-  return function(needle, haystack)
-    local probe = probe_of(needle, haystack)
-    return probe and stage(probe) or nil
-  end
-end
-
----Stages exposed for direct testing. Callers should still use `M.score`.
-M._stages = {
-  exact = via_probe(try_exact),
-  prefix = via_probe(try_prefix),
-  camel = via_probe(try_camel),
-  fuzzy = via_probe(try_fuzzy),
+---Exposed for tests. Callers should still go through M.score.
+M._probe_of = probe_of
+M.STAGES = {
+  exact = try_exact,
+  prefix = try_prefix,
+  camel = try_camel,
+  fuzzy = try_fuzzy,
 }
 
 return M

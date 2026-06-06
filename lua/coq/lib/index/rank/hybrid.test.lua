@@ -205,99 +205,120 @@ T.describe({ "rank.hybrid" }, function(test)
   end)
 end)
 
--- Stage-level tests. Each stage is a pure transform with the same
--- signature `(needle, haystack) -> number?`. Probe them in isolation,
--- bypassing the pipeline's first-non-nil cascade.
-T.describe({ "rank.hybrid._stages" }, function(test)
-  local stages = hybrid._stages
+-- Stage-level tests. Each stage takes a Probe and returns a score or nil.
+-- Tests construct probes via hybrid._probe_of and feed them directly.
+T.describe({ "rank.hybrid._probe_of" }, function(test)
+  test({ "rejects empty needle" }, function()
+    T.eq(hybrid._probe_of("", "dog"), nil)
+  end)
+
+  test({ "rejects needle longer than haystack" }, function()
+    T.eq(hybrid._probe_of("lab", "x"), nil)
+  end)
+
+  test({ "accepts equal-length pair" }, function()
+    assert(hybrid._probe_of("dog", "dog") ~= nil)
+  end)
+
+  test({ "rejects oversize haystack" }, function()
+    T.eq(hybrid._probe_of("a", string.rep("a", 1025)), nil)
+  end)
+end)
+
+T.describe({ "rank.hybrid.STAGES" }, function(test)
+  ---@param n string
+  ---@param h string
+  ---@return hybrid.Probe
+  local probe = function(n, h)
+    return assert(hybrid._probe_of(n, h), "test inputs must yield a valid probe")
+  end
 
   -- exact ----------------------------------------------------------------
 
   test({ "exact: byte-equal returns T_EXACT" }, function()
-    T.eq(stages.exact("dog", "dog"), 2 ^ 30)
+    T.eq(hybrid.STAGES.exact(probe("dog", "dog")), 2 ^ 30)
   end)
 
   test({ "exact: case-fold-equal returns nil (byte-exact only)" }, function()
-    T.eq(stages.exact("dog", "Dog"), nil)
+    T.eq(hybrid.STAGES.exact(probe("dog", "Dog")), nil)
   end)
 
   test({ "exact: any other input returns nil" }, function()
-    T.eq(stages.exact("dog", "doggo"), nil)
-    T.eq(stages.exact("dog", "labrador"), nil)
+    T.eq(hybrid.STAGES.exact(probe("dog", "doggo")), nil)
+    T.eq(hybrid.STAGES.exact(probe("dog", "labrador")), nil)
   end)
 
   -- prefix ---------------------------------------------------------------
 
   test({ "prefix: smart-case prefix returns a positive score" }, function()
-    assert(stages.prefix("lab", "labrador") ~= nil)
-    assert(stages.prefix("lab", "Labrador") ~= nil)
+    assert(hybrid.STAGES.prefix(probe("lab", "labrador")) ~= nil)
+    assert(hybrid.STAGES.prefix(probe("lab", "Labrador")) ~= nil)
   end)
 
   test({ "prefix: does NOT short-circuit on exact equality" }, function()
     -- The pipeline routes exact via try_exact first; the stage itself
     -- still treats exact as a valid prefix and returns a score.
-    local got = stages.prefix("dog", "dog")
+    local got = hybrid.STAGES.prefix(probe("dog", "dog"))
     assert(got ~= nil, "prefix should accept exact as a valid prefix")
     assert(got < 2 ^ 30, "prefix score should sit below T_EXACT")
   end)
 
   test({ "prefix: non-prefix returns nil" }, function()
-    T.eq(stages.prefix("lab", "global_lab"), nil)
-    T.eq(stages.prefix("lab", "x"), nil)
+    T.eq(hybrid.STAGES.prefix(probe("lab", "global_lab")), nil)
   end)
 
   test({ "prefix: smart-case rejection returns nil" }, function()
-    T.eq(stages.prefix("Lab", "labrador"), nil)
+    T.eq(hybrid.STAGES.prefix(probe("Lab", "labrador")), nil)
   end)
 
   -- camel ----------------------------------------------------------------
 
   test({ "camel: matching initialism returns a positive score" }, function()
-    assert(stages.camel("agn", "AnimGraphNode") ~= nil)
-    assert(stages.camel("agn", "anim_graph_node") ~= nil)
+    assert(hybrid.STAGES.camel(probe("agn", "AnimGraphNode")) ~= nil)
+    assert(hybrid.STAGES.camel(probe("agn", "anim_graph_node")) ~= nil)
   end)
 
   test({ "camel: non-initialism returns nil" }, function()
-    T.eq(stages.camel("agn", "BatchAgnSelector"), nil)
-    T.eq(stages.camel("xyz", "AnimGraphNode"), nil)
+    T.eq(hybrid.STAGES.camel(probe("agn", "BatchAgnSelector")), nil)
+    T.eq(hybrid.STAGES.camel(probe("xyz", "AnimGraphNode")), nil)
   end)
 
   test({ "camel: shorter haystack wins on tiebreak" }, function()
-    local short = assert(stages.camel("agn", "AnimGraphNode"))
-    local long = assert(stages.camel("agn", "AnimationGraphNode"))
+    local short = assert(hybrid.STAGES.camel(probe("agn", "AnimGraphNode")))
+    local long = assert(hybrid.STAGES.camel(probe("agn", "AnimationGraphNode")))
     assert(short > long, "shorter initialism candidate should outscore longer")
   end)
 
   -- fuzzy ----------------------------------------------------------------
 
   test({ "fuzzy: subsequence match returns a positive score" }, function()
-    local got = stages.fuzzy("lbr", "labrador")
+    local got = hybrid.STAGES.fuzzy(probe("lbr", "labrador"))
     assert(got ~= nil and got > 0)
   end)
 
   test({ "fuzzy: non-subsequence returns nil" }, function()
-    T.eq(stages.fuzzy("xyz", "labrador"), nil)
+    T.eq(hybrid.STAGES.fuzzy(probe("xyz", "labrador")), nil)
   end)
 
   test({ "fuzzy: smart-case rejection propagates as nil" }, function()
-    T.eq(stages.fuzzy("Lab", "labrador"), nil)
+    T.eq(hybrid.STAGES.fuzzy(probe("Lab", "labrador")), nil)
   end)
 
   -- pipeline ordering ----------------------------------------------------
 
   test({ "score: returns try_exact result when byte-equal" }, function()
-    T.eq(hybrid.score("dog", "dog"), stages.exact("dog", "dog"))
+    T.eq(hybrid.score("dog", "dog"), hybrid.STAGES.exact(probe("dog", "dog")))
   end)
 
   test({ "score: returns try_prefix result when smart-case prefix matches" }, function()
-    T.eq(hybrid.score("lab", "labrador"), stages.prefix("lab", "labrador"))
+    T.eq(hybrid.score("lab", "labrador"), hybrid.STAGES.prefix(probe("lab", "labrador")))
   end)
 
   test({ "score: returns try_camel result for initialism non-prefix" }, function()
-    T.eq(hybrid.score("agn", "AnimGraphNode"), stages.camel("agn", "AnimGraphNode"))
+    T.eq(hybrid.score("agn", "AnimGraphNode"), hybrid.STAGES.camel(probe("agn", "AnimGraphNode")))
   end)
 
   test({ "score: returns try_fuzzy result for plain subsequence" }, function()
-    T.eq(hybrid.score("lbr", "labrador"), stages.fuzzy("lbr", "labrador"))
+    T.eq(hybrid.score("lbr", "labrador"), hybrid.STAGES.fuzzy(probe("lbr", "labrador")))
   end)
 end)

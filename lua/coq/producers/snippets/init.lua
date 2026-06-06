@@ -81,29 +81,20 @@ M.idle = function(settings, idle_ctx)
   local idx = index_of(settings)
   local ft = string.lower(idle_ctx.ctx.filetype)
 
-  local loaded = set.new {}
   ---@type snippets.Extends[]
   local all_extends = {}
 
-  local pending = vim.list_extend({ ft }, extends_m.IMPLICIT)
-  while #pending > 0 do
-    local target = table.remove(pending)
-    if not loaded[target] then
-      local cached = fetch_ft(settings, idle_ctx, target)
+  for target, cached in
+    extends_m.traverse(ft, function(t)
+      return fetch_ft(settings, idle_ctx, t)
+    end)
+  do
+    table.insert(all_extends, { [target] = set.new(cached.extends) })
 
-      do
-        loaded[target] = true
-        table.insert(all_extends, { [target] = set.new(cached.extends) })
-        for _, parent in pairs(cached.extends) do
-          table.insert(pending, parent)
-        end
-      end
-
-      async.sleep(0)
-      idx.prune { filetype = target }
-      for _, item in pairs(cached.items) do
-        idx.insert(item)
-      end
+    async.sleep(0)
+    idx.prune { filetype = target }
+    for _, item in pairs(cached.items) do
+      idx.insert(item)
     end
   end
 

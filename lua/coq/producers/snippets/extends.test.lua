@@ -100,3 +100,79 @@ T.describe({ "snippets.extends.denormalize" }, function(test)
     T.eq(r.B, nil)
   end)
 end)
+
+T.describe({ "snippets.extends.traverse" }, function(test)
+  ---@param graph table<string, string[]>
+  ---@return fun(t: string): { extends: string[] }
+  local fetcher = function(graph)
+    return function(t)
+      return { extends = graph[t] or {} }
+    end
+  end
+
+  ---@param target string
+  ---@param graph table<string, string[]>
+  ---@return string[]
+  local sorted_seen = function(target, graph)
+    local seen = {}
+    for t, _ in extends_m.traverse(target, fetcher(graph)) do
+      table.insert(seen, t)
+    end
+    table.sort(seen)
+    return seen
+  end
+
+  test({ "yields target plus the implicit defaults" }, function()
+    T.eq(sorted_seen("foo", {}), { "*", "_", "foo" })
+  end)
+
+  test({ "follows extends edges depth-first" }, function()
+    T.eq(sorted_seen("A", { A = { "B" }, B = { "C" } }), { "*", "A", "B", "C", "_" })
+  end)
+
+  test({ "deduplicates already-loaded filetypes" }, function()
+    -- A → B, A → C, B → C: C should not be processed twice.
+    local counts = {}
+    for _, t in pairs(sorted_seen("A", { A = { "B", "C" }, B = { "C" } })) do
+      counts[t] = (counts[t] or 0) + 1
+    end
+    T.eq(counts, { ["*"] = 1, A = 1, B = 1, C = 1, _ = 1 })
+  end)
+
+  test({ "terminates on self-edge" }, function()
+    T.eq(sorted_seen("A", { A = { "A" } }), { "*", "A", "_" })
+  end)
+
+  test({ "terminates on two-cycle" }, function()
+    T.eq(sorted_seen("A", { A = { "B" }, B = { "A" } }), { "*", "A", "B", "_" })
+  end)
+
+  test({ "terminates on three-cycle" }, function()
+    T.eq(sorted_seen("A", { A = { "B" }, B = { "C" }, C = { "A" } }), { "*", "A", "B", "C", "_" })
+  end)
+
+  test({ "implicit entries follow their own extends" }, function()
+    -- "*" extends "shared"; "shared" must appear in the visited set.
+    T.eq(sorted_seen("foo", { ["*"] = { "shared" } }), { "*", "_", "foo", "shared" })
+  end)
+
+  test({ "yielded cached value is whatever fetch returned" }, function()
+    local fetch = function(t)
+      return { extends = {}, payload = t .. "-data" }
+    end
+    local payloads = {}
+    for t, cached in extends_m.traverse("X", fetch) do
+      payloads[t] = cached.payload
+    end
+    T.eq(payloads, { X = "X-data", ["*"] = "*-data", _ = "_-data" })
+  end)
+
+  test({ "target deduped against implicit when they overlap" }, function()
+    -- if "*" is the target, it shouldn't be visited twice.
+    local counts = {}
+    for _, t in pairs(sorted_seen("*", {})) do
+      counts[t] = (counts[t] or 0) + 1
+    end
+    T.eq(counts, { ["*"] = 1, _ = 1 })
+  end)
+end)

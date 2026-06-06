@@ -118,6 +118,58 @@ M._word_range = function(ctx, i, lsp)
   return edit
 end
 
+---@param settings config.Settings
+---@param ctx ctx.full
+---@param resolver completions.Resolver
+---@param i completions.Item
+---@return completions.ItemLspMeta? lsp
+---@return lsp.TextEdit[] edits
+M._resolve = function(settings, ctx, resolver, i)
+  local lsp = i.meta.lsp or {}
+  local edits = (lsp.item and lsp.item.additionalTextEdits) or {}
+  if #edits > 0 then
+    return lsp, edits
+  end
+
+  local timeout_ms = math.floor(settings.clients.lsp.resolve_timeout * 1000)
+  lsp = resolver.resolve(ctx, i, timeout_ms) or lsp
+  edits = (lsp.item and lsp.item.additionalTextEdits) or {}
+
+  if not context.still_valid(ctx) then
+    return nil, {}
+  end
+  return lsp, edits
+end
+
+---@param ctx ctx.full
+---@param i completions.Item
+---@param lsp completions.ItemLspMeta
+---@param additional_edits lsp.TextEdit[]
+M._apply_edits = function(ctx, i, lsp, additional_edits)
+  local edit = M._word_range(ctx, i, lsp)
+  local enc = lsp.position_encoding or DEFAULT_ENCODING
+  local start_line = vim.api.nvim_buf_get_lines(ctx.buf, edit.start_row, edit.start_row + 1, true)[1] or ""
+  local end_line = edit.end_row == edit.start_row and start_line
+    or (vim.api.nvim_buf_get_lines(ctx.buf, edit.end_row, edit.end_row + 1, true)[1] or "")
+
+  local main_edit = {
+    range = {
+      start = {
+        line = edit.start_row,
+        character = vim.str_utfindex(start_line, enc, edit.start_col, true),
+      },
+      ["end"] = {
+        line = edit.end_row,
+        character = vim.str_utfindex(end_line, enc, edit.end_col, true),
+      },
+    },
+    newText = edit.text,
+  }
+  local all_edits = vim.list_extend({ main_edit }, additional_edits)
+
+  vim.lsp.util.apply_text_edits(all_edits, ctx.buf, enc)
+end
+
 -- https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/completion.lua
 ---@param settings config.Settings
 ---@param ctx ctx.full
@@ -125,53 +177,15 @@ end
 ---@param i completions.Item
 ---@return true?
 M.apply = function(settings, ctx, resolver, i)
-  local meta = i.meta
-  local lsp = meta.lsp or {}
-
-  local edits = lsp.item and lsp.item.additionalTextEdits
-  if #(edits or {}) == 0 then
-    local timeout_ms = math.floor(settings.clients.lsp.resolve_timeout * 1000)
-    lsp = resolver.resolve(ctx, i, timeout_ms) or lsp
-    edits = lsp.item and lsp.item.additionalTextEdits
-
-    if not context.still_valid(ctx) then
-      return
-    end
+  local lsp, edits = M._resolve(settings, ctx, resolver, i)
+  if not lsp then
+    return
   end
 
-  do
-    local edit = M._word_range(ctx, i, lsp)
-    local enc = lsp.position_encoding or DEFAULT_ENCODING
-    local start_line = vim.api.nvim_buf_get_lines(ctx.buf, edit.start_row, edit.start_row + 1, true)[1] or ""
-    local end_line = edit.end_row == edit.start_row and start_line
-      or (vim.api.nvim_buf_get_lines(ctx.buf, edit.end_row, edit.end_row + 1, true)[1] or "")
+  M._apply_edits(ctx, i, lsp, edits)
 
-    local all_edits = vim
-      .iter(coroutine.wrap(function()
-        coroutine.yield {
-          range = {
-            start = {
-              line = edit.start_row,
-              character = vim.str_utfindex(start_line, enc, edit.start_col, true),
-            },
-            ["end"] = {
-              line = edit.end_row,
-              character = vim.str_utfindex(end_line, enc, edit.end_col, true),
-            },
-          },
-          newText = edit.text,
-        }
-        for _, e in pairs(edits or {}) do
-          coroutine.yield(e)
-        end
-      end))
-      :totable()
-
-    vim.lsp.util.apply_text_edits(all_edits, ctx.buf, enc)
-  end
-
-  if meta.snippet then
-    errs.with_reporting(vim.snippet.expand)(meta.snippet)
+  if i.meta.snippet then
+    errs.with_reporting(vim.snippet.expand)(i.meta.snippet)
   end
 
   if lsp.item and lsp.item.command then

@@ -79,6 +79,25 @@ end
 ---@param client vim.lsp.Client
 ---@param ctx ctx.full
 ---@param td_params lsp.TextDocumentIdentifier
+---@param trigger_char string?
+---@param token string
+---@return lsp.CompletionParams
+M._params_of = function(client, ctx, td_params, trigger_char, token)
+  local row = unpack(ctx.pos)
+  return {
+    position = { line = row - 1, character = col_for(ctx.pos, client.offset_encoding) },
+    textDocument = td_params,
+    context = {
+      triggerKind = trigger_kind_of(ctx.buf, client.id, trigger_char),
+      triggerCharacter = trigger_char,
+    },
+    partialResultToken = token,
+  }
+end
+
+---@param client vim.lsp.Client
+---@param ctx ctx.full
+---@param td_params lsp.TextDocumentIdentifier
 ---@return fun() close
 ---@return lib.Iterator<lsp.CompletionItem[]> iter
 local query_1 = function(client, ctx, td_params)
@@ -106,16 +125,7 @@ local query_1 = function(client, ctx, td_params)
       end
     end)
 
-    local row = ctx.pos[1]
-    local params = {
-      position = { line = row - 1, character = col_for(ctx.pos, client.offset_encoding) },
-      textDocument = td_params,
-      context = {
-        triggerKind = trigger_kind_of(ctx.buf, client.id, trigger_char),
-        triggerCharacter = trigger_char,
-      },
-      partialResultToken = token,
-    }
+    local params = M._params_of(client, ctx, td_params, trigger_char, token)
 
     ---@type channels.Mpmc<lsp.CompletionItem[]>
     local chan = mpmc.new(math.huge)

@@ -193,3 +193,175 @@ T.describe({ "inserted.span" }, function(test)
     T.eq(span, { start_row = 0, start_col = 0, end_row = 0, end_col = 5 })
   end)
 end)
+
+local async = require "coq.lib.async"
+local atools = require "coq.lib.atools"
+
+---@param lines string[]
+---@return ctx.full, integer buf
+local make_ctx = function(lines)
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, true, lines)
+  local first = lines[1] or ""
+  ---@type ctx.full
+  ---@diagnostic disable-next-line: missing-fields
+  local ctx = {
+    win = 0,
+    buf = buf,
+    pos = { 1, #first },
+    changedtick = vim.b[buf].changedtick,
+    iskeyword = tokens.parse_charset(vim.bo[buf].iskeyword),
+  }
+  return ctx, buf
+end
+
+---@param buf integer
+---@return string[]
+local lines_of = function(buf)
+  return vim.api.nvim_buf_get_lines(buf, 0, -1, true)
+end
+
+T.describe({ "inserted._apply_edits" }, function(test)
+  test({ "plain word: replaces the trailing keyword span with item.word" }, function()
+    local ctx, buf = make_ctx { "fid" }
+    ---@diagnostic disable-next-line: missing-fields
+    local item = { word = "fido", meta = { uid = "x", source = "LSP", filter = "fid", fuzzy = 0 } } --[[@as completions.Item]]
+    inserted._apply_edits(ctx, item, {}, {})
+    T.eq(lines_of(buf), { "fido" })
+  end)
+
+  test({ "snippet item: main edit empties the keyword span (snippet expands separately)" }, function()
+    local ctx, buf = make_ctx { "fid" }
+    ---@diagnostic disable-next-line: missing-fields
+    local item = {
+      word = "fido",
+      abbr = "fido",
+      meta = { uid = "x", source = "LSP", filter = "fid", fuzzy = 0, snippet = "fido($0)" },
+    } --[[@as completions.Item]]
+    inserted._apply_edits(ctx, item, {}, {})
+    T.eq(lines_of(buf), { "" })
+  end)
+
+  test({ "additionalTextEdits applied alongside the main edit, no row-shift bug" }, function()
+    -- INS1 regression: main edit replaces "fid" with 3 lines on row 0;
+    -- additional sits on row 2 against the ORIGINAL buffer. Both must land
+    -- at their pre-edit coords via apply_text_edits' descending sort.
+    local ctx, buf = make_ctx { "fid", "ignored", "leave-me-alone" }
+    ---@diagnostic disable-next-line: missing-fields
+    local item = {
+      word = "fido",
+      meta = { uid = "x", source = "LSP", filter = "fid", fuzzy = 0 },
+    } --[[@as completions.Item]]
+    ---@diagnostic disable-next-line: missing-fields
+    local lsp = {
+      position_encoding = "utf-16",
+      ---@diagnostic disable-next-line: missing-fields
+      item = {
+        textEdit = {
+          newText = "line-1\nline-2\nline-3",
+          range = {
+            start = { line = 0, character = 0 },
+            ["end"] = { line = 0, character = 3 },
+          },
+        },
+      },
+    } --[[@as completions.ItemLspMeta]]
+    local additional = {
+      {
+        newText = "IMPORT",
+        range = {
+          start = { line = 2, character = 0 },
+          ["end"] = { line = 2, character = 0 },
+        },
+      },
+    }
+    inserted._apply_edits(ctx, item, lsp, additional)
+    T.eq(lines_of(buf), { "line-1", "line-2", "line-3", "ignored", "IMPORTleave-me-alone" })
+  end)
+end)
+
+---@param fake fun(ctx: ctx.full, item: completions.Item, timeout_ms: integer): completions.ItemLspMeta?
+---@return completions.Resolver
+local fake_resolver = function(fake)
+  ---@diagnostic disable-next-line: missing-fields
+  return { resolve = fake } --[[@as completions.Resolver]]
+end
+
+---@return config.Settings
+local settings_of = function()
+  ---@diagnostic disable-next-line: missing-fields
+  return { clients = { lsp = { resolve_timeout = 1 } } } --[[@as config.Settings]]
+end
+
+T.describe({ "inserted._resolve" }, function(test)
+  test({ "skips resolver when item already carries additionalTextEdits" }, function()
+    local called = false
+    local ctx = make_ctx { "" }
+    ---@diagnostic disable-next-line: missing-fields
+    local item = {
+      word = "fido",
+      meta = {
+        uid = "x",
+        source = "LSP",
+        filter = "fido",
+        fuzzy = 0,
+        ---@diagnostic disable-next-line: missing-fields
+        lsp = { item = { additionalTextEdits = { { newText = "x", range = {} } } } },
+      },
+    } --[[@as completions.Item]]
+    local resolver = fake_resolver(function()
+      called = true
+      return nil
+    end)
+    async.scope(function()
+      local lsp, edits = inserted._resolve(settings_of(), ctx, resolver, item)
+      assert(lsp, "expected lsp")
+      T.eq(#edits, 1)
+    end)
+    T.eq(called, false)
+  end)
+
+  test({ "calls resolver when no additionalTextEdits, returns enriched edits" }, function()
+    local captured_timeout
+    local ctx = make_ctx { "" }
+    ---@diagnostic disable-next-line: missing-fields
+    local item = {
+      word = "fido",
+      meta = { uid = "x", source = "LSP", filter = "fido", fuzzy = 0, lsp = {} },
+    } --[[@as completions.Item]]
+    local resolver = fake_resolver(function(_, _, timeout_ms)
+      captured_timeout = timeout_ms
+      return {
+        ---@diagnostic disable-next-line: missing-fields
+        item = { additionalTextEdits = { { newText = "y", range = {} } } },
+      } --[[@as completions.ItemLspMeta]]
+    end)
+    async.scope(function()
+      local lsp, edits = inserted._resolve(settings_of(), ctx, resolver, item)
+      assert(lsp, "expected lsp")
+      T.eq(#edits, 1)
+      T.eq(edits[1].newText, "y")
+    end)
+    T.eq(captured_timeout, 1000)
+  end)
+
+  test({ "returns nil when ctx is invalidated post-resolve" }, function()
+    local ctx, buf = make_ctx { "" }
+    ---@diagnostic disable-next-line: missing-fields
+    local item = {
+      word = "fido",
+      meta = { uid = "x", source = "LSP", filter = "fido", fuzzy = 0, lsp = {} },
+    } --[[@as completions.Item]]
+    local resolver = fake_resolver(function()
+      -- mutate the buffer mid-resolve → bumps changedtick → still_valid fails
+      atools.scheduled()
+      vim.api.nvim_buf_set_lines(buf, 0, -1, true, { "edited" })
+      return nil
+    end)
+    local lsp_val
+    async.scope(function()
+      lsp_val = inserted._resolve(settings_of(), ctx, resolver, item)
+    end)
+    T.eq(lsp_val, nil)
+  end)
+end)

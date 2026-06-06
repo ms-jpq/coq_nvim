@@ -36,23 +36,21 @@ local M = {}
 ---@return fun() drain
 M._drainable = function(fn)
   ---@type async.Future?
-  local pending = nil
+  local f = nil
 
   local invoke = function(...)
-    pending = async.future()
-    local argv = { ... }
-    table.insert(argv, pending.resolve)
-
+    f = async.future()
+    local argv = vim.list_extend({ ... }, { f.resolve })
     fn(unpack(argv))
 
-    local rets = { pending.await() }
-    pending = nil
+    local rets = { f.await() }
+    f = nil
     return unpack(rets)
   end
 
   local drain = function()
-    if pending then
-      pending.await { cancel = false }
+    if f then
+      f.await { cancel = false }
     end
   end
 
@@ -66,7 +64,7 @@ end
 M.stat = function(path)
   local err, st = fs_stat(path)
   if err or not st then
-    return err, st, false
+    return err, nil, false
   end
   local mask = (st.uid == UID and R_OWNER) or (st.gid == GID and R_GROUP) or R_OTHER
   return nil, st, bit.band(st.mode or 0, mask) ~= 0
