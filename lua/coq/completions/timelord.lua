@@ -6,8 +6,7 @@ local ring_m = require "coq.lib.ring"
 ---@field guard fun(key: string, recommended_ms: integer, fn: fun(): any): any
 ---@field guard_stream_1 fun(key: string, recommended_ms: integer, iter: lib.Iterator<any>): lib.Iterator<any>
 
-local MIN_SAMPLES = 4
-local MAX_SAMPLES = 32
+local MIN_SAMPLES, MAX_SAMPLES = 4, 32
 local FACTOR = 1.5
 
 ---@param samples number[]
