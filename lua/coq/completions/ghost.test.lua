@@ -79,17 +79,29 @@ end
 -- nvim normalizes some keys (eol + virt_text_win_col → "win_col"), so for
 -- tests that care about the normalized form we round-trip through a
 -- persistent extmark via mark_details.
+---@param ghost_settings config.GhostText
+---@param buf integer
+---@param cursor_col integer
+local extmark_opts = function(ghost_settings, buf, cursor_col)
+  local s = vim.b[buf].coq_ghost
+  if s == nil then
+    return nil
+  end
+  local first = ghost._extmarks(ghost_settings, buf, s, cursor_col)()
+  return first and first.opts
+end
+
 ---@param buf integer
 ---@param ctx ctx.base
 local mark_text = function(buf, ctx)
-  local opts = ghost._extmark_opts(ghost_cfg, buf, ctx.pos[2])
+  local opts = extmark_opts(ghost_cfg, buf, ctx.pos[2])
   return opts and opts.virt_text and opts.virt_text[1]
 end
 
 ---@param buf integer
 ---@param ctx ctx.base
 local mark_details = function(buf, ctx)
-  local opts = ghost._extmark_opts(ghost_cfg, buf, ctx.pos[2])
+  local opts = extmark_opts(ghost_cfg, buf, ctx.pos[2])
   if not opts then
     return nil
   end
@@ -229,17 +241,19 @@ T.describe({ "ghost.show multi-line range" }, function(test)
     -- (anchor at cursor col, others at col 0).
     local buf, ctx = mk_ctx({ "dog", "good", "fido" }, 1, 0)
     ghost.show(ctx, item_ml_range("puppy\nclever\nfido", 0, 0, 2, 4))
-    local marks = ghost._extmarks(ghost_cfg, buf, ctx.pos[2])
+    local marks = vim.iter(ghost._extmarks(ghost_cfg, buf, vim.b[buf].coq_ghost, ctx.pos[2])):totable()
     T.eq(#marks, 3)
+    -- Anchor is (0, 0); cursor col is 0 too. Marks 2+ overlay at col 0
+    -- on rows 1 and 2 (anchor_row + k - 1).
     T.eq(marks[1].opts.virt_text[1][1], "puppy")
     T.eq(marks[1].opts.virt_text_pos, "overlay")
-    T.eq(marks[1].col_at_cursor, true)
+    T.eq(marks[1].row, 0)
     T.eq(marks[2].opts.virt_text[1][1], "clever")
     T.eq(marks[2].opts.virt_text_pos, "overlay")
-    T.eq(marks[2].col_at_cursor, false)
-    T.eq(marks[2].row_offset, 1)
+    T.eq(marks[2].row, 1)
+    T.eq(marks[2].col, 0)
     T.eq(marks[3].opts.virt_text[1][1], "fido")
-    T.eq(marks[3].row_offset, 2)
+    T.eq(marks[3].row, 2)
     -- No surplus virt_lines on the last mark.
     T.eq(marks[3].opts.virt_lines, nil)
   end)
@@ -248,7 +262,7 @@ T.describe({ "ghost.show multi-line range" }, function(test)
     -- 2-row range, 4-line newText → 2 overlays, 2 surplus → virt_lines on mark 2
     local buf, ctx = mk_ctx({ "a", "b" }, 1, 0)
     ghost.show(ctx, item_ml_range("L1\nL2\nL3\nL4", 0, 0, 1, 1))
-    local marks = ghost._extmarks(ghost_cfg, buf, ctx.pos[2])
+    local marks = vim.iter(ghost._extmarks(ghost_cfg, buf, vim.b[buf].coq_ghost, ctx.pos[2])):totable()
     T.eq(#marks, 2)
     T.eq(marks[1].opts.virt_text[1][1], "L1")
     T.eq(marks[2].opts.virt_text[1][1], "L2")
@@ -261,7 +275,7 @@ T.describe({ "ghost.show multi-line range" }, function(test)
     -- 3-row range, 1-line newText → 1 mark (anchor), buffer rows 2,3 leak (limitation)
     local buf, ctx = mk_ctx({ "a", "b", "c" }, 1, 0)
     ghost.show(ctx, item_ml_range("once", 0, 0, 2, 1))
-    local marks = ghost._extmarks(ghost_cfg, buf, ctx.pos[2])
+    local marks = vim.iter(ghost._extmarks(ghost_cfg, buf, vim.b[buf].coq_ghost, ctx.pos[2])):totable()
     T.eq(#marks, 1)
     T.eq(marks[1].opts.virt_text[1][1], "once")
   end)
@@ -270,7 +284,7 @@ T.describe({ "ghost.show multi-line range" }, function(test)
     -- 1-row range stays as single overlay anchor; surplus lines as virt_lines.
     local buf, ctx = mk_ctx({ "fi" }, 1, 2)
     ghost.show(ctx, item_ml_range("fido\nbark", 0, 0, 0, 2))
-    local marks = ghost._extmarks(ghost_cfg, buf, ctx.pos[2])
+    local marks = vim.iter(ghost._extmarks(ghost_cfg, buf, vim.b[buf].coq_ghost, ctx.pos[2])):totable()
     T.eq(#marks, 1)
     T.eq(marks[1].opts.virt_text[1][1], "do") -- "fi" prefix consumed
     assert(marks[1].opts.virt_lines, "expected virt_lines")
