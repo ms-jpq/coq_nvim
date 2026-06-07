@@ -6,6 +6,8 @@ local inserted = require "coq.completions.inserted"
 local txt = require "coq.lib.text"
 
 local NS = vim.api.nvim_create_namespace "coq.ghost"
+-- https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/inline_completion.lua
+local LSP_INLINE_NS = vim.api.nvim_create_namespace "nvim.lsp.inline_completion"
 local B_KEY = "coq_ghost"
 
 local M = {}
@@ -26,6 +28,7 @@ local function state_of(buf)
   if not vim.api.nvim_buf_is_valid(buf) then
     return nil
   end
+
   return vim.b[buf][B_KEY]
 end
 
@@ -49,10 +52,15 @@ local function replaces_rows(i)
   return math.max(1, r["end"].line - r.start.line + 1)
 end
 
+---@return boolean
+local function lsp_inline_active(buf)
+  return #vim.api.nvim_buf_get_extmarks(buf, LSP_INLINE_NS, 0, -1, { limit = 1 }) > 0
+end
+
 ---@param ctx ctx.full
 ---@param i? completions.Item
 M.show = function(ctx, i)
-  if i == nil or vim.lsp.inline_completion.is_enabled { bufnr = ctx.buf } then
+  if i == nil or lsp_inline_active(ctx.buf) then
     return M.clear(ctx.buf)
   end
 
@@ -61,6 +69,7 @@ M.show = function(ctx, i)
   if span.start_row == span.end_row and not string.find(insert_text, "\n", 1, true) then
     insert_text = string.sub(insert_text, 1, #insert_text - (span.end_col - e_ctx.col))
   end
+
   if insert_text == "" then
     return M.clear(ctx.buf)
   end
@@ -117,8 +126,7 @@ M._extmarks = function(ghost, buf, s, cursor_col)
       end)
       :totable()
 
-    for k = 1, row_overlays do
-      local line_k = lines[k]
+    for k, line_k in vim.iter(lines):take(row_overlays):enumerate() do
       local opts = {
         ephemeral = true,
         virt_text = line_k ~= "" and { { line_k, hl } } or {},
@@ -182,9 +190,13 @@ M.bind = function(n, settings, ev)
     end
 
     atools.scheduled()
-    local userdata = pum_ev.completed_item and pum_ev.completed_item.user_data
-    if type(userdata) == "table" and userdata.word then
-      M.show(context.full(), userdata --[[@as completions.Item]])
+    local ci = pum_ev.completed_item
+    if ci == nil or ci.word == nil or ci.word == "" then
+      return
+    end
+
+    if type(ci.user_data) == "table" and ci.user_data.word then
+      M.show(context.full(), ci.user_data --[[@as completions.Item]])
     else
       M.clear(vim.api.nvim_get_current_buf())
     end
