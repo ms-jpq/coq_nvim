@@ -171,7 +171,7 @@ M.span = function(preview, ctx, i, lsp)
   end
 
   local replace_text = M._replacement_text(preview, i, range, text_edit)
-  local match_text = (i.meta.snippet and (i.word or "")) or replace_text
+  local match_text = (i.meta.snippet and not preview and (i.word or "")) or replace_text
   local span = e_ctx.span or M._fallback_span(ctx.iskeyword, e_ctx, match_text)
 
   return span, e_ctx, enc, replace_text
