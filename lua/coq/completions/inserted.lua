@@ -1,12 +1,24 @@
 local context = require "coq.lib.context"
 local errs = require "coq.lib.errs"
 local lsp_util = require "coq.producers.lsp.util"
+local snippet_preview = require "coq.producers.snippets.preview"
 local tokens = require "coq.lib.index.tokens"
 local txt = require "coq.lib.text"
 
 local DEFAULT_ENCODING = "utf-16"
 
 local M = {}
+
+M.prefix_overlap = txt.prefix_overlap
+M.suffix_overlap = txt.suffix_overlap
+
+---@param lsp completions.ItemLspMeta?
+---@return lsp.TextEdit | lsp.InsertReplaceEdit?
+---@return lsp.Range?
+M.text_edit = function(lsp)
+  local te = lsp and lsp.item and lsp.item.textEdit
+  return te, te and (te.range or te.replace)
+end
 
 ---@param settings config.Settings
 ---@param ctx ctx.full
@@ -113,10 +125,10 @@ M._fallback_span = function(iskeyword, e_ctx, word)
   local start_col = #e_ctx.before_inserted
     - math.max(
       #tokens.trailing_keyword_before(iskeyword, e_ctx.before_inserted),
-      txt.prefix_overlap(e_ctx.before_inserted, word)
+      M.prefix_overlap(e_ctx.before_inserted, word)
     )
   local end_col = e_ctx.col
-    + math.max(#tokens.leading_keyword(iskeyword, e_ctx.after_cursor), txt.suffix_overlap(e_ctx.after_cursor, word))
+    + math.max(#tokens.leading_keyword(iskeyword, e_ctx.after_cursor), M.suffix_overlap(e_ctx.after_cursor, word))
 
   return {
     start_row = e_ctx.cursor_row,
@@ -126,14 +138,16 @@ M._fallback_span = function(iskeyword, e_ctx, word)
   }
 end
 
+---@param expand_snippet boolean
 ---@param i completions.Item
 ---@param range? lsp.Range
 ---@param text_edit? lsp.TextEdit | lsp.InsertReplaceEdit
 ---@return string
-M._replacement = function(i, range, text_edit)
+M.replacement_text = function(expand_snippet, i, range, text_edit)
   if i.meta.snippet then
-    return ""
+    return expand_snippet and snippet_preview.preview(i.meta.snippet) or ""
   end
+
   if range then
     ---@cast text_edit -nil
     return text_edit.newText or ""
@@ -147,15 +161,14 @@ end
 ---@return lsp.TextEdit
 M._main_edit = function(ctx, i, lsp)
   local enc = lsp.position_encoding or DEFAULT_ENCODING
-  local text_edit = lsp.item and lsp.item.textEdit
-  local range = text_edit and (text_edit.range or text_edit.replace)
+  local text_edit, range = M.text_edit(lsp)
 
   local e_ctx = edit_ctx(ctx, i, enc, range)
   if not e_ctx.span then
     text_edit, range = nil, nil
   end
 
-  local replace_text = M._replacement(i, range, text_edit)
+  local replace_text = M.replacement_text(false, i, range, text_edit)
   local match_text = (i.meta.snippet and (i.word or "")) or replace_text
   local span = e_ctx.span or M._fallback_span(ctx.iskeyword, e_ctx, match_text)
 

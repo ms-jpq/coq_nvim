@@ -1,46 +1,32 @@
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local events = require "coq.completions.events"
-local snippet_preview = require "coq.producers.snippets.preview"
+local inserted = require "coq.completions.inserted"
+local lib = require "coq.lib"
 local txt = require "coq.lib.text"
 
 local NS = vim.api.nvim_create_namespace "coq.ghost"
-local AUGROUP = "coq.ghost"
 
 local M = {}
 
 ---@param i completions.Item
 local function has_replacement_range(i)
-  local te = i.meta.lsp and i.meta.lsp.item and i.meta.lsp.item.textEdit
-  local r = te and (te.range or te.replace)
-  return r ~= nil
-    and not (r.start.line == r["end"].line and r.start.character == r["end"].character)
+  local _, r = inserted.text_edit(i.meta.lsp)
+  return r ~= nil and not (r.start.line == r["end"].line and r.start.character == r["end"].character)
 end
 
 ---@param i completions.Item
 local function insertion_text(i)
-  if i.meta.snippet then
-    return snippet_preview.preview(i.meta.snippet)
-  end
-  local te = i.meta.lsp and i.meta.lsp.item and i.meta.lsp.item.textEdit
-  return (te and te.newText) or i.word or ""
-end
-
----When the buffer has `vim.lsp.inline_completion` enabled, defer to it.
----@param buf integer
-local function lsp_inline_owns(buf)
-  local ic = vim.lsp.inline_completion
-  return ic and ic.is_enabled and ic.is_enabled { bufnr = buf } or false
+  local text_edit, range = inserted.text_edit(i.meta.lsp)
+  return inserted.replacement_text(true, i, range, text_edit)
 end
 
 -- Stubs — overridden by `bind`. Calling them before bind is a no-op rather
 -- than a nil-method error, so importers (notably `insertion.complete`) can
 -- safely call `ghost.show` without ordering ceremony.
-M.show = function() end
-M.clear = function() end
-M._extmark_opts = function()
-  return nil
-end
+M.show = lib.noop
+M.clear = lib.noop
+M._extmark_opts = lib.noop
 
 ---@param n? async.Nursery
 ---@param settings config.Settings
@@ -128,7 +114,8 @@ M.bind = function(n, settings, ev)
   ---@param idx? integer
   ---@param total? integer
   M.show = function(ghost, ctx, i, idx, total)
-    if not ghost.enabled or lsp_inline_owns(ctx.buf) then
+    -- Defer to `vim.lsp.inline_completion` when the buffer has it enabled.
+    if not ghost.enabled or vim.lsp.inline_completion.is_enabled { bufnr = ctx.buf } then
       return M.clear(ctx.buf)
     end
     local raw = insertion_text(i)
@@ -139,11 +126,10 @@ M.bind = function(n, settings, ev)
     local row, col = unpack(ctx.pos)
     local line = vim.api.nvim_buf_get_lines(ctx.buf, row - 1, row, true)[1] or ""
     local before, after = string.sub(line, 1, col), string.sub(line, col + 1)
-    -- Drop bytes the user has already typed, then trim trailing bytes that
-    -- already follow the cursor — same overlap math `inserted._fallback_span`
-    -- uses to compute its edit span.
-    local tail = string.sub(raw, txt.prefix_overlap(before, raw) + 1)
-    tail = string.sub(tail, 1, #tail - txt.suffix_overlap(after, tail))
+    -- Same overlap math `inserted._fallback_span` uses to compute its edit
+    -- span — re-exported from `inserted` so the shared semantics are visible.
+    local tail = string.sub(raw, inserted.prefix_overlap(before, raw) + 1)
+    tail = string.sub(tail, 1, #tail - inserted.suffix_overlap(after, tail))
     if tail == "" then
       return M.clear(ctx.buf)
     end
@@ -179,11 +165,9 @@ M.bind = function(n, settings, ev)
     end,
   })
 
-  -- Autocmds — idempotent via group clear.
-  vim.api.nvim_create_augroup(AUGROUP, { clear = true })
   local advance_handled = false
-  vim.api.nvim_create_autocmd("InsertCharPre", {
-    group = AUGROUP,
+  vim.api.nvim_create_autocmd({ "InsertCharPre" }, {
+    group = lib.group,
     callback = function(args)
       if state.buf ~= args.buf or state.remaining == "" then
         return
@@ -202,8 +186,9 @@ M.bind = function(n, settings, ev)
       end
     end,
   })
-  vim.api.nvim_create_autocmd("TextChangedI", {
-    group = AUGROUP,
+
+  vim.api.nvim_create_autocmd({ "TextChangedI" }, {
+    group = lib.group,
     callback = function(args)
       if advance_handled then
         advance_handled = false
