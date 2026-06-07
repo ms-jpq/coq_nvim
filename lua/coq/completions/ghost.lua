@@ -96,11 +96,8 @@ M._extmarks = function(ghost, buf, s, cursor_col)
 
     local line = vim.api.nvim_buf_get_lines(buf, anchor_row, anchor_row + 1, true)[1] or ""
     local typed = string.sub(line, anchor_col + 1, cursor_col)
-    if string.sub(s.insert_text, 1, #typed) ~= typed then
-      return
-    end
-
-    local remaining = string.sub(s.insert_text, #typed + 1)
+    local lcp = txt.longest_common_prefix(typed, s.insert_text)
+    local remaining = string.sub(s.insert_text, lcp + 1)
     if remaining == "" then
       return
     end
