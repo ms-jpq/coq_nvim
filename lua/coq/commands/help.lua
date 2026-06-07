@@ -29,26 +29,25 @@ M.run = function(fargs)
     elseif M.TOPICS[a] then
       topic = a
     else
-      vim.notify("COQhelp: unknown arg '" .. a .. "'", vim.log.levels.ERROR)
+      vim.notify("COQ help: unknown arg '" .. a .. "'", vim.log.levels.ERROR)
       return
     end
   end
 
   local name = M.TOPICS[topic] .. ".md"
+
   if web then
     vim.ui.open(URI_BASE .. name)
     return
   end
 
-  local found = vim.api.nvim_get_runtime_file("docs/" .. name, false)
-  local path = found[1]
+  local path = vim.api.nvim_get_runtime_file("docs/" .. name, false)[1]
   if not path then
-    vim.notify("COQhelp: docs/" .. name .. " not on runtimepath", vim.log.levels.ERROR)
+    vim.notify("COQ help: docs/" .. name .. " not on runtimepath", vim.log.levels.ERROR)
     return
   end
 
-  local lines = vim.fn.readfile(path)
-  float.show { ns = "coq.help", lines = lines, filetype = "markdown" }
+  float.show { ns = "coq.help", lines = vim.fn.readfile(path), filetype = "markdown" }
 end
 
 return M

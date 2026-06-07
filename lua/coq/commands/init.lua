@@ -6,24 +6,15 @@ local source = require "coq.commands.source"
 local stats = require "coq.commands.stats"
 local transition = require "coq.transition"
 
-local M = {}
-
-M.Help = function(...)
-  help.run { ... }
-end
-
-M.deps = transition.deps
-
 local snips_impl = lib.noop
 local stats_impl = lib.noop
 
-M.Snips = function(...)
-  return snips_impl(...)
-end
-
-M.Stats = function(...)
-  return stats_impl(...)
-end
+local M = {
+  deps = transition.deps,
+  Help = function(...) help.run { ... } end,
+  Snips = function(...) return snips_impl(...) end,
+  Stats = function(...) return stats_impl(...) end,
+}
 
 ---@param arglead string
 ---@param items string[]
@@ -45,31 +36,21 @@ end
 ---@return table<string, commands.Subcommand>
 local subcommands_of = function(settings)
   return {
-    stats = {
-      run = function()
-        M.Stats()
-      end,
-    },
+    stats = { run = function() stats_impl() end },
     help = {
-      run = function(fargs)
-        help.run(fargs)
-      end,
+      run = help.run,
       complete = function(arglead)
         return startswith_filter(arglead, vim.tbl_keys(help.TOPICS))
       end,
     },
     snips = {
-      run = function(fargs)
-        M.Snips(fargs)
-      end,
+      run = function(fargs) snips_impl(fargs) end,
       complete = function(arglead)
         return startswith_filter(arglead, snippets.SUBCMDS)
       end,
     },
     source = {
-      run = function(fargs)
-        source.run(settings, fargs)
-      end,
+      run = function(fargs) source.run(settings, fargs) end,
       complete = function(arglead, cmdline)
         return source.complete(settings, arglead, cmdline)
       end,
@@ -80,17 +61,16 @@ end
 ---@param subcommands table<string, commands.Subcommand>
 ---@param fargs string[]
 local dispatch = function(subcommands, fargs)
-  local name = fargs[1]
-  if not name then
-    vim.notify("COQ: missing subcommand — try :COQ help", vim.log.levels.ERROR)
-    return
+  local sub = subcommands[fargs[1] or ""]
+  if sub then
+    sub.run(vim.list_slice(fargs, 2))
+  else
+    vim.notify(
+      fargs[1] and "COQ: unknown subcommand '" .. fargs[1] .. "'"
+        or "COQ: missing subcommand — try :COQ help",
+      vim.log.levels.ERROR
+    )
   end
-  local sub = subcommands[name]
-  if not sub then
-    vim.notify("COQ: unknown subcommand '" .. name .. "'", vim.log.levels.ERROR)
-    return
-  end
-  sub.run(vim.list_slice(fargs, 2))
 end
 
 ---@param subcommands table<string, commands.Subcommand>
@@ -103,25 +83,10 @@ local complete_root = function(subcommands, arglead, cmdline)
     return startswith_filter(arglead, vim.tbl_keys(subcommands))
   end
   local sub = subcommands[parts[2]]
-  if sub and sub.complete then
-    return sub.complete(arglead, cmdline)
-  end
-  return {}
+  return sub and sub.complete and sub.complete(arglead, cmdline) or {}
 end
 
----@param old_name string
----@param new_form string
----@param impl fun(opts: any)
----@param complete? fun(arglead: string, cmdline: string): string[]
-local register_deprecated = function(old_name, new_form, impl, complete)
-  vim.api.nvim_create_user_command(old_name, function(opts)
-    vim.notify(":" .. old_name .. " is deprecated; use :COQ " .. new_form, vim.log.levels.WARN)
-    impl(opts)
-  end, {
-    nargs = "*",
-    complete = complete,
-  })
-end
+local DEPRECATED = { COQstats = "stats", COQhelp = "help", COQsnips = "snips" }
 
 ---@param settings config.Settings
 ---@param statsd index.Statsd
@@ -129,9 +94,7 @@ end
 M.bind = function(settings, statsd, events)
   atools.scheduled()
 
-  stats_impl = function()
-    stats.show(statsd)
-  end
+  stats_impl = function() stats.show(statsd) end
   snips_impl = snippets.bind(settings, events)
 
   local subcommands = subcommands_of(settings)
@@ -148,19 +111,18 @@ M.bind = function(settings, statsd, events)
   vim.api.nvim_create_user_command("COQnow", lib.noop, { nargs = "*" })
   vim.api.nvim_create_user_command("COQdeps", M.deps, { nargs = 0 })
 
-  register_deprecated("COQstats", "stats", function()
-    M.Stats()
-  end)
-  register_deprecated("COQhelp", "help", function(opts)
-    help.run(opts.fargs)
-  end, function(arglead)
-    return startswith_filter(arglead, vim.tbl_keys(help.TOPICS))
-  end)
-  register_deprecated("COQsnips", "snips", function(opts)
-    M.Snips(opts.fargs)
-  end, function(arglead)
-    return startswith_filter(arglead, snippets.SUBCMDS)
-  end)
+  for old, new in pairs(DEPRECATED) do
+    local sub = subcommands[new]
+    vim.api.nvim_create_user_command(old, function(opts)
+      vim.notify(":" .. old .. " is deprecated; use :COQ " .. new, vim.log.levels.WARN)
+      sub.run(opts.fargs)
+    end, {
+      nargs = "*",
+      complete = sub.complete and function(arglead)
+        return sub.complete(arglead, "")
+      end or nil,
+    })
+  end
 end
 
 return M

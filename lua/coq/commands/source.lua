@@ -2,61 +2,44 @@ local toggle = require "coq.lib.producers.toggle"
 
 local M = {}
 
+M.SUBCMDS = { "on", "off", "list" }
+
 ---@param settings config.Settings
 ---@return string[]
 local known_sources = function(settings)
-  local names = {}
-  for name in pairs(settings.clients) do
-    table.insert(names, name)
-  end
-  table.sort(names)
-  return names
+  return vim.iter(vim.tbl_keys(settings.clients)):totable()
 end
 
-M.SUBCMDS = { "on", "off", "list" }
+---@param settings config.Settings
+local list = function(settings)
+  local on, off = {}, {}
+  for _, name in pairs(known_sources(settings)) do
+    table.insert(toggle.is_enabled(name) and on or off, name)
+  end
+  table.sort(on)
+  table.sort(off)
+  vim.notify(
+    "COQsource:\n  on:  " .. table.concat(on, ", ") .. "\n  off: " .. table.concat(off, ", "),
+    vim.log.levels.INFO
+  )
+end
 
 ---@param settings config.Settings
 ---@param fargs string[]
 M.run = function(settings, fargs)
-  local known = known_sources(settings)
-  local known_set = {}
-  for _, n in ipairs(known) do
-    known_set[n] = true
-  end
+  local cmd, name = fargs[1] or "list", fargs[2]
 
-  if #fargs == 0 or fargs[1] == "list" then
-    local on, off = {}, {}
-    for _, name in ipairs(known) do
-      if toggle.is_enabled(name) then
-        table.insert(on, name)
-      else
-        table.insert(off, name)
-      end
-    end
+  if cmd == "list" then
+    list(settings)
+  elseif (cmd == "on" or cmd == "off") and name and settings.clients[name] then
+    toggle.set(name, cmd == "on")
+    vim.notify("COQsource: " .. name .. " " .. cmd, vim.log.levels.INFO)
+  else
     vim.notify(
-      "COQsource:\n  on:  " .. table.concat(on, ", ") .. "\n  off: " .. table.concat(off, ", "),
-      vim.log.levels.INFO
+      "COQsource: usage — :COQ source (on|off) <source> | :COQ source list",
+      vim.log.levels.ERROR
     )
-    return
   end
-
-  if #fargs ~= 2 then
-    vim.notify("COQsource: usage — :COQsource (on|off) <source> | :COQsource list", vim.log.levels.ERROR)
-    return
-  end
-
-  local cmd, name = fargs[1], fargs[2]
-  if cmd ~= "on" and cmd ~= "off" then
-    vim.notify("COQsource: unknown subcommand '" .. cmd .. "'", vim.log.levels.ERROR)
-    return
-  end
-  if not known_set[name] then
-    vim.notify("COQsource: unknown source '" .. name .. "'", vim.log.levels.ERROR)
-    return
-  end
-
-  toggle.set(name, cmd == "on")
-  vim.notify("COQsource: " .. name .. " " .. cmd, vim.log.levels.INFO)
 end
 
 ---@param settings config.Settings
@@ -65,24 +48,15 @@ end
 ---@return string[]
 M.complete = function(settings, arglead, cmdline)
   local parts = vim.split(cmdline, "%s+")
-  -- parts[1] = "COQsource", parts[2] = subcmd or partial, parts[3] = source or partial
-  if #parts <= 2 then
-    return vim
-      .iter(M.SUBCMDS)
-      :filter(function(t)
-        return vim.startswith(t, arglead)
-      end)
-      :totable()
-  end
-  if parts[2] == "on" or parts[2] == "off" then
-    return vim
-      .iter(known_sources(settings))
-      :filter(function(t)
-        return vim.startswith(t, arglead)
-      end)
-      :totable()
-  end
-  return {}
+  local candidates = (#parts <= 2 and M.SUBCMDS)
+    or ((parts[2] == "on" or parts[2] == "off") and known_sources(settings))
+    or {}
+  return vim
+    .iter(candidates)
+    :filter(function(t)
+      return vim.startswith(t, arglead)
+    end)
+    :totable()
 end
 
 return M
