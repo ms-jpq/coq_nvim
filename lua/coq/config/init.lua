@@ -2,7 +2,6 @@ local defaults = require "coq.config.defaults"
 
 ---@class config.GhostText
 ---@field enabled boolean
----@field context [string, string]
 ---@field highlight_group string
 
 ---@class config.Icons

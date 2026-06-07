@@ -90,7 +90,6 @@ local M = {
 
   display = {
     ghost_text = {
-      context = { " 〈 ", " 〉" },
       enabled = true,
       highlight_group = "Comment",
     },

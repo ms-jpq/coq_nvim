@@ -27,9 +27,6 @@ local lib = require "coq.lib"
 ---@class completions.IdleEvent
 ---@field synthetic boolean
 
----@class completions.TextChangeEvent
----@field buf integer
-
 ---@alias completions.BufKind "update" | "remove"
 
 ---@class completions.BufEvent
@@ -40,8 +37,7 @@ local lib = require "coq.lib"
 ---@field trigger channels.Broadcast<completions.TriggerEvent>
 ---@field pum channels.Broadcast<completions.PumEvent>
 ---@field idle channels.Broadcast<completions.IdleEvent>
----@field leave channels.Broadcast<nil>
----@field text_change channels.Broadcast<completions.TextChangeEvent>
+---@field leave channels.Broadcast<integer>
 ---@field bufs channels.Broadcast<completions.BufEvent>
 
 ---@type table<string, completions.BufKind>
@@ -96,7 +92,6 @@ M.new = function()
 
   do
     events.trigger = broadcast.new()
-    events.text_change = broadcast.new()
 
     vim.api.nvim_create_autocmd({ "InsertCharPre" }, {
       group = lib.group,
@@ -124,8 +119,6 @@ M.new = function()
         if not is_completable(args.buf) then
           return
         end
-        events.text_change.replace { buf = args.buf }
-
         local prev = vim.b[args.buf][COQ_LAST_SIZE]
         local now = buffers.buf_size(args.buf)
         vim.b[args.buf][COQ_LAST_SIZE] = now
@@ -163,9 +156,9 @@ M.new = function()
 
     vim.api.nvim_create_autocmd({ "InsertLeave" }, {
       group = lib.group,
-      callback = function()
+      callback = function(args)
         events.pum.replace { kind = "clear" }
-        events.leave.replace()
+        events.leave.replace(args.buf)
       end,
     })
   end

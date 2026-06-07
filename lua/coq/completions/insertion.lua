@@ -56,22 +56,13 @@ M.complete = function(ctx, settings, statsd, iter)
     return
   end
 
-  -- proactive top-1 ghost: render the best match inline before the PUM opens.
-  -- When no match exists, clear so a stale ghost from a prior trigger doesn't
-  -- linger across the keystroke.
-  local g = settings.display.ghost_text
-  if g.proactive then
-    if ranked[1] then
-      ghost.show(g, ctx, ranked[1], 1, #ranked)
-    else
-      ghost.clear(ctx.buf)
-    end
+  if settings.display.ghost_text.enabled then
+    ghost.show(ctx, ranked[1])
   end
 
-  local items = {}
-  for _, i in pairs(ranked) do
-    table.insert(items, item.to_nvim(settings.display.icons, i))
-  end
+  local items = vim.iter(ranked):map(function(i)
+    return item.to_nvim(settings.display.icons, i)
+  end):totable()
 
   local start = #ctx.line_before - #ctx.keyword_before + 1
   vim.fn.complete(start, items)
