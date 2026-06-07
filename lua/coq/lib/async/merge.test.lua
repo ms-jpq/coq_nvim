@@ -101,14 +101,15 @@ T.describe({ "merge" }, function(test)
   end)
 
   test({ "close raises errors from a failed iter" }, function()
+    local errored = async.future()
     local close, _ = async.merge {
       function()
-        async.sleep(2 * T.SLOW)
+        errored.resolve()
         error("bad dog", 0)
       end,
     }
 
-    async.sleep(50 * T.SLOW)
+    errored.await()
     local ok, err = pcall(close)
     T.eq(ok, false)
     T.eq(err, "bad dog")

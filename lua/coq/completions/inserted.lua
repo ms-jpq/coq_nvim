@@ -1,12 +1,28 @@
 local context = require "coq.lib.context"
 local errs = require "coq.lib.errs"
 local lsp_util = require "coq.producers.lsp.util"
+local snippet_preview = require "coq.producers.snippets.preview"
 local tokens = require "coq.lib.index.tokens"
 local txt = require "coq.lib.text"
 
 local DEFAULT_ENCODING = "utf-16"
 
 local M = {}
+
+---@class completions.Span
+---@field start_row integer
+---@field start_col integer
+---@field end_row integer
+---@field end_col integer
+
+---@class completions.EditCtx
+---@field cursor_row integer
+---@field col integer
+---@field before_inserted string
+---@field after_cursor string
+---@field start_line string
+---@field end_line string
+---@field span? completions.Span
 
 ---@param settings config.Settings
 ---@param ctx ctx.full
@@ -31,20 +47,13 @@ M._resolve = function(settings, ctx, resolver, i)
   return lsp, edits
 end
 
----@class completions.Span
----@field start_row integer
----@field start_col integer
----@field end_row integer
----@field end_col integer
-
----@class completions.EditCtx
----@field cursor_row integer
----@field col integer
----@field before_inserted string
----@field after_cursor string
----@field start_line string
----@field end_line string
----@field span? completions.Span
+---@param lsp completions.ItemLspMeta?
+---@return lsp.TextEdit | lsp.InsertReplaceEdit?
+---@return lsp.Range?
+M.text_edit = function(lsp)
+  local te = lsp and lsp.item and lsp.item.textEdit
+  return te, te and (te.range or te.replace)
+end
 
 ---@param buf integer
 ---@param enc string
@@ -79,17 +88,18 @@ local resolve_range = function(buf, enc, cursor_row, cursor_line, range)
   return start_line, end_line, { start_row = s.line, start_col = start_col, end_row = e.line, end_col = end_col }
 end
 
+---@param preview boolean
 ---@param ctx ctx.full
 ---@param i completions.Item
 ---@param enc string
 ---@param range? lsp.Range
 ---@return completions.EditCtx
-local edit_ctx = function(ctx, i, enc, range)
+local edit_ctx = function(preview, ctx, i, enc, range)
   local row, col = unpack(ctx.pos)
   local cursor_row = row - 1
   local line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, cursor_row, row, true))
 
-  local inserted = (i.meta.snippet and i.abbr) or i.word or ""
+  local inserted = preview and "" or ((i.meta.snippet and i.abbr) or i.word or "")
   local original_col = math.max(0, col - #inserted)
 
   local start_line, end_line, span = resolve_range(ctx.buf, enc, cursor_row, line, range)
@@ -126,14 +136,16 @@ M._fallback_span = function(iskeyword, e_ctx, word)
   }
 end
 
+---@param preview boolean
 ---@param i completions.Item
 ---@param range? lsp.Range
 ---@param text_edit? lsp.TextEdit | lsp.InsertReplaceEdit
 ---@return string
-M._replacement = function(i, range, text_edit)
+M._replacement_text = function(preview, i, range, text_edit)
   if i.meta.snippet then
-    return ""
+    return preview and snippet_preview.preview(i.meta.snippet) or ""
   end
+
   if range then
     ---@cast text_edit -nil
     return text_edit.newText or ""
@@ -141,24 +153,36 @@ M._replacement = function(i, range, text_edit)
   return i.word or ""
 end
 
+---@param preview boolean
+---@param ctx ctx.full
+---@param i completions.Item
+---@param lsp completions.ItemLspMeta
+---@return completions.Span span
+---@return completions.EditCtx e_ctx
+---@return string enc
+---@return string replace_text
+M.span = function(preview, ctx, i, lsp)
+  local text_edit, range = M.text_edit(lsp)
+
+  local enc = lsp.position_encoding or DEFAULT_ENCODING
+  local e_ctx = edit_ctx(preview, ctx, i, enc, range)
+  if not e_ctx.span then
+    text_edit, range = nil, nil
+  end
+
+  local replace_text = M._replacement_text(preview, i, range, text_edit)
+  local match_text = (i.meta.snippet and not preview and (i.word or "")) or replace_text
+  local span = e_ctx.span or M._fallback_span(ctx.iskeyword, e_ctx, match_text)
+
+  return span, e_ctx, enc, replace_text
+end
+
 ---@param ctx ctx.full
 ---@param i completions.Item
 ---@param lsp completions.ItemLspMeta
 ---@return lsp.TextEdit
 M._main_edit = function(ctx, i, lsp)
-  local enc = lsp.position_encoding or DEFAULT_ENCODING
-  local text_edit = lsp.item and lsp.item.textEdit
-  local range = text_edit and (text_edit.range or text_edit.replace)
-
-  local e_ctx = edit_ctx(ctx, i, enc, range)
-  if not e_ctx.span then
-    text_edit, range = nil, nil
-  end
-
-  local replace_text = M._replacement(i, range, text_edit)
-  local match_text = (i.meta.snippet and (i.word or "")) or replace_text
-  local span = e_ctx.span or M._fallback_span(ctx.iskeyword, e_ctx, match_text)
-
+  local span, e_ctx, enc, replace_text = M.span(false, ctx, i, lsp)
   return {
     range = {
       start = {

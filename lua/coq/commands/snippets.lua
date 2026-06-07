@@ -66,25 +66,30 @@ end
 ---@param events completions.Events
 ---@return fun(args: string[])
 M.bind = function(settings, events)
-  local compile = function()
-    events.idle.replace { synthetic = true }
-  end
+  local actions = {
+    ls = function()
+      ls(settings)
+    end,
+    cd = function()
+      cd(settings)
+    end,
+    compile = function()
+      events.idle.replace { synthetic = true }
+    end,
+    edit = function(rest)
+      edit(settings, rest or "")
+    end,
+  }
 
   return async.entry(function(args)
     atools.scheduled()
     local action, rest = unpack(args or {})
-    action = action or "ls"
-    if action == "ls" then
-      ls(settings)
-    elseif action == "cd" then
-      cd(settings)
-    elseif action == "compile" then
-      compile()
-    elseif action == "edit" then
-      edit(settings, rest or "")
+    local handler = actions[action or "ls"]
+    if handler then
+      handler(rest)
     else
       vim.notify(
-        string.format("COQsnips: unknown subcommand %q (expected %s)", action, table.concat(M.SUBCMDS, "/")),
+        string.format("COQ snips: unknown subcommand %q (expected %s)", action, table.concat(M.SUBCMDS, "/")),
         vim.log.levels.ERROR
       )
     end

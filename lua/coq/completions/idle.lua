@@ -18,38 +18,44 @@ local M = {}
 ---@param sup producers.Producer<idle.Ctx>
 ---@param events completions.Events
 M.bind = function(n, settings, sup, events)
-  events.idle.replace { synthetic = true }
-
-  local carry = { updated = set.new {}, removed = set.new {} }
   local rtps = vim.api.nvim_list_runtime_paths()
   local config_dir = vim.fn.stdpath "config"
   local cache_dir = vim.fs.joinpath(vim.fn.stdpath "cache", "coq")
+
+  local carry = { updated = set.new {}, removed = set.new {} }
+  for _, buf in pairs(vim.api.nvim_list_bufs()) do
+    if vim.bo[buf].buflisted then
+      carry.updated[buf] = true
+    end
+  end
+  events.idle.replace { synthetic = true }
+
+  events_m.subscribe_latest(n, events.bufs, function(ev)
+    if ev.kind == "remove" then
+      carry.updated[ev.buf] = nil
+      carry.removed[ev.buf] = true
+    else
+      carry.removed[ev.buf] = nil
+      carry.updated[ev.buf] = true
+    end
+  end)
 
   events_m.subscribe_latest(n, events.idle, function(ev)
     if not ev.synthetic then
       async.sleep(math.floor(settings.limits.idle_timeout * 1000))
     end
 
-    local diff = events.drain_bufs()
-    for buf in pairs(diff.removed) do
-      carry.updated[buf] = nil
-      carry.removed[buf] = true
-    end
-    for buf in pairs(diff.updated) do
-      carry.removed[buf] = nil
-      carry.updated[buf] = true
-    end
+    local snapshot = carry
+    carry = { updated = set.new {}, removed = set.new {} }
 
     sup.idle(settings, {
       ctx = context.full(),
       config_dir = config_dir,
       cache_dir = cache_dir,
       rtps = rtps,
-      updated = carry.updated,
-      removed = carry.removed,
+      updated = snapshot.updated,
+      removed = snapshot.removed,
     })
-
-    carry = { updated = set.new {}, removed = set.new {} }
   end)
 end
 

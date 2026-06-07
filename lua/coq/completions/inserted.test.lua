@@ -360,6 +360,37 @@ T.describe({ "inserted span :: |before| |word| |after|" }, function(test)
   end)
 
   -- ---------------------------------------------------------------------------
+  -- Member access / dotted scope — regression for #623, #617, #572.
+  -- The dot is non-keyword, so `before_inserted` ending in `.` must not
+  -- get consumed by trailing_keyword. The previously-typed prefix has
+  -- already been replaced by vim's PUM auto-insert; our span only needs
+  -- to cover that auto-insert, not the dot or anything before it.
+  -- ---------------------------------------------------------------------------
+
+  test({ "member access, full identifier: 'obj.' method '' → obj.method" }, function()
+    -- user typed `obj.met<TAB>`, picked `method`. Pre-PUM:
+    -- `obj.met|`. PUM start backed up `met` only (3 chars).
+    -- vim inserted `method`, buffer = `obj.method`.
+    -- Span must replace just `method` with `method` (no-op).
+    T.eq(scenario("obj.", "method", ""), "obj.method")
+  end)
+
+  test(
+    { "snake_case identifier, dotted scope: 'some_identifier.' completion '' → some_identifier.completion" },
+    function()
+      -- the canonical #623 example. Underscores are keyword chars; the dot is not.
+      -- Span must stop at the dot — not eat into `some_identifier`.
+      T.eq(scenario("some_identifier.", "completion", ""), "some_identifier.completion")
+    end
+  )
+
+  test({ "fuzzy member access mid-identifier: 'obj.' method 'hod' → obj.method" }, function()
+    -- user had `obj.met|hod`, picked `method`. Trailing `hod` is the rest of
+    -- the identifier under the cursor; leading_keyword rule consumes it.
+    T.eq(scenario("obj.", "method", "hod"), "obj.method")
+  end)
+
+  -- ---------------------------------------------------------------------------
   -- Pure insert (no surrounding identifier)
   -- ---------------------------------------------------------------------------
 

@@ -2,7 +2,6 @@ local defaults = require "coq.config.defaults"
 
 ---@class config.GhostText
 ---@field enabled boolean
----@field context [string, string]
 ---@field highlight_group string
 
 ---@class config.Icons
@@ -73,6 +72,7 @@ local defaults = require "coq.config.defaults"
 ---@field always_on_top boolean
 ---@field same_filetype boolean
 ---@field parent_scope string
+---@field max_bytes integer
 
 ---@class config.LSPClient: config.BaseClient
 ---@field always_on_top? string[]

@@ -7,8 +7,10 @@ M.HOME = vim.uv.os_homedir() or ""
 
 ---@param is_windows boolean
 ---@return lib.Set<string>
+---@return string default
 M.seps = function(is_windows)
-  return set.new(is_windows and { "/", "\\" } or { "/" })
+  local default = is_windows and "\\" or "/"
+  return set.new(is_windows and { default, "/" } or { default }), default
 end
 
 local DRIVE_PAT = "^%a:[/\\]"

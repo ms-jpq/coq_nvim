@@ -58,6 +58,28 @@ local fmt_duration = function(n)
   return string.format("%.2fs", n)
 end
 
+local COUNT_FIELDS = {
+  Interrupted = "interrupted",
+  Inserted = "inserted",
+}
+local COUNT_HEADERS = { "Interrupted", "Inserted" }
+
+local DURATION_FIELDS = {
+  ["Avg Duration"] = "avg_duration",
+  ["Q10 Duration"] = "q10_duration",
+  ["Q50 Duration"] = "q50_duration",
+  ["Q95 Duration"] = "q95_duration",
+  ["Q99 Duration"] = "q99_duration",
+}
+local DURATION_HEADERS = { "Avg Duration", "Q10 Duration", "Q50 Duration", "Q95 Duration", "Q99 Duration" }
+
+local ITEM_FIELDS = {
+  ["Avg Items"] = "avg_items",
+  ["Q50 Items"] = "q50_items",
+  ["Q99 Items"] = "q99_items",
+}
+local ITEM_HEADERS = { "Avg Items", "Q50 Items", "Q99 Items" }
+
 ---@param summary table<string, statsd.Summary>
 ---@return fun(): string?
 local build = function(summary)
@@ -72,32 +94,14 @@ local build = function(summary)
     end
 
     local blocks = {
-      table_block(sources, { "Interrupted", "Inserted" }, function(s, h)
-        return tostring(h == "Interrupted" and summary[s].interrupted or summary[s].inserted)
+      table_block(sources, COUNT_HEADERS, function(s, h)
+        return tostring(summary[s][COUNT_FIELDS[h]])
       end),
-      table_block(
-        sources,
-        { "Avg Duration", "Q10 Duration", "Q50 Duration", "Q95 Duration", "Q99 Duration" },
-        function(s, h)
-          local sum = summary[s]
-          local field = ({
-            ["Avg Duration"] = sum.avg_duration,
-            ["Q10 Duration"] = sum.q10_duration,
-            ["Q50 Duration"] = sum.q50_duration,
-            ["Q95 Duration"] = sum.q95_duration,
-            ["Q99 Duration"] = sum.q99_duration,
-          })[h]
-          return fmt_duration(field)
-        end
-      ),
-      table_block(sources, { "Avg Items", "Q50 Items", "Q99 Items" }, function(s, h)
-        local sum = summary[s]
-        local field = ({
-          ["Avg Items"] = sum.avg_items,
-          ["Q50 Items"] = sum.q50_items,
-          ["Q99 Items"] = sum.q99_items,
-        })[h]
-        return tostring(math.floor(field + 0.5))
+      table_block(sources, DURATION_HEADERS, function(s, h)
+        return fmt_duration(summary[s][DURATION_FIELDS[h]])
+      end),
+      table_block(sources, ITEM_HEADERS, function(s, h)
+        return tostring(math.floor(summary[s][ITEM_FIELDS[h]] + 0.5))
       end),
     }
 

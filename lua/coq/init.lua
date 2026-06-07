@@ -7,6 +7,7 @@ local atools = require "coq.lib.atools"
 local commands = require "coq.commands"
 local config = require "coq.config"
 local events_m = require "coq.completions.events"
+local ghost = require "coq.completions.ghost"
 local idle = require "coq.completions.idle"
 local insertion = require "coq.completions.insertion"
 local instrument = require "coq.lib.producers.instrument"
@@ -25,6 +26,8 @@ local preview = require "coq.completions.preview"
 local resolver_m = require "coq.completions.resolver"
 local statsd_m = require "coq.lib.index.rank.statsd"
 local supervisor = require "coq.lib.producers.supervisor"
+local timelord_m = require "coq.completions.timelord"
+local toggle = require "coq.lib.producers.toggle"
 local transition = require "coq.transition"
 local trigger = require "coq.completions.trigger"
 
@@ -104,30 +107,34 @@ M.setup = function(opts)
       atools.scheduled()
 
       local statsd = statsd_m.new(settings)
+      local lord = timelord_m.new()
 
-      local p = vim
+      local ps = vim
         .iter(producers(settings.clients))
         :map(function(prod)
-          return instrument.wrap(statsd, prod)
+          return timelord_m.wrap(lord, toggle.wrap(instrument.wrap(statsd, prod)))
         end)
         :totable()
-      local sup = supervisor.new(p)
+      local sup = supervisor.new(ps)
 
       local events = events_m.new()
-      local resolver = resolver_m.new(n)
+      local resolver = resolver_m.new(n, lord)
 
       nvim_options.apply(settings, events)
 
+      idle.bind(n, settings, sup, events)
       trigger.bind(n, settings, statsd, resolver, sup, events)
       preview.bind(n, settings, resolver, events.pum)
-      insertion.bind(n, settings, resolver, statsd, events.done)
-      idle.bind(n, settings, sup, events)
+      ghost.bind(n, settings, events)
+      insertion.bind(n, settings, resolver, statsd, events.pum)
       commands.bind(settings, statsd, events)
     end)
   end)()
 end
 
-M.setup {}
+if vim.g.coq_settings then
+  M.setup {}
+end
 
 return setmetatable(M, {
   __call = function()

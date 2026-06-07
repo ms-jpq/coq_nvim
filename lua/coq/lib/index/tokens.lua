@@ -1,6 +1,7 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local buffers = require "coq.lib.buffers"
+local default_dict = require "coq.lib.default_dict"
 local set = require "coq.lib.set"
 
 local M = {}
@@ -198,11 +199,13 @@ end
 ---@param text lib.Iterator<string>
 ---@return table<string, integer>
 M.locality = function(kw, text)
-  local acc = {}
+  local acc = default_dict.new(function()
+    return 0
+  end)
   for word in M.keywords(kw, text) do
-    acc[word] = (acc[word] or 0) + 1
+    acc[word] = acc[word] + 1
   end
-  return acc
+  return acc --[[@as table<string, integer>]]
 end
 
 return M

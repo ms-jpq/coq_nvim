@@ -12,14 +12,14 @@ local lib = require "coq.lib"
 ---@field width integer
 ---@field scrollbar boolean
 
+---@class completions.PumDoneEvent
+---@field kind "done"
+---@field completed_item vim.v.completed_item
+
 ---@class completions.PumClearEvent
 ---@field kind "clear"
 
----@alias completions.PumEvent completions.PumChangedEvent | completions.PumClearEvent
-
----@class completions.BufDiff
----@field updated table<integer, true>
----@field removed table<integer, true>
+---@alias completions.PumEvent completions.PumChangedEvent | completions.PumDoneEvent | completions.PumClearEvent
 
 ---@class completions.TriggerEvent
 ---@field manual boolean
@@ -27,14 +27,20 @@ local lib = require "coq.lib"
 ---@class completions.IdleEvent
 ---@field synthetic boolean
 
+---@alias completions.BufKind "update" | "remove"
+
+---@class completions.BufEvent
+---@field buf integer
+---@field kind completions.BufKind
+
 ---@class completions.Events
 ---@field trigger channels.Broadcast<completions.TriggerEvent>
 ---@field pum channels.Broadcast<completions.PumEvent>
----@field done channels.Broadcast<vim.v.completed_item>
 ---@field idle channels.Broadcast<completions.IdleEvent>
----@field leave channels.Broadcast<nil>
----@field drain_bufs fun(): completions.BufDiff
+---@field leave channels.Broadcast<integer>
+---@field bufs channels.Broadcast<completions.BufEvent>
 
+---@type table<string, completions.BufKind>
 local BUF_KINDS = {
   BufEnter = "update",
   BufRead = "update",
@@ -59,109 +65,102 @@ local M = {}
 
 ---@return completions.Events
 M.new = function()
-  local bufs = { updated = {}, removed = {} }
+  ---@diagnostic disable-next-line: missing-fields
+  local events = {} ---@type completions.Events
 
-  ---@type completions.Events
-  local events = {
-    trigger = broadcast.new(),
-    pum = broadcast.new(),
-    done = broadcast.new(),
-    idle = broadcast.new(),
-    leave = broadcast.new(),
-    drain_bufs = function()
-      local p = bufs
-      bufs = { updated = {}, removed = {} }
-      return p
-    end,
-  }
+  do
+    events.idle = broadcast.new()
 
-  vim.api.nvim_create_autocmd({ "InsertCharPre" }, {
-    group = lib.group,
-    callback = function(args)
-      if not is_completable(args.buf) then
-        return
-      end
+    vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
+      group = lib.group,
+      callback = function()
+        events.idle.replace { synthetic = false }
+      end,
+    })
+  end
 
-      events.trigger.replace { manual = false }
-    end,
-  })
+  do
+    events.bufs = broadcast.new()
 
-  vim.api.nvim_create_autocmd({ "InsertEnter", "BufEnter", "TextChanged" }, {
-    group = lib.group,
-    callback = function(args)
-      if not is_completable(args.buf) then
-        return
-      end
+    vim.api.nvim_create_autocmd(vim.tbl_keys(BUF_KINDS), {
+      group = lib.group,
+      callback = function(args)
+        events.bufs.replace { buf = args.buf, kind = BUF_KINDS[args.event] }
+      end,
+    })
+  end
 
-      vim.b[args.buf][COQ_LAST_SIZE] = buffers.buf_size(args.buf)
-    end,
-  })
+  do
+    events.trigger = broadcast.new()
 
-  vim.api.nvim_create_autocmd({ "TextChangedI" }, {
-    group = lib.group,
-    callback = function(args)
-      if not is_completable(args.buf) then
-        return
-      end
-
-      local prev = vim.b[args.buf][COQ_LAST_SIZE]
-      local now = buffers.buf_size(args.buf)
-      vim.b[args.buf][COQ_LAST_SIZE] = now
-      if prev ~= nil and now < prev then
+    vim.api.nvim_create_autocmd({ "InsertCharPre" }, {
+      group = lib.group,
+      callback = function(args)
+        if not is_completable(args.buf) then
+          return
+        end
         events.trigger.replace { manual = false }
-      end
-    end,
-  })
+      end,
+    })
 
-  vim.api.nvim_create_autocmd({ "CompleteChanged" }, {
-    group = lib.group,
-    callback = function()
-      local ev = vim.tbl_extend("force", { kind = "changed" }, vim.v.event) --[[@as completions.PumChangedEvent]]
-      events.pum.replace(ev)
-    end,
-  })
+    vim.api.nvim_create_autocmd({ "InsertEnter", "BufEnter", "TextChanged" }, {
+      group = lib.group,
+      callback = function(args)
+        if not is_completable(args.buf) then
+          return
+        end
+        vim.b[args.buf][COQ_LAST_SIZE] = buffers.buf_size(args.buf)
+      end,
+    })
 
-  vim.api.nvim_create_autocmd({ "CompleteDone" }, {
-    group = lib.group,
-    callback = function()
-      events.pum.replace { kind = "clear" }
-      events.done.replace(vim.v.completed_item)
-    end,
-  })
+    vim.api.nvim_create_autocmd({ "TextChangedI" }, {
+      group = lib.group,
+      callback = function(args)
+        if not is_completable(args.buf) then
+          return
+        end
+        local prev = vim.b[args.buf][COQ_LAST_SIZE]
+        local now = buffers.buf_size(args.buf)
+        vim.b[args.buf][COQ_LAST_SIZE] = now
+        if prev == nil or now >= prev then
+          return
+        end
+        events.trigger.replace { manual = false }
+      end,
+    })
+  end
 
-  vim.api.nvim_create_autocmd({ "InsertLeave" }, {
-    group = lib.group,
-    callback = function()
-      events.pum.replace { kind = "clear" }
-      events.leave.replace()
-    end,
-  })
+  do
+    events.pum = broadcast.new()
 
-  vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
-    group = lib.group,
-    callback = function()
-      events.idle.replace { synthetic = false }
-    end,
-  })
+    vim.api.nvim_create_autocmd({ "CompleteChanged" }, {
+      group = lib.group,
+      callback = function()
+        local ev = vim.tbl_extend("force", { kind = "changed" }, vim.v.event) --[[@as completions.PumChangedEvent]]
+        events.pum.replace(ev)
+      end,
+    })
+  end
 
-  vim.api.nvim_create_autocmd(vim.tbl_keys(BUF_KINDS), {
-    group = lib.group,
-    callback = function(args)
-      local kind = BUF_KINDS[args.event]
-      if kind == "remove" then
-        bufs.updated[args.buf] = nil
-        bufs.removed[args.buf] = true
-      else
-        bufs.removed[args.buf] = nil
-        bufs.updated[args.buf] = true
-      end
-    end,
-  })
+  do
+    vim.api.nvim_create_autocmd({ "CompleteDone" }, {
+      group = lib.group,
+      callback = function()
+        events.pum.replace { kind = "done", completed_item = vim.v.completed_item }
+      end,
+    })
+  end
 
-  for _, buf in pairs(vim.api.nvim_list_bufs()) do
-    if vim.bo[buf].buflisted then
-      bufs.updated[buf] = true
-    end
+  do
+    events.leave = broadcast.new()
+
+    vim.api.nvim_create_autocmd({ "InsertLeave" }, {
+      group = lib.group,
+      callback = function(args)
+        events.pum.replace { kind = "clear" }
+        events.leave.replace(args.buf)
+      end,
+    })
   end
 
   return events

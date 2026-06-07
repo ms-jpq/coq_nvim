@@ -1,6 +1,7 @@
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local events = require "coq.completions.events"
+local ghost = require "coq.completions.ghost"
 local inserted = require "coq.completions.inserted"
 local item = require "coq.completions.item"
 local statsd_m = require "coq.lib.index.rank.statsd"
@@ -12,10 +13,13 @@ local M = {}
 ---@param settings config.Settings
 ---@param resolver completions.Resolver
 ---@param statsd index.Statsd
----@param done channels.Broadcast<vim.v.completed_item>
-M.bind = function(n, settings, resolver, statsd, done)
-  events.subscribe_latest(n, done, function(completed)
-    local user_data = completed.user_data
+---@param pum channels.Broadcast<completions.PumEvent>
+M.bind = function(n, settings, resolver, statsd, pum)
+  events.subscribe_latest(n, pum, function(ev)
+    if ev.kind ~= "done" then
+      return
+    end
+    local user_data = ev.completed_item.user_data
     if type(user_data) ~= "table" then
       return
     end
@@ -42,15 +46,26 @@ M.complete = function(ctx, settings, statsd, iter)
     end
   end
 
-  local items = {}
+  local ranked = {}
   for i in topk.iter() do
-    table.insert(items, item.to_nvim(settings.display.icons, i))
+    table.insert(ranked, i)
   end
 
   atools.scheduled()
   if not context.still_valid(ctx) or string.sub(vim.api.nvim_get_mode().mode, 1, 1) ~= "i" then
     return
   end
+
+  if settings.display.ghost_text.enabled then
+    ghost.show(ctx, ranked[1])
+  end
+
+  local items = vim
+    .iter(ranked)
+    :map(function(i)
+      return item.to_nvim(settings.display.icons, i)
+    end)
+    :totable()
 
   local start = #ctx.line_before - #ctx.keyword_before + 1
   vim.fn.complete(start, items)
