@@ -60,9 +60,12 @@ M.complete = function(ctx, settings, statsd, iter)
     ghost.show(ctx, ranked[1])
   end
 
-  local items = vim.iter(ranked):map(function(i)
-    return item.to_nvim(settings.display.icons, i)
-  end):totable()
+  local items = vim
+    .iter(ranked)
+    :map(function(i)
+      return item.to_nvim(settings.display.icons, i)
+    end)
+    :totable()
 
   local start = #ctx.line_before - #ctx.keyword_before + 1
   vim.fn.complete(start, items)

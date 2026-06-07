@@ -35,10 +35,7 @@ M.run = function(settings, fargs)
     toggle.set(name, cmd == "on")
     vim.notify("COQsource: " .. name .. " " .. cmd, vim.log.levels.INFO)
   else
-    vim.notify(
-      "COQsource: usage — :COQ source (on|off) <source> | :COQ source list",
-      vim.log.levels.ERROR
-    )
+    vim.notify("COQsource: usage — :COQ source (on|off) <source> | :COQ source list", vim.log.levels.ERROR)
   end
 end
 

@@ -272,11 +272,10 @@ T.describe({ "ghost.show multi-line range" }, function(test)
     ghost.show(ctx, item_ml_range("fido\nbark", 0, 0, 0, 2))
     local marks = ghost._extmarks(ghost_cfg, buf, ctx.pos[2])
     T.eq(#marks, 1)
-    T.eq(marks[1].opts.virt_text[1][1], "do")  -- "fi" prefix consumed
+    T.eq(marks[1].opts.virt_text[1][1], "do") -- "fi" prefix consumed
     assert(marks[1].opts.virt_lines, "expected virt_lines")
     T.eq(marks[1].opts.virt_lines[1][1][1], "bark")
   end)
-
 end)
 
 T.describe({ "ghost.show control-char fallback" }, function(test)
@@ -368,4 +367,3 @@ T.describe({ "ghost snippet preview integration" }, function(test)
     T.eq(entry[1], "fido(bone)")
   end)
 end)
-

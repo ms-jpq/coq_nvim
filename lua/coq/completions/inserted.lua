@@ -9,16 +9,20 @@ local DEFAULT_ENCODING = "utf-16"
 
 local M = {}
 
-M.prefix_overlap = txt.prefix_overlap
-M.suffix_overlap = txt.suffix_overlap
+---@class completions.Span
+---@field start_row integer
+---@field start_col integer
+---@field end_row integer
+---@field end_col integer
 
----@param lsp completions.ItemLspMeta?
----@return lsp.TextEdit | lsp.InsertReplaceEdit?
----@return lsp.Range?
-M.text_edit = function(lsp)
-  local te = lsp and lsp.item and lsp.item.textEdit
-  return te, te and (te.range or te.replace)
-end
+---@class completions.EditCtx
+---@field cursor_row integer
+---@field col integer
+---@field before_inserted string
+---@field after_cursor string
+---@field start_line string
+---@field end_line string
+---@field span? completions.Span
 
 ---@param settings config.Settings
 ---@param ctx ctx.full
@@ -43,20 +47,13 @@ M._resolve = function(settings, ctx, resolver, i)
   return lsp, edits
 end
 
----@class completions.Span
----@field start_row integer
----@field start_col integer
----@field end_row integer
----@field end_col integer
-
----@class completions.EditCtx
----@field cursor_row integer
----@field col integer
----@field before_inserted string
----@field after_cursor string
----@field start_line string
----@field end_line string
----@field span? completions.Span
+---@param lsp completions.ItemLspMeta?
+---@return lsp.TextEdit | lsp.InsertReplaceEdit?
+---@return lsp.Range?
+M.text_edit = function(lsp)
+  local te = lsp and lsp.item and lsp.item.textEdit
+  return te, te and (te.range or te.replace)
+end
 
 ---@param buf integer
 ---@param enc string
@@ -126,10 +123,10 @@ M._fallback_span = function(iskeyword, e_ctx, word)
   local start_col = #e_ctx.before_inserted
     - math.max(
       #tokens.trailing_keyword_before(iskeyword, e_ctx.before_inserted),
-      M.prefix_overlap(e_ctx.before_inserted, word)
+      txt.prefix_overlap(e_ctx.before_inserted, word)
     )
   local end_col = e_ctx.col
-    + math.max(#tokens.leading_keyword(iskeyword, e_ctx.after_cursor), M.suffix_overlap(e_ctx.after_cursor, word))
+    + math.max(#tokens.leading_keyword(iskeyword, e_ctx.after_cursor), txt.suffix_overlap(e_ctx.after_cursor, word))
 
   return {
     start_row = e_ctx.cursor_row,

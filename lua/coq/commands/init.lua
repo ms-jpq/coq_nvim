@@ -11,9 +11,15 @@ local stats_impl = lib.noop
 
 local M = {
   deps = transition.deps,
-  Help = function(...) help.run { ... } end,
-  Snips = function(...) return snips_impl(...) end,
-  Stats = function(...) return stats_impl(...) end,
+  Help = function(...)
+    help.run { ... }
+  end,
+  Snips = function(...)
+    return snips_impl(...)
+  end,
+  Stats = function(...)
+    return stats_impl(...)
+  end,
 }
 
 ---@param arglead string
@@ -36,7 +42,11 @@ end
 ---@return table<string, commands.Subcommand>
 local subcommands_of = function(settings)
   return {
-    stats = { run = function() stats_impl() end },
+    stats = {
+      run = function()
+        stats_impl()
+      end,
+    },
     help = {
       run = help.run,
       complete = function(arglead)
@@ -44,13 +54,17 @@ local subcommands_of = function(settings)
       end,
     },
     snips = {
-      run = function(fargs) snips_impl(fargs) end,
+      run = function(fargs)
+        snips_impl(fargs)
+      end,
       complete = function(arglead)
         return startswith_filter(arglead, snippets.SUBCMDS)
       end,
     },
     source = {
-      run = function(fargs) source.run(settings, fargs) end,
+      run = function(fargs)
+        source.run(settings, fargs)
+      end,
       complete = function(arglead, cmdline)
         return source.complete(settings, arglead, cmdline)
       end,
@@ -66,8 +80,7 @@ local dispatch = function(subcommands, fargs)
     sub.run(vim.list_slice(fargs, 2))
   else
     vim.notify(
-      fargs[1] and "COQ: unknown subcommand '" .. fargs[1] .. "'"
-        or "COQ: missing subcommand — try :COQ help",
+      fargs[1] and "COQ: unknown subcommand '" .. fargs[1] .. "'" or "COQ: missing subcommand — try :COQ help",
       vim.log.levels.ERROR
     )
   end
@@ -94,7 +107,9 @@ local DEPRECATED = { COQstats = "stats", COQhelp = "help", COQsnips = "snips" }
 M.bind = function(settings, statsd, events)
   atools.scheduled()
 
-  stats_impl = function() stats.show(statsd) end
+  stats_impl = function()
+    stats.show(statsd)
+  end
   snips_impl = snippets.bind(settings, events)
 
   local subcommands = subcommands_of(settings)

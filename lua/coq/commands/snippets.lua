@@ -67,10 +67,18 @@ end
 ---@return fun(args: string[])
 M.bind = function(settings, events)
   local actions = {
-    ls = function() ls(settings) end,
-    cd = function() cd(settings) end,
-    compile = function() events.idle.replace { synthetic = true } end,
-    edit = function(rest) edit(settings, rest or "") end,
+    ls = function()
+      ls(settings)
+    end,
+    cd = function()
+      cd(settings)
+    end,
+    compile = function()
+      events.idle.replace { synthetic = true }
+    end,
+    edit = function(rest)
+      edit(settings, rest or "")
+    end,
   }
 
   return async.entry(function(args)
