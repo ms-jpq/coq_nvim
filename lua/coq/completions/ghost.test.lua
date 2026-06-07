@@ -172,6 +172,102 @@ T.describe({ "ghost.show range-driven overlay" }, function(test)
   end)
 end)
 
+T.describe({ "ghost.show multi-line range" }, function(test)
+  ---@param newText string
+  ---@param s_line integer
+  ---@param s_char integer
+  ---@param e_line integer
+  ---@param e_char integer
+  ---@return completions.Item
+  local item_ml_range = function(newText, s_line, s_char, e_line, e_char)
+    ---@diagnostic disable-next-line: missing-fields
+    return {
+      word = newText,
+      meta = {
+        uid = "x",
+        source = "LSP",
+        filter = newText,
+        fuzzy = 0,
+        lsp = {
+          position_encoding = "utf-8",
+          ---@diagnostic disable-next-line: missing-fields
+          item = {
+            textEdit = {
+              newText = newText,
+              range = {
+                start = { line = s_line, character = s_char },
+                ["end"] = { line = e_line, character = e_char },
+              },
+            },
+          },
+        },
+      },
+    } --[[@as completions.Item]]
+  end
+
+  test({ "range N rows × newText K lines: emits min(N,K) per-row overlays" }, function()
+    -- Range spans 3 rows, newText has 3 lines → 3 overlay extmarks
+    -- (anchor at cursor col, others at col 0).
+    local _, ctx = mk_ctx({ "dog", "good", "fido" }, 1, 0)
+    ghost.show(cfg(), ctx, item_ml_range("puppy\nclever\nfido", 0, 0, 2, 4), 1, 1)
+    local marks = ghost._extmarks()
+    T.eq(#marks, 3)
+    T.eq(marks[1].opts.virt_text[1][1], "puppy")
+    T.eq(marks[1].opts.virt_text_pos, "overlay")
+    T.eq(marks[1].col_at_cursor, true)
+    T.eq(marks[2].opts.virt_text[1][1], "clever")
+    T.eq(marks[2].opts.virt_text_pos, "overlay")
+    T.eq(marks[2].col_at_cursor, false)
+    T.eq(marks[2].row_offset, 1)
+    T.eq(marks[3].opts.virt_text[1][1], "fido")
+    T.eq(marks[3].row_offset, 2)
+    -- No surplus virt_lines on the last mark.
+    T.eq(marks[3].opts.virt_lines, nil)
+  end)
+
+  test({ "newText has more lines than range: surplus goes into virt_lines" }, function()
+    -- 2-row range, 4-line newText → 2 overlays, 2 surplus → virt_lines on mark 2
+    local _, ctx = mk_ctx({ "a", "b" }, 1, 0)
+    ghost.show(cfg(), ctx, item_ml_range("L1\nL2\nL3\nL4", 0, 0, 1, 1), 1, 1)
+    local marks = ghost._extmarks()
+    T.eq(#marks, 2)
+    T.eq(marks[1].opts.virt_text[1][1], "L1")
+    T.eq(marks[2].opts.virt_text[1][1], "L2")
+    assert(marks[2].opts.virt_lines, "expected virt_lines on last mark")
+    T.eq(marks[2].opts.virt_lines[1][1][1], "L3")
+    T.eq(marks[2].opts.virt_lines[2][1][1], "L4")
+  end)
+
+  test({ "range has more rows than newText: only emit row_overlays for newText lines" }, function()
+    -- 3-row range, 1-line newText → 1 mark (anchor), buffer rows 2,3 leak (limitation)
+    local _, ctx = mk_ctx({ "a", "b", "c" }, 1, 0)
+    ghost.show(cfg(), ctx, item_ml_range("once", 0, 0, 2, 1), 1, 1)
+    local marks = ghost._extmarks()
+    T.eq(#marks, 1)
+    T.eq(marks[1].opts.virt_text[1][1], "once")
+  end)
+
+  test({ "single-line range, multi-line newText: anchor + virt_lines (no extra overlays)" }, function()
+    -- 1-row range stays as single overlay anchor; surplus lines as virt_lines.
+    local _, ctx = mk_ctx({ "fi" }, 1, 2)
+    ghost.show(cfg(), ctx, item_ml_range("fido\nbark", 0, 0, 0, 2), 1, 1)
+    local marks = ghost._extmarks()
+    T.eq(#marks, 1)
+    T.eq(marks[1].opts.virt_text[1][1], "do")  -- "fi" prefix consumed
+    assert(marks[1].opts.virt_lines, "expected virt_lines")
+    T.eq(marks[1].opts.virt_lines[1][1][1], "bark")
+  end)
+
+  test({ "count annotation rides on the last mark's virt_lines" }, function()
+    local _, ctx = mk_ctx({ "a", "b" }, 1, 0)
+    ghost.show(cfg { show_count = true }, ctx, item_ml_range("L1\nL2", 0, 0, 1, 1), 2, 5)
+    local marks = ghost._extmarks()
+    T.eq(#marks, 2)
+    assert(marks[2].opts.virt_lines, "expected virt_lines for annotation")
+    T.eq(marks[2].opts.virt_lines[1][1][1], "  (2/5)")
+  end)
+end)
+
 T.describe({ "ghost.show control-char fallback" }, function(test)
   test({ "switches to eol when first line has \\t" }, function()
     local buf, ctx = mk_ctx({ "if " }, 1, 3)

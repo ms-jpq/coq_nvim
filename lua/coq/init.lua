@@ -122,11 +122,11 @@ M.setup = function(opts)
 
       nvim_options.apply(settings, events)
 
+      idle.bind(n, settings, sup, events)
       trigger.bind(n, settings, statsd, resolver, sup, events)
       preview.bind(n, settings, resolver, events.pum)
       ghost.bind(n, settings, events)
-      insertion.bind(n, settings, resolver, statsd, events.done)
-      idle.bind(n, settings, sup, events)
+      insertion.bind(n, settings, resolver, statsd, events.pum)
       commands.bind(settings, statsd, events)
     end)
   end)()

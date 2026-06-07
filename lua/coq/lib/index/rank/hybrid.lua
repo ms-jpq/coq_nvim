@@ -37,32 +37,32 @@ local BYTE_HIGH = 128 -- first byte of any multi-byte UTF-8 codepoint
 -- Helpers
 -- ============================================================================
 
-local function is_upper(b)
+local is_upper = function(b)
   return b >= BYTE_A and b <= BYTE_Z
 end
 
-local function is_lower(b)
+local is_lower = function(b)
   return b >= BYTE_a and b <= BYTE_z
 end
 
-local function is_digit(b)
+local is_digit = function(b)
   return b >= BYTE_0 and b <= BYTE_9
 end
 
-local function to_lower(b)
+local to_lower = function(b)
   return is_upper(b) and b + (BYTE_a - BYTE_A) or b
 end
 
 -- Per-character smart-case predicate. The driver of the case rule:
 -- lowercase needle accepts any case; uppercase needle requires exact case.
-local function smart_eq(nb, hb)
+local smart_eq = function(nb, hb)
   if is_upper(nb) then
     return nb == hb
   end
   return to_lower(nb) == to_lower(hb)
 end
 
-local function smart_starts_with(hay, ned)
+local smart_starts_with = function(hay, ned)
   if #ned > #hay then
     return false
   end
@@ -74,23 +74,11 @@ local function smart_starts_with(hay, ned)
   return true
 end
 
-local function smart_string_eq(a, b)
-  if #a ~= #b then
-    return false
-  end
-  for i = 1, #a do
-    if not smart_eq(string.byte(a, i), string.byte(b, i)) then
-      return false
-    end
-  end
-  return true
-end
-
 -- camelCase / snake_case initials of a string.
 -- "AnimGraphNode"        -> "AGN"
 -- "anim_graph_node"      -> "agn"
 -- "BatchAgnSelector"     -> "BAS"
-local function initials(s)
+local initials = function(s)
   local out = {}
   local prev = string.byte " " -- start of string treated as whitespace
   for i = 1, #s do
@@ -117,7 +105,7 @@ local CLASS_NUMBER = 7
 
 local DELIMITERS = set.new { string.byte "/", string.byte ",", string.byte ":", string.byte ";", string.byte "|" }
 
-local function classify(b)
+local classify = function(b)
   if tokens.WHITES[b] then
     return CLASS_WHITE
   end
@@ -163,7 +151,7 @@ do
   assert(FUZZY_MAX < T_CAMEL, "try_fuzzy can overlap T_CAMEL")
 end
 
-local function bonus_for(prev, curr)
+local bonus_for = function(prev, curr)
   if curr == CLASS_LOWER or curr == CLASS_LETTER or curr == CLASS_UPPER or curr == CLASS_NUMBER then
     if prev == CLASS_WHITE then
       return BONUS_BOUNDARY_WHITE
@@ -194,7 +182,7 @@ end
 ---haystack. Cheap rejection before the O(n·m) DP.
 ---@param probe hybrid.Probe
 ---@return boolean
-local function is_subsequence(probe)
+local is_subsequence = function(probe)
   local needle, haystack, n, m = probe.needle, probe.haystack, probe.n, probe.m
   local i = 1
   for j = 1, m do
@@ -212,7 +200,7 @@ end
 ---@param haystack string
 ---@param m integer
 ---@return integer[]
-local function classify_haystack(haystack, m)
+local classify_haystack = function(haystack, m)
   local hclass = {}
   for j = 1, m do
     hclass[j] = classify(string.byte(haystack, j))
@@ -225,7 +213,7 @@ end
 ---@param probe hybrid.Probe
 ---@param hclass integer[]
 ---@return integer
-local function dp_score(probe, hclass)
+local dp_score = function(probe, hclass)
   local needle, haystack, n, m = probe.needle, probe.haystack, probe.n, probe.m
 
   local H, C = {}, {}
@@ -302,7 +290,7 @@ end
 ---fzf v2 Smith-Waterman score, or nil if the needle isn't a subsequence.
 ---@param probe hybrid.Probe
 ---@return integer?
-local function fzf_score(probe)
+local fzf_score = function(probe)
   if not is_subsequence(probe) then
     return nil
   end
@@ -342,11 +330,12 @@ end
 
 ---Construct a Probe from raw inputs. Returns nil for empty / oversize.
 ---Acts as the pipeline's gate — invalid inputs never reach any stage.
+---Exposed for tests; callers should go through M.score.
 ---@param needle string
 ---@param haystack string
 ---@param precomputed? hybrid.Precomputed
 ---@return hybrid.Probe?
-local function probe_of(needle, haystack, precomputed)
+M._probe_of = function(needle, haystack, precomputed)
   local n, m = #needle, #haystack
   if n == 0 or n > m or m > LEN_CAP then
     return nil
@@ -370,7 +359,7 @@ end
 -- ============================================================================
 
 ---@type hybrid.Stage
-local function try_exact(probe)
+local try_exact = function(probe)
   if probe.needle == probe.haystack then
     return T_EXACT
   end
@@ -378,7 +367,7 @@ local function try_exact(probe)
 end
 
 ---@type hybrid.Stage
-local function try_prefix(probe)
+local try_prefix = function(probe)
   local needle, haystack, n, m = probe.needle, probe.haystack, probe.n, probe.m
   if not smart_starts_with(haystack, needle) then
     return nil
@@ -394,16 +383,19 @@ local function try_prefix(probe)
 end
 
 ---@type hybrid.Stage
-local function try_camel(probe)
+local try_camel = function(probe)
   local needle, n, m = probe.needle, probe.n, probe.m
   local inits = probe.initials_str or initials(probe.haystack)
-  local inits_pref = string.sub(inits, 1, n)
-  if not smart_string_eq(needle, inits_pref) then
+  if #inits < n then
     return nil
   end
   local mismatches = 0
   for i = 1, n do
-    if string.byte(needle, i) ~= string.byte(inits_pref, i) then
+    local nb, hb = string.byte(needle, i), string.byte(inits, i)
+    if not smart_eq(nb, hb) then
+      return nil
+    end
+    if nb ~= hb then
       mismatches = mismatches + 1
     end
   end
@@ -411,7 +403,7 @@ local function try_camel(probe)
 end
 
 ---@type hybrid.Stage
-local function try_fuzzy(probe)
+local try_fuzzy = function(probe)
   local f = fzf_score(probe)
   if f == nil then
     return nil
@@ -428,34 +420,33 @@ end
 -- Pipeline
 -- ============================================================================
 
----@type hybrid.Stage[]
-local STAGES = { try_exact, try_prefix, try_camel, try_fuzzy }
+---Exposed for tests; callers should go through M.score.
+---@type table<string, hybrid.Stage>
+M._STAGES = {
+  exact = try_exact,
+  prefix = try_prefix,
+  camel = try_camel,
+  fuzzy = try_fuzzy,
+}
+
+local STAGE_ORDER = { "exact", "prefix", "camel", "fuzzy" }
 
 ---@param needle string
 ---@param haystack string
 ---@param precomputed? hybrid.Precomputed
 ---@return number?
 M.score = function(needle, haystack, precomputed)
-  local probe = probe_of(needle, haystack, precomputed)
+  local probe = M._probe_of(needle, haystack, precomputed)
   if probe == nil then
     return nil
   end
-  for _, stage in ipairs(STAGES) do
-    local s = stage(probe)
+  for _, name in ipairs(STAGE_ORDER) do
+    local s = M._STAGES[name](probe)
     if s ~= nil then
       return s
     end
   end
   return nil
 end
-
----Exposed for tests. Callers should still go through M.score.
-M._probe_of = probe_of
-M.STAGES = {
-  exact = try_exact,
-  prefix = try_prefix,
-  camel = try_camel,
-  fuzzy = try_fuzzy,
-}
 
 return M

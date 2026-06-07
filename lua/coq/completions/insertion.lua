@@ -13,10 +13,13 @@ local M = {}
 ---@param settings config.Settings
 ---@param resolver completions.Resolver
 ---@param statsd index.Statsd
----@param done channels.Broadcast<vim.v.completed_item>
-M.bind = function(n, settings, resolver, statsd, done)
-  events.subscribe_latest(n, done, function(completed)
-    local user_data = completed.user_data
+---@param pum channels.Broadcast<completions.PumEvent>
+M.bind = function(n, settings, resolver, statsd, pum)
+  events.subscribe_latest(n, pum, function(ev)
+    if ev.kind ~= "done" then
+      return
+    end
+    local user_data = ev.completed_item.user_data
     if type(user_data) ~= "table" then
       return
     end
