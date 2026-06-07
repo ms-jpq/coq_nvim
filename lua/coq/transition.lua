@@ -73,6 +73,10 @@ local REMOVED_OPTIONS = {
   { "display.pum.y_ratio", "compute yourself: `vim.o.pumheight = math.floor(vim.o.lines * 0.3)`." },
   { "keymap.eval_snips", "bind a key to `:COQsnips compile` yourself." },
   { "keymap.repeat" },
+  {
+    "display.ghost_text.context",
+    "v2 ghost text renders inline without decorators — drop the field. Highlight via `display.ghost_text.highlight_group`.",
+  },
 }
 
 ---@type [string, string?][]

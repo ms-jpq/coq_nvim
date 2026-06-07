@@ -1,6 +1,7 @@
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local events = require "coq.completions.events"
+local ghost = require "coq.completions.ghost"
 local inserted = require "coq.completions.inserted"
 local item = require "coq.completions.item"
 local statsd_m = require "coq.lib.index.rank.statsd"
@@ -42,14 +43,31 @@ M.complete = function(ctx, settings, statsd, iter)
     end
   end
 
-  local items = {}
+  local ranked = {}
   for i in topk.iter() do
-    table.insert(items, item.to_nvim(settings.display.icons, i))
+    table.insert(ranked, i)
   end
 
   atools.scheduled()
   if not context.still_valid(ctx) or string.sub(vim.api.nvim_get_mode().mode, 1, 1) ~= "i" then
     return
+  end
+
+  -- proactive top-1 ghost: render the best match inline before the PUM opens.
+  -- When no match exists, clear so a stale ghost from a prior trigger doesn't
+  -- linger across the keystroke.
+  local g = settings.display.ghost_text
+  if g.proactive then
+    if ranked[1] then
+      ghost.show(g, ctx, ranked[1], 1, #ranked)
+    else
+      ghost.clear(ctx.buf)
+    end
+  end
+
+  local items = {}
+  for _, i in pairs(ranked) do
+    table.insert(items, item.to_nvim(settings.display.icons, i))
   end
 
   local start = #ctx.line_before - #ctx.keyword_before + 1

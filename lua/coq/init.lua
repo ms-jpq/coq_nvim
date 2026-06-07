@@ -7,6 +7,7 @@ local atools = require "coq.lib.atools"
 local commands = require "coq.commands"
 local config = require "coq.config"
 local events_m = require "coq.completions.events"
+local ghost = require "coq.completions.ghost"
 local idle = require "coq.completions.idle"
 local insertion = require "coq.completions.insertion"
 local instrument = require "coq.lib.producers.instrument"
@@ -123,6 +124,7 @@ M.setup = function(opts)
 
       trigger.bind(n, settings, statsd, resolver, sup, events)
       preview.bind(n, settings, resolver, events.pum)
+      ghost.bind(n, settings, events)
       insertion.bind(n, settings, resolver, statsd, events.done)
       idle.bind(n, settings, sup, events)
       commands.bind(settings, statsd, events)
