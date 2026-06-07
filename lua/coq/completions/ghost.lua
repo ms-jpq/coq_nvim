@@ -13,6 +13,7 @@ local B_KEY = "coq_ghost"
 local M = {}
 
 ---@class ghost.State
+---@field changedtick integer
 ---@field anchor [integer, integer]
 ---@field insert_text string
 ---@field replaces_rows integer?
@@ -37,6 +38,7 @@ M.clear = function(buf)
   if not buf or not vim.api.nvim_buf_is_valid(buf) then
     return
   end
+
   vim.b[buf][B_KEY] = nil
   vim.api.nvim_buf_clear_namespace(buf, NS, 0, -1)
 end
@@ -76,6 +78,7 @@ M.show = function(ctx, i)
 
   ---@type ghost.State
   vim.b[ctx.buf][B_KEY] = {
+    changedtick = vim.b[ctx.buf].changedtick,
     insert_text = insert_text,
     anchor = { span.start_row, span.start_col },
     replaces_rows = replaces_rows(i),
@@ -90,43 +93,37 @@ end
 M._extmarks = function(ghost, buf, s, cursor_col)
   return coroutine.wrap(function()
     local anchor_row, anchor_col = unpack(s.anchor)
-    if cursor_col < anchor_col then
-      return
-    end
 
     local line = vim.api.nvim_buf_get_lines(buf, anchor_row, anchor_row + 1, true)[1] or ""
-    local typed = string.sub(line, anchor_col + 1, cursor_col)
+    local typed = (cursor_col >= anchor_col) and string.sub(line, anchor_col + 1, cursor_col) or ""
     local lcp = txt.longest_common_prefix(typed, s.insert_text)
-    local remaining = string.sub(s.insert_text, lcp + 1)
+
+    local fuzzy = lcp < #typed and not s.replaces_rows
+    local remaining = fuzzy and s.insert_text or string.sub(s.insert_text, lcp + 1)
+    local first_col = fuzzy and anchor_col or cursor_col
     if remaining == "" then
       return
     end
 
     local lines = vim.iter(txt.splitlines(remaining)):totable()
-    local line1 = lines[1] or ""
-    if line1 == "" and #lines <= 1 then
-      return
-    end
-
+    local line1 = unpack(lines)
     local has_ctrl = string.find(line1, "%c") ~= nil
-    local replaces = s.replaces_rows
-    local pos = (has_ctrl and "eol") or (replaces and "overlay") or "inline"
-    local hl = ghost.highlight_group
+    local pos = (has_ctrl and "eol") or (s.replaces_rows and "overlay") or (fuzzy and "overlay") or "inline"
 
-    local row_overlays = (replaces and not has_ctrl) and math.min(#lines, replaces) or 1
+    local row_overlays = (s.replaces_rows and not has_ctrl) and math.min(#lines, s.replaces_rows) or 1
 
     local virt_lines = vim
       .iter(lines)
       :skip(row_overlays)
       :map(function(l)
-        return { { l, hl } }
+        return { { l, ghost.highlight_group } }
       end)
       :totable()
 
     for k, line_k in vim.iter(lines):take(row_overlays):enumerate() do
       local opts = {
         ephemeral = true,
-        virt_text = line_k ~= "" and { { line_k, hl } } or {},
+        virt_text = line_k ~= "" and { { line_k, ghost.highlight_group } } or {},
         virt_text_pos = k == 1 and pos or "overlay",
         hl_mode = "replace",
       }
@@ -139,7 +136,7 @@ M._extmarks = function(ghost, buf, s, cursor_col)
 
       coroutine.yield {
         row = anchor_row + k - 1,
-        col = k == 1 and cursor_col or 0,
+        col = k == 1 and first_col or 0,
         opts = opts,
       }
     end
@@ -158,7 +155,7 @@ M.bind = function(n, settings, ev)
     end,
     on_line = function(_, win, buf, row)
       local s = state_of(buf)
-      if s == nil then
+      if s == nil or s.changedtick ~= vim.b[buf].changedtick or lsp_inline_active(buf) then
         return
       end
       local anchor_row = unpack(s.anchor)

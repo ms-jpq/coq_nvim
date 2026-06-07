@@ -359,6 +359,19 @@ T.describe({ "ghost typed-prefix suppression :: multibyte" }, function(test)
   end)
 end)
 
+T.describe({ "ghost fuzzy / divergent-typed overlay" }, function(test)
+  test({ "typed diverges → overlay full body at anchor column" }, function()
+    -- Buffer "fn", item "function". Body painted at anchor_col=0 with
+    -- overlay — body covers typed text, user sees "function" on top of "fn".
+    local buf, ctx = mk_ctx({ "fn" }, 1, 2)
+    ghost.show(ctx, item_of "function")
+    local opts = extmark_opts(ghost_cfg, buf, ctx.pos[2])
+    assert(opts and opts.virt_text, "expected an extmark")
+    T.eq(opts.virt_text[1][1], "function")
+    T.eq(opts.virt_text_pos, "overlay")
+  end)
+end)
+
 T.describe({ "ghost snippet preview integration" }, function(test)
   -- Parser tests live in producers/snippets/preview.test.lua. Here we only
   -- check that a snippet item's body gets routed through that parser.
