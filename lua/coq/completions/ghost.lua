@@ -13,9 +13,7 @@ local B_KEY = "coq_ghost"
 local M = {}
 
 ---@class ghost.State
----@field changedtick integer
 ---@field anchor [integer, integer]
----@field anchor_line string
 ---@field insert_text string[]
 ---@field replaces_rows integer?
 
@@ -34,6 +32,10 @@ local function state_of(buf)
   return vim.b[buf][B_KEY]
 end
 
+local clear = function(buf)
+  vim.api.nvim_buf_clear_namespace(buf, NS, 0, -1)
+end
+
 ---@param buf integer
 M.clear = function(buf)
   if not buf or not vim.api.nvim_buf_is_valid(buf) then
@@ -41,7 +43,7 @@ M.clear = function(buf)
   end
 
   vim.b[buf][B_KEY] = nil
-  vim.api.nvim_buf_clear_namespace(buf, NS, 0, -1)
+  clear(buf)
 end
 
 ---@param i completions.Item
@@ -124,9 +126,7 @@ M.show = function(ctx, i)
 
   ---@type ghost.State
   vim.b[ctx.buf][B_KEY] = {
-    changedtick = vim.b[ctx.buf].changedtick,
     anchor = { span.start_row, span.start_col },
-    anchor_line = anchor_line,
     insert_text = lines,
     replaces_rows = replaces_rows(i),
   }
@@ -138,22 +138,24 @@ end
 ---@return string[] rest
 M._remaining = function(typed, candidate)
   local first = candidate[1] or ""
-  local head = string.sub(first, txt.subseq_end(typed, first) + 1)
+  local pos = txt.subseq_end(typed, first) + 1
+  local head = string.sub(first, pos)
   local rest = { unpack(candidate, 2) }
   return head, rest
 end
 
 ---@param ghost config.GhostText
 ---@param s ghost.State
+---@param line string
 ---@param cursor_col integer
 ---@return fun(): ghost.Mark?
-M._extmarks = function(ghost, s, cursor_col)
+M._extmarks = function(ghost, s, line, cursor_col)
   return coroutine.wrap(function()
     local anchor_row, anchor_col = unpack(s.anchor)
     if cursor_col < anchor_col then
       return
     end
-    local typed = string.sub(s.anchor_line, anchor_col + 1, cursor_col)
+    local typed = string.sub(line, anchor_col + 1, cursor_col)
     local head, rest = M._remaining(typed, s.insert_text)
 
     if head == "" and #rest == 0 then
@@ -199,11 +201,11 @@ M.bind = function(n, settings, ev)
       return state_of(buf) ~= nil
     end,
     on_buf = function(_, buf)
-      vim.api.nvim_buf_clear_namespace(buf, NS, 0, -1)
+      clear(buf)
     end,
     on_line = function(_, win, buf, row)
       local s = state_of(buf)
-      if s == nil or s.changedtick ~= vim.b[buf].changedtick or lsp_inline_active(buf) then
+      if s == nil or lsp_inline_active(buf) then
         return
       end
 
@@ -217,8 +219,9 @@ M.bind = function(n, settings, ev)
         return
       end
 
-      vim.api.nvim_buf_clear_namespace(buf, NS, 0, -1)
-      for mark in M._extmarks(settings.display.ghost_text, s, col) do
+      local line = unpack(vim.api.nvim_buf_get_lines(buf, row, row + 1, true))
+      clear(buf)
+      for mark in M._extmarks(settings.display.ghost_text, s, line, col) do
         nvim_buf_set_extmark(buf, NS, mark.row, mark.col, mark.opts)
       end
     end,
