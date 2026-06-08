@@ -100,11 +100,11 @@ M.setup = function(opts)
 
   async.entry(function()
     async.scope(function(n)
+      atools.scheduled()
+
       local merged = vim.tbl_deep_extend("force", vim.g.coq_settings or {}, opts or {})
       local settings = config.merged(merged)
       transition.audit(merged)
-
-      atools.scheduled()
 
       local statsd = statsd_m.new(settings)
       local lord = timelord_m.new()

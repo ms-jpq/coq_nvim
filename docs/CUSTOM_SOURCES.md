@@ -80,7 +80,7 @@ The caching semantics is identical to LSP specification. ie. `items[]...` is cac
 
 All code paths must invoke `callback`, or else `coq.nvim` will end up waiting for `callback` and timing out on every keystroke.
 
-**`:COQstats`** is your best friend. It's super obvious if one source is slowing everybody down.
+**`:COQ stats`** is your best friend. It's super obvious if one source is slowing everybody down.
 
 ## Known sources
 

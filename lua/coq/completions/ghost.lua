@@ -33,18 +33,18 @@ local function state_of(buf)
   return vim.b[buf][B_KEY]
 end
 
-local clear = function(buf)
+local clear_ns = function(buf)
   vim.api.nvim_buf_clear_namespace(buf, NS, 0, -1)
 end
 
 ---@param buf integer
 M.clear = function(buf)
-  if not buf or not vim.api.nvim_buf_is_valid(buf) then
+  if not vim.api.nvim_buf_is_valid(buf) then
     return
   end
 
   vim.b[buf][B_KEY] = nil
-  clear(buf)
+  clear_ns(buf)
 end
 
 ---@param i completions.Item
@@ -99,6 +99,20 @@ M._expand_tabs = function(tabstop, start_col, lines)
     :totable()
 end
 
+---@type fun(buf: integer, lo: integer, hi: integer)
+local invalidate = vim.api.nvim__redraw
+    and function(buf, lo, hi)
+      vim.api.nvim__redraw {
+        valid = false,
+        buf = buf,
+        range = { lo, hi },
+      }
+    end
+  or function(buf, lo, _)
+    local id = vim.api.nvim_buf_set_extmark(buf, NS, lo, 0, {})
+    vim.api.nvim_buf_del_extmark(buf, NS, id)
+  end
+
 ---@param ctx ctx.full
 ---@param i? completions.Item
 M.show = function(ctx, i)
@@ -136,6 +150,8 @@ M.show = function(ctx, i)
     insert_text = lines,
     replaces_rows = replaces_rows(i),
   }
+
+  invalidate(ctx.buf, span.start_row, span.start_row + #lines)
 end
 
 ---@param typed string
@@ -236,7 +252,7 @@ M.bind = function(n, settings, ev)
       return state_of(buf) ~= nil
     end,
     on_buf = function(_, buf)
-      clear(buf)
+      clear_ns(buf)
     end,
     on_line = function(_, win, buf, row)
       local s = state_of(buf)
@@ -259,7 +275,7 @@ M.bind = function(n, settings, ev)
       end
       local line = unpack(vim.api.nvim_buf_get_lines(buf, row, row + 1, true))
 
-      clear(buf)
+      clear_ns(buf)
       for mark in M._extmarks(settings.display.ghost_text, s, line, col) do
         nvim_buf_set_extmark(buf, NS, mark.row, mark.col, mark.opts)
       end

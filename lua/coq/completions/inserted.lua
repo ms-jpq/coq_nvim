@@ -1,3 +1,4 @@
+local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local debug_m = require "coq.lib.debug"
 local lsp_util = require "coq.producers.lsp.util"
@@ -43,6 +44,7 @@ M._resolve = function(settings, ctx, resolver, i)
   lsp = resolver.resolve(ctx, i, timeout_ms) or lsp
   edits = (lsp.item and lsp.item.additionalTextEdits) or {}
 
+  atools.scheduled()
   if not context.still_valid(ctx) then
     return nil, {}
   end
@@ -69,6 +71,7 @@ local resolve_range = function(buf, enc, cursor_row, cursor_line, range)
   if not range then
     return
   end
+
   local s, e = range.start, range["end"]
   local line_count = vim.api.nvim_buf_line_count(buf)
   if not (s.line >= 0 and s.line <= cursor_row and e and e.line >= s.line and e.line < line_count) then

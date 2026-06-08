@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local events_m = require "coq.completions.events"
 local set = require "coq.lib.set"
@@ -48,6 +49,7 @@ M.bind = function(n, settings, sup, events)
     local snapshot = carry
     carry = { updated = set.new {}, removed = set.new {} }
 
+    atools.scheduled()
     sup.idle(settings, {
       ctx = context.full(),
       config_dir = config_dir,

@@ -1,10 +1,6 @@
 # Snippets
 
-There are two important hotkeys
-
-- `coq_settings.keymap.jump_to_mark`: jump to next edit region. (default `<c-h>`)
-
-- `coq_settings.keymap.eval_snips`: evaluate document / visual seleciton as snippets (unbound by default)
+- Coq uses the standard `vim.snippet.jump(±1)` for snippet navigation.
 
 ## Pre-compiled snippets
 
@@ -18,33 +14,9 @@ Note: `*` and `_` is are special wildcard filetypes.
 
 ### Workflow
 
-1. `:COQsnips edit` -- edits snippet for current filetype
+1. `:COQ snips edit` -- edits snippet for current filetype
 
-2. `<eval_snips>` -- live repl to ensure snippet is what you want
-
-3. `:COQsnips compile` -- boom, you are good to do
-
-### Compilation
-
-```viml
-:COQsnips compile
-```
-
-`coq.nvim` requires you to compile the snippets before they can be loaded. This is to ensure **zero snippet errors** during runtime.
-
-`coq` will only accept snippets with valid grammar, and has built-in repl to help you on that.
-
-![snip_load.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/snip_load.gif)
-
-### Repl
-
-You need to bound `coq_settings.keymap.eval_snips` to a key first.
-
-ie. `let g:coq_settings = { 'keymap.eval_snips': '<leader>j' }`
-
-Now entering `<leader>j` under normal mode will evaluate current document, and under visual mode will evaluate only the visual seleciton.
-
-![snip_parse.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/snip_parse.gif)
+2. `:COQ snips compile` -- re-index user snippets
 
 ### Grammar
 
@@ -118,9 +90,9 @@ You can also set `coq_settings.clients.snippets.user_path` to load from a custom
 
 There is a convenience command:
 
-```viml
+```vim
 " <filetype> can be omitted if current document has a filetype
-:COQsnips edit <filetype>
+:COQ snips edit <filetype>
 ```
 
 To edit snippets for a particular filetype.
@@ -129,13 +101,9 @@ The default path is normally under `$NVIM_HOME/coq-user-snippets/`, but if `coq_
 
 To see where snippets are currently stored, there is also
 
-```viml
-:COQsnips cd
-:COQsnips ls
+```vim
+:COQ snips cd
+:COQ snips ls
 ```
-
-### et al.
-
-Set `coq_settings.clients.snippets.warn` to `[]` to disable warnings.
 
 [My personal snippets](https://github.com/ms-jpq/snips)

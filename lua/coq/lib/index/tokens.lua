@@ -1,5 +1,4 @@
 local async = require "coq.lib.async"
-local atools = require "coq.lib.atools"
 local buffers = require "coq.lib.buffers"
 local default_dict = require "coq.lib.default_dict"
 local set = require "coq.lib.set"
@@ -191,7 +190,6 @@ end
 ---@param ctx ctx.full
 ---@return string[]
 M.surround = function(ctx)
-  atools.scheduled()
   return buffers.lines_around_cursor(ctx.buf)
 end
 

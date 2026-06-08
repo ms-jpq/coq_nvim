@@ -1,3 +1,4 @@
+local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local events_m = require "coq.completions.events"
 local insertion = require "coq.completions.insertion"
@@ -59,6 +60,7 @@ M.bind = function(n, settings, statsd, resolver, sup, events)
   end)
 
   events_m.subscribe_latest(n, events.trigger, function(ev)
+    atools.scheduled()
     local manual = ev.manual or sticky
     local ctx = context.full { manual = manual }
 
