@@ -102,7 +102,9 @@ local edit_ctx = function(preview, ctx, i, enc, range)
   local line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, cursor_row, row, true))
 
   local inserted = preview and "" or ((i.meta.snippet and i.abbr) or i.word or "")
-  local original_col = math.max(0, col - #inserted)
+  local first_nl = string.find(inserted, "[\r\n]")
+  local first_line_len = first_nl and (first_nl - 1) or #inserted
+  local original_col = math.max(0, col - first_line_len)
 
   local start_line, end_line, span = resolve_range(ctx.buf, enc, cursor_row, line, range)
 
@@ -209,15 +211,18 @@ end
 ---@return lsp.TextEdit
 M._main_edit = function(ctx, i, lsp)
   local span, e_ctx, enc, replace_text = M.span(false, ctx, i, lsp)
+  local start_col = math.min(span.start_col, #e_ctx.start_line)
+  local end_col = math.min(span.end_col, #e_ctx.end_line)
+
   return {
     range = {
       start = {
         line = span.start_row,
-        character = vim.str_utfindex(e_ctx.start_line, enc, span.start_col, true),
+        character = vim.str_utfindex(e_ctx.start_line, enc, start_col, true),
       },
       ["end"] = {
         line = span.end_row,
-        character = vim.str_utfindex(e_ctx.end_line, enc, span.end_col, true),
+        character = vim.str_utfindex(e_ctx.end_line, enc, end_col, true),
       },
     },
     newText = replace_text,
@@ -237,11 +242,12 @@ end
 
 ---@param ctx ctx.full
 ---@param body string
-M._snippet_expand = function(ctx, body)
+M._apply_snippet = function(ctx, body)
   local ok, err = pcall(vim.snippet.expand, body)
   if ok then
     return
   end
+
   local row, col = unpack(vim.api.nvim_win_get_cursor(ctx.win))
   vim.lsp.util.apply_text_edits({
     {
@@ -272,7 +278,7 @@ M.apply = function(settings, ctx, resolver, i)
   debug.buf(ctx.buf, "post-apply_edits")
 
   if i.meta.snippet then
-    M._snippet_expand(ctx, i.meta.snippet)
+    M._apply_snippet(ctx, i.meta.snippet)
     debug.buf(ctx.buf, "post-snippet.expand")
   end
 

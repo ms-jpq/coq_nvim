@@ -105,7 +105,7 @@ M.show = function(ctx, i)
   local lines = vim.iter(txt.splitlines(insert_text)):totable()
 
   if span.start_row == span.end_row and #lines == 1 then
-    local trim = span.end_col - e_ctx.col
+    local trim = math.max(0, span.end_col - e_ctx.col)
     lines[1] = string.sub(lines[1], 1, #lines[1] - trim)
   end
 
@@ -249,7 +249,11 @@ M.bind = function(n, settings, ev)
         return
       end
 
+      if row >= vim.api.nvim_buf_line_count(buf) then
+        return
+      end
       local line = unpack(vim.api.nvim_buf_get_lines(buf, row, row + 1, true))
+
       clear(buf)
       for mark in M._extmarks(settings.display.ghost_text, s, line, col) do
         nvim_buf_set_extmark(buf, NS, mark.row, mark.col, mark.opts)

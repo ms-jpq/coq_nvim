@@ -24,11 +24,18 @@ M.new = function(name)
     if not enabled then
       return
     end
-    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+
+    local win = vim.fn.bufwinid(buf)
+    if win == -1 then
+      return
+    end
+
+    local row, col = unpack(vim.api.nvim_win_get_cursor(win))
     local line_count = vim.api.nvim_buf_line_count(buf)
     local from = math.max(0, row - 3)
     local to = math.min(line_count, row + 2)
     local lines = vim.api.nvim_buf_get_lines(buf, from, to, false)
+
     local out = {}
     for k, l in ipairs(lines) do
       local n = from + k
