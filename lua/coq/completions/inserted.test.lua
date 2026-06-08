@@ -1,4 +1,5 @@
 local T = require "coq.lib.test"
+local TH = require "coq.lib.test_helpers"
 local inserted = require "coq.completions.inserted"
 local tokens = require "coq.lib.index.tokens"
 
@@ -11,17 +12,10 @@ local tokens = require "coq.lib.index.tokens"
 ---@return integer[] span  -- { start_row, start_col, end_row, end_col }
 ---@return string replacement
 local apply = function(opts)
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(buf, 0, -1, true, vim.split(opts.line, "\n", { plain = true }))
-
-  -- only buf/pos/iskeyword are read; a full ctx.full is intentionally not built
-  ---@type ctx.full
-  ---@diagnostic disable-next-line: missing-fields
-  local ctx = {
-    win = 0,
+  local buf = TH.scratch_buf(vim.split(opts.line, "\n", { plain = true }))
+  local ctx = TH.ctx_of {
     buf = buf,
-    pos = { 1, opts.col },
-    changedtick = 0,
+    pos = { 1, opts.col, opts.col, opts.col },
     iskeyword = tokens.parse_charset(vim.bo[buf].iskeyword),
   }
   local item = {
@@ -150,55 +144,17 @@ T.describe({ "inserted.word_range" }, function(test)
   end)
 end)
 
--- `_span` is pure: hand-built EditCtx, no buffer. These pin the column math the
--- buffer-level tests above exercise end-to-end.
-local DEFAULT_ISKEYWORD = tokens.parse_charset "@,48-57,_,192-255"
-
-local edit_ctx = function(o)
-  local col = o.col or 2
-  local end_row = o.end_row or 0
-  return {
-    cursor_row = 0,
-    col = col,
-    before_inserted = o.before_inserted or "",
-    after_cursor = o.after_cursor or "",
-    start_line = o.start_line or "",
-    end_line = o.end_line or "",
-    span = o.span or { start_row = 0, start_col = col, end_row = end_row, end_col = col },
-  } --[[@as completions.EditCtx]]
-end
-
-T.describe({ "inserted.fallback_span" }, function(test)
-  -- `_fallback_span` runs when no LSP range was resolved: pure keyword/overlap
-  -- math from EditCtx.
-  -- The range-honoring branch lives at the callsite in `_main_edit` and is
-  -- exercised by the scenario tests below.
-  test({ "fallback uses the keyword runs flanking the cursor" }, function()
-    local span = inserted._fallback_span(
-      DEFAULT_ISKEYWORD,
-      edit_ctx { col = 2, before_inserted = "", after_cursor = "XYZ" },
-      "anything"
-    )
-    -- after_cursor "XYZ" is all keyword chars; leading_keyword consumes all 3.
-    T.eq(span, { start_row = 0, start_col = 0, end_row = 0, end_col = 5 })
-  end)
-end)
-
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 
 ---@param lines string[]
 ---@return ctx.full, integer buf
 local make_ctx = function(lines)
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(buf, 0, -1, true, lines)
+  local buf = TH.scratch_buf(lines)
   local first = lines[1] or ""
-  ---@type ctx.full
-  ---@diagnostic disable-next-line: missing-fields
-  local ctx = {
-    win = 0,
+  local ctx = TH.ctx_of {
     buf = buf,
-    pos = { 1, #first },
+    pos = { 1, #first, #first, #first },
     changedtick = vim.b[buf].changedtick,
     iskeyword = tokens.parse_charset(vim.bo[buf].iskeyword),
   }
@@ -230,22 +186,17 @@ end
 ---@return string
 local scenario = function(before, word, after, opts)
   opts = opts or {}
-  local buf = vim.api.nvim_create_buf(false, true)
   local content = before .. word .. after
-  vim.api.nvim_buf_set_lines(buf, 0, -1, true, vim.split(content, "\n", { plain = true }))
+  local buf = TH.scratch_buf(vim.split(content, "\n", { plain = true }))
 
   local cursor_text = before .. word
   local cursor_lines = vim.split(cursor_text, "\n", { plain = true })
   local row = #cursor_lines
   local col = #cursor_lines[#cursor_lines]
 
-  ---@type ctx.full
-  ---@diagnostic disable-next-line: missing-fields
-  local ctx = {
-    win = 0,
+  local ctx = TH.ctx_of {
     buf = buf,
-    pos = { row, col },
-    changedtick = 0,
+    pos = { row, col, col, col },
     iskeyword = tokens.parse_charset(vim.bo[buf].iskeyword),
   }
   local item = {

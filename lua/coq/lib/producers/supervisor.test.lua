@@ -93,15 +93,17 @@ T.describe({ "supervisor" }, function(test)
   end)
 
   test({ "new search cancels in-flight idle" }, function()
+    -- pcall(sleep) returning false IS the proof idle's sleep was cancelled.
+    -- If search hadn't cancelled idle, sleep would complete naturally and
+    -- pcall would return true.
     local idle_started = async.future()
-    local idle_finished = async.future()
+    local idle_cancelled = async.future()
     async.scope(function(n)
       local p, push = pushable {
         idle = function()
           idle_started.resolve()
-          local start = vim.uv.hrtime()
-          pcall(async.sleep, 100 * T.SLOW)
-          idle_finished.resolve((vim.uv.hrtime() - start) / 1e6)
+          local ok = pcall(async.sleep, 100 * T.SLOW)
+          idle_cancelled.resolve(not ok)
         end,
         matcher = function()
           coroutine.yield "lil"
@@ -116,11 +118,7 @@ T.describe({ "supervisor" }, function(test)
       drain(sup.search(SETTINGS, {}))
     end)
 
-    local idle_elapsed_ms = idle_finished.await()
-    assert(
-      idle_elapsed_ms and idle_elapsed_ms < 50 * T.SLOW,
-      "idle should have been cancelled, elapsed: " .. tostring(idle_elapsed_ms)
-    )
+    T.eq(idle_cancelled.await(), true)
   end)
 
   test({ "idle is no-op while search is active" }, function()
@@ -256,5 +254,59 @@ T.describe({ "supervisor" }, function(test)
     end)
 
     assert(idle_ran, "idle must run after a cancelled search (searching must not latch)")
+  end)
+
+  test({ "two consecutive searches without intervening idle" }, function()
+    -- Real-world pattern: subscribe_latest fires two searches back-to-back.
+    -- The second must produce items just like the first — searching must not
+    -- latch on, and matcher state must not leak between searches.
+    local items_a, items_b = {}, {}
+    async.scope(function()
+      local sup = supervisor.new { yields("lil", "spot") }
+      do
+        local close, iter = sup.search(SETTINGS, {})
+        for v in iter do
+          table.insert(items_a, v)
+        end
+        close()
+      end
+      do
+        local close, iter = sup.search(SETTINGS, {})
+        for v in iter do
+          table.insert(items_b, v)
+        end
+        close()
+      end
+    end)
+    T.eq(items_a, { "lil", "spot" })
+    T.eq(items_b, { "lil", "spot" })
+  end)
+
+  test({ "second search proceeds after first's consumer is cancelled" }, function()
+    -- subscribe_latest dispatches the next search before the previous one's
+    -- consumer fully drains. The supervisor's `searching` flag must reset
+    -- via the on_cancel hook so the second search's matcher is reachable.
+    async.scope(function(n)
+      local sup = supervisor.new { yields "lil" }
+
+      -- Start the first search inside a cancellable task without draining.
+      local searcher = n.spawn(function()
+        local _, iter = sup.search(SETTINGS, {})
+        for _ in iter do
+          lib.noop()
+        end
+      end)
+      async.sleep(5 * T.SLOW)
+      searcher.cancel()
+
+      -- Second search must produce items — `searching` flag must have reset.
+      local close, iter = sup.search(SETTINGS, {})
+      local got = {}
+      for v in iter do
+        table.insert(got, v)
+      end
+      close()
+      T.eq(got, { "lil" })
+    end)
   end)
 end)

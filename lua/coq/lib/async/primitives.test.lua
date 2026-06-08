@@ -78,31 +78,38 @@ end)
 
 T.describe({ "sleep cancel" }, function(test)
   test({ "returns immediately when handle already cancelled" }, function()
+    -- Pre-cancel the handle, then call sleep. The pcall raises cancel — if
+    -- sleep actually waited, the sentinel sibling would log first.
     local h = handle.new()
-    local n = nursery.new()
-    local _ = h.on_cancel(n.cancel)
-    n.spawn(function()
-      h.cancel()
-      local start = vim.uv.hrtime()
-      pcall(async.sleep, 100 * T.SLOW)
-      local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
-
-      assert(elapsed_ms < 20 * T.SLOW, ("expected immediate, got %.1fms"):format(elapsed_ms))
+    local checkpoints = {}
+    async.scope(function(outer)
+      outer.spawn(function()
+        async.sleep(50 * T.SLOW)
+        table.insert(checkpoints, "sentinel")
+      end)
+      local n = nursery.new()
+      local _ = h.on_cancel(n.cancel)
+      n.spawn(function()
+        h.cancel()
+        pcall(async.sleep, 100 * T.SLOW)
+        table.insert(checkpoints, "woke")
+      end)
+      n.join()
+      outer.cancel()
     end)
-    n.join()
+    T.eq(checkpoints, { "woke" })
   end)
 
   test({ "throws cancel when cancelled mid-sleep" }, function()
+    -- pcall flagging the cancel error IS the proof; if the cancel didn't
+    -- interrupt, pcall would return ok=true.
     local h = handle.new()
-    local elapsed_ms
     local ok, err
 
     local n = nursery.new()
     local _ = h.on_cancel(n.cancel)
     n.spawn(function()
-      local start = vim.uv.hrtime()
       ok, err = pcall(async.sleep, 500 * T.SLOW)
-      elapsed_ms = (vim.uv.hrtime() - start) / 1e6
     end)
     n.spawn(function()
       async.sleep(30 * T.SLOW)
@@ -110,7 +117,6 @@ T.describe({ "sleep cancel" }, function(test)
     end)
     n.join()
 
-    assert(elapsed_ms and elapsed_ms < 200 * T.SLOW, ("expected fast wake, got %s"):format(tostring(elapsed_ms)))
     T.eq(ok, false)
     T.eq(cancel.is(err), true)
   end)

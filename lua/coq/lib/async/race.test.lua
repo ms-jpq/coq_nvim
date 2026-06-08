@@ -14,7 +14,10 @@ T.describe({ "race" }, function(test)
   end)
 
   test({ "returns as soon as winner finishes, not waiting for losers" }, function()
-    local start = vim.uv.hrtime()
+    -- Race-with-cancel means the loser's sleep raises before it can set the
+    -- flag. If race waited for the loser instead, the flag would be true.
+    -- No wall-clock budget — the assertion is on cancellation reaching loser.
+    local loser_completed = false
     async.race {
       function()
         async.sleep(5 * T.SLOW)
@@ -22,12 +25,10 @@ T.describe({ "race" }, function(test)
       end,
       function()
         async.sleep(200 * T.SLOW)
-        return "slow"
+        loser_completed = true
       end,
     }
-    local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
-
-    assert(elapsed_ms < 100 * T.SLOW, ("expected ~5ms, got %.1fms"):format(elapsed_ms))
+    T.eq(loser_completed, false)
   end)
 
   test({ "forwards multiple return values" }, function()

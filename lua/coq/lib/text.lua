@@ -116,11 +116,11 @@ M.startswith = function(prefixes, line)
 end
 
 ---@param lines string[]
----@return string[]
+---@return fun(): string?
 M.dedent = function(lines)
   local prefix = nil
 
-  for _, line in pairs(lines) do
+  for _, line in ipairs(lines) do
     if string.match(line, "%S") then
       local leading = string.match(line, "^[ \t]*")
       if prefix == nil then
@@ -139,15 +139,13 @@ M.dedent = function(lines)
     end
   end
 
-  if prefix == nil or prefix == "" then
-    return lines
-  end
-
-  local out = {}
-  for i, line in ipairs(lines) do
-    out[i] = vim.startswith(line, prefix) and string.sub(line, #prefix + 1) or line
-  end
-  return out
+  local strip = prefix and prefix ~= "" and prefix or nil
+  return coroutine.wrap(function()
+    for _, line in ipairs(lines) do
+      local l = (strip and vim.startswith(line, strip)) and string.sub(line, #strip + 1) or line
+      coroutine.yield(l)
+    end
+  end)
 end
 
 return M

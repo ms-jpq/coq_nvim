@@ -115,12 +115,16 @@ T.describe({ "nursery" }, function(test)
     local n = nursery.new()
     local join_ok, join_err
 
+    -- Spot's error triggers n.h.cancel, which fires on_cancel watchers —
+    -- a deterministic signal that errors has been populated. Awaiting it
+    -- before outer.cancel removes the wall-clock race against spot's sleep.
+    local spot_errored = runtime.future()
+    local _ = n.on_cancel(spot_errored.resolve)
+
     async.scope(function(test_n)
       test_n.spawn(function()
         runtime.bind(coroutine.running(), outer)
 
-        -- spot errors at t=5*SLOW, populating n.errors=["spot ran off"]
-        -- and triggering n.h.cancel.
         n.spawn(function()
           async.sleep(5 * T.SLOW)
           error "spot ran off"
@@ -133,7 +137,7 @@ T.describe({ "nursery" }, function(test)
           block.await { cancel = false }
         end)
 
-        async.sleep(50 * T.SLOW)
+        spot_errored.await()
         outer.cancel()
         join_ok, join_err = pcall(n.join)
       end)

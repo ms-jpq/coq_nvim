@@ -1,4 +1,5 @@
 local T = require "coq.lib.test"
+local TH = require "coq.lib.test_helpers"
 local atools = require "coq.lib.atools"
 local itertools = require "coq.lib.itertools"
 local tokens = require "coq.lib.index.tokens"
@@ -87,7 +88,7 @@ end
 ---@return string iskeyword
 ---@return string[] expected
 local probe = function(ft)
-  local buf = vim.api.nvim_create_buf(false, true)
+  local buf = TH.scratch_buf()
   vim.bo[buf].filetype = ft
   local iskeyword = vim.bo[buf].iskeyword
   local expected = vim.api.nvim_buf_call(buf, function()

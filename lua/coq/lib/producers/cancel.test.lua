@@ -26,8 +26,11 @@ end
 local cancel_tests = function(name, factory)
   T.describe({ "producer " .. name .. " :: cancel" }, function(test)
     test({ "ambient cancel wakes a sleeping matcher" }, function()
+      -- If cancel correctly wakes the matcher, its sleep raises before
+      -- matcher_completed is set. If cancel didn't wake it, the matcher would
+      -- sleep its full 200ms and set the flag.
       local h = handle.new()
-      local elapsed_ms
+      local matcher_completed = false
       local n = nursery.new()
       local _ = h.on_cancel(n.cancel)
       n.spawn(function()
@@ -36,20 +39,19 @@ local cancel_tests = function(name, factory)
           idle = lib.noop,
           matcher = function(_, ctx)
             require("coq.lib.async").sleep(200 * ctx.slow)
+            matcher_completed = true
             coroutine.yield "never"
           end,
         }
-        local start = vim.uv.hrtime()
         local _, iter = db.search(SETTINGS, { slow = T.SLOW })
         pcall(iter)
-        elapsed_ms = (vim.uv.hrtime() - start) / 1e6
       end)
       n.spawn(function()
         async.sleep(30 * T.SLOW)
         h.cancel()
       end)
       n.join()
-      assert(elapsed_ms and elapsed_ms < 100 * T.SLOW, ("expected fast wake, got %s ms"):format(tostring(elapsed_ms)))
+      T.eq(matcher_completed, false)
     end)
   end)
 end

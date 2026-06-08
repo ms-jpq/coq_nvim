@@ -93,7 +93,7 @@ M.parse = function(src, text)
         seen[m] = true
         table.insert(items, {
           word = m,
-          body = vim.trim(table.concat(txt.dedent(current_lines), "\n")),
+          body = vim.trim(table.concat(vim.iter(txt.dedent(current_lines)):totable(), "\n")),
           filetype = src.filetype,
           grammar = "lsp",
           label = current_label,

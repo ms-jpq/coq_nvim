@@ -34,11 +34,11 @@ local lib = require "coq.lib"
 ---@field kind completions.BufKind
 
 ---@class completions.Events
----@field trigger channels.Broadcast<completions.TriggerEvent>
----@field pum channels.Broadcast<completions.PumEvent>
 ---@field idle channels.Broadcast<completions.IdleEvent>
----@field leave channels.Broadcast<integer>
 ---@field bufs channels.Broadcast<completions.BufEvent>
+---@field trigger channels.Broadcast<completions.TriggerEvent>
+---@field completion channels.Broadcast<completions.PumEvent>
+---@field leave channels.Broadcast<integer>
 
 ---@type table<string, completions.BufKind>
 local BUF_KINDS = {
@@ -131,13 +131,13 @@ M.new = function()
   end
 
   do
-    events.pum = broadcast.new()
+    events.completion = broadcast.new()
 
     vim.api.nvim_create_autocmd({ "CompleteChanged" }, {
       group = lib.group,
       callback = function()
         local ev = vim.tbl_extend("force", { kind = "changed" }, vim.v.event) --[[@as completions.PumChangedEvent]]
-        events.pum.replace(ev)
+        events.completion.replace(ev)
       end,
     })
   end
@@ -146,7 +146,8 @@ M.new = function()
     vim.api.nvim_create_autocmd({ "CompleteDone" }, {
       group = lib.group,
       callback = function()
-        events.pum.replace { kind = "done", completed_item = vim.v.completed_item }
+        local completed_item = vim.tbl_extend("force", {}, vim.v.completed_item)
+        events.completion.replace { kind = "done", completed_item = completed_item }
       end,
     })
   end
@@ -157,7 +158,7 @@ M.new = function()
     vim.api.nvim_create_autocmd({ "InsertLeave" }, {
       group = lib.group,
       callback = function(args)
-        events.pum.replace { kind = "clear" }
+        events.completion.replace { kind = "clear" }
         events.leave.replace(args.buf)
       end,
     })
