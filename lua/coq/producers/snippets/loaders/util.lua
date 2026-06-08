@@ -5,7 +5,7 @@ local M = {}
 ---@return snippets.Sourced
 M.sourced = function(src, items)
   return {
-    kind = src.kind,
+    filetype = src.filetype,
     path = src.path,
     mtime = src.mtime,
     snippets = items,

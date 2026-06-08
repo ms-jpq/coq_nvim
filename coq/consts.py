@@ -26,7 +26,7 @@ _DOC_DIR = TOP_LEVEL / "docs"
 
 
 CONFIG_YML = _CONF_DIR / "defaults.yml"
-COMPILATION_YML = _CONF_DIR / "compilation.yml"
+COMPILATION_JSON = _CONF_DIR / "compilation.json"
 
 
 _ART_DIR = TOP_LEVEL / "artifacts"

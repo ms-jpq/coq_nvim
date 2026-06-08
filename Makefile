@@ -65,6 +65,7 @@ build: .venv/bin/mypy
 
 ci: .venv/bin/mypy
 	.venv/bin/python3 -m coq.ci
+	./ci/compile_v3.lua
 
 $(VAR)/bin/stylua: | $(VAR)/bin
 	URI='https://github.com/JohnnyMorganz/StyLua/releases/latest/download/stylua-$(OS)-$(ARCH).zip'
