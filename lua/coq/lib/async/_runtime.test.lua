@@ -110,11 +110,17 @@ T.describe({ "async" }, function(test)
   end)
 
   test({ "sleep yields for the requested duration" }, function()
-    local start = vim.uv.hrtime()
-
-    async.sleep(20 * T.SLOW)
-    local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
-
-    assert(elapsed_ms >= 15 * T.SLOW, ("expected ~20ms, got %.1fms"):format(elapsed_ms))
+    -- Order assertion: a shorter sibling sleep must finish before the
+    -- longer one. If sleep returned immediately, "main" would log first.
+    local checkpoints = {}
+    async.scope(function(n)
+      n.spawn(function()
+        async.sleep(5 * T.SLOW)
+        table.insert(checkpoints, "sentinel")
+      end)
+      async.sleep(100 * T.SLOW)
+      table.insert(checkpoints, "main")
+    end)
+    T.eq(checkpoints, { "sentinel", "main" })
   end)
 end)

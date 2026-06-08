@@ -110,8 +110,14 @@ M.show = function(ctx, i)
     return M.clear(ctx.buf)
   end
 
-  local anchor_line = (span.start_row == ctx.pos[1] - 1) and ctx.line
-    or (vim.api.nvim_buf_get_lines(ctx.buf, span.start_row, span.start_row + 1, true)[1] or "")
+  local row = unpack(ctx.pos)
+  local anchor_line = ctx.line
+  if span.start_row ~= row - 1 then
+    if span.start_row < 0 or span.start_row >= vim.api.nvim_buf_line_count(ctx.buf) then
+      return M.clear(ctx.buf)
+    end
+    anchor_line = vim.api.nvim_buf_get_lines(ctx.buf, span.start_row, span.start_row + 1, true)[1] or ""
+  end
 
   local anchor_vcol = vim.fn.strdisplaywidth(string.sub(anchor_line, 1, span.start_col))
   lines = M._expand_tabs(vim.bo[ctx.buf].tabstop, anchor_vcol, lines)
@@ -144,7 +150,10 @@ end
 M._extmarks = function(ghost, s, cursor_col)
   return coroutine.wrap(function()
     local anchor_row, anchor_col = unpack(s.anchor)
-    local typed = (cursor_col >= anchor_col) and string.sub(s.anchor_line, anchor_col + 1, cursor_col) or ""
+    if cursor_col < anchor_col then
+      return
+    end
+    local typed = string.sub(s.anchor_line, anchor_col + 1, cursor_col)
     local head, rest = M._remaining(typed, s.insert_text)
 
     if head == "" and #rest == 0 then

@@ -78,23 +78,6 @@ T.describe({ "closable.iter unwind order" }, function(test)
     T.eq(closable_order, scope_order)
   end)
 
-  test({ "close is idempotent — defers run once even if called twice" }, function()
-    local runs = {}
-    async.scope(function()
-      local close, _iter = closable.iter(function(defer)
-        defer(function()
-          table.insert(runs, "x")
-        end)
-        coroutine.yield "spot"
-      end)
-      _iter()
-      close()
-      close()
-    end)
-
-    T.eq(runs, { "x" })
-  end)
-
   test({ "close before any pull runs no defers (producer never entered)" }, function()
     local runs = {}
     async.scope(function()

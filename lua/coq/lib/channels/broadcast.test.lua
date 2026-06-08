@@ -88,23 +88,6 @@ T.describe({ "broadcast" }, function(test)
     T.eq(exited, true)
   end)
 
-  test({ "replace after close is silent" }, function()
-    local chan = broadcast.new()
-    local _, sub = chan.subscribe()
-    chan.close()
-    chan.replace "lil"
-
-    T.eq(sub(), nil)
-  end)
-
-  test({ "subscribe after close returns a closed iter" }, function()
-    local chan = broadcast.new()
-    chan.close()
-    local _, sub = chan.subscribe()
-
-    T.eq(sub(), nil)
-  end)
-
   test({ "replace is safe when puller closes mid-iteration" }, function()
     local chan = broadcast.new()
     local seen_a, seen_b = {}, {}

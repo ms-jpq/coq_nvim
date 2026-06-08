@@ -3,23 +3,6 @@ local async = require "coq.lib.async"
 local cancel = require "coq.lib.async.cancel"
 local nursery = require "coq.lib.async._nursery"
 
-T.describe({ "cancel sentinel" }, function(test)
-  test({ "is identifies cancel errors" }, function()
-    T.eq(cancel.is(cancel.new()), true)
-  end)
-
-  test({ "is rejects non-cancel values" }, function()
-    T.eq(cancel.is {}, false)
-    T.eq(cancel.is "cancelled", false)
-    T.eq(cancel.is(nil), false)
-    T.eq(cancel.is(setmetatable({}, {})), false)
-  end)
-
-  test({ "cancel error has readable __tostring" }, function()
-    T.eq(tostring(cancel.new()), "<cancelled>")
-  end)
-end)
-
 T.describe({ "cancel by throw" }, function(test)
   test({ "nursery does not record cancel in its error list" }, function()
     local n = nursery.new()

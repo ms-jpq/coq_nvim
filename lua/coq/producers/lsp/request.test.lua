@@ -1,4 +1,5 @@
 local T = require "coq.lib.test"
+local TH = require "coq.lib.test_helpers"
 local request = require "coq.producers.lsp.request"
 
 local kinds = vim.lsp.protocol.CompletionTriggerKind
@@ -21,27 +22,11 @@ end
 ---@return ctx.full
 local ctx_of = function(overrides)
   -- Use a fresh scratch buf each time so the incomplete buf-var doesn't leak.
-  local buf = vim.api.nvim_create_buf(false, true)
-  local base = {
-    win = 0,
-    buf = buf,
-    pos = { 3, 8, 8, 8 }, -- row=3, byte=8, utf16=8, utf32=8
-    line = "",
-    line_before = "",
-    changedtick = 0,
-    filetype = "",
-    manual = false,
-    cwd = "",
-    filename = "",
-    linesep = "\n",
+  return TH.ctx_of(vim.tbl_extend("force", {
+    buf = TH.scratch_buf(),
+    pos = { 3, 8, 8, 8 },
     iskeyword = {},
-    wildignore = "",
-    comment = { "", "" },
-    keyword_before = "",
-    keyword_before_has_upper = false,
-    symbol_before = "",
-  }
-  return vim.tbl_deep_extend("force", base, overrides or {}) --[[@as ctx.full]]
+  }, overrides or {}))
 end
 
 local TD = { uri = "file:///tmp/spot.lua" } ---@type lsp.TextDocumentIdentifier

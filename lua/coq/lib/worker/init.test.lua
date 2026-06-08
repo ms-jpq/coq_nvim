@@ -1,4 +1,5 @@
 local T = require "coq.lib.test"
+local async = require "coq.lib.async"
 local lib = require "coq.lib"
 local worker = require "coq.lib.worker"
 
@@ -81,15 +82,25 @@ T.describe({ "worker" }, function(test)
   end)
 
   test({ "a queued fn can yield via async" }, function()
+    -- A shorter sibling sleep must finish before the queued fn returns.
+    -- If queue didn't honour the inner async.sleep, queue_done would log
+    -- first.
     local w = worker.spawn()
-    local start = vim.uv.hrtime()
-    w.queue(function(ms)
-      require("coq.lib.async").sleep(ms)
-    end, 5 * T.SLOW)
-    local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
+    local checkpoints = {}
+    async.scope(function(n)
+      n.spawn(function()
+        async.sleep(1 * T.SLOW)
+        table.insert(checkpoints, "sentinel")
+      end)
+      w.queue(function(ms)
+        require("coq.lib.async").sleep(ms)
+      end, 20 * T.SLOW)
+      table.insert(checkpoints, "queue_done")
+      n.cancel()
+    end)
     w.close()
 
-    assert(elapsed_ms >= 3 * T.SLOW, ("expected ~5ms, got %.1fms"):format(elapsed_ms))
+    T.eq(checkpoints, { "sentinel", "queue_done" })
   end)
 
   test({ "a queued fn can call back to main via worker.main" }, function()

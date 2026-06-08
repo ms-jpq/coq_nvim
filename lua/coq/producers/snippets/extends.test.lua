@@ -1,15 +1,8 @@
 local T = require "coq.lib.test"
+local TH = require "coq.lib.test_helpers"
 local extends_m = require "coq.producers.snippets.extends"
 
----@param parents string[]
----@return lib.Set<string>
-local set = function(parents)
-  local s = {}
-  for _, p in pairs(parents) do
-    s[p] = true
-  end
-  return s
-end
+local set = TH.set_of
 
 T.describe({ "snippets.extends.denormalize" }, function(test)
   test({ "empty input → empty result" }, function()

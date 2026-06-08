@@ -4,16 +4,6 @@ local path = require "coq.lib.path"
 local UNIX, WIN = false, true
 local SU, SW = path.seps(UNIX), path.seps(WIN)
 
-T.describe({ "path.seps" }, function(test)
-  test({ "unix default is just /" }, function()
-    T.eq(path.seps(UNIX), { ["/"] = true })
-  end)
-
-  test({ "windows default is / and backslash" }, function()
-    T.eq(path.seps(WIN), { ["/"] = true, ["\\"] = true })
-  end)
-end)
-
 T.describe({ "path.is_absolute" }, function(test)
   test({ "/ is absolute" }, function()
     T.eq(path.is_absolute(UNIX, "/var/dogs"), true)

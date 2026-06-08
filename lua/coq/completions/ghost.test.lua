@@ -1,4 +1,5 @@
 local T = require "coq.lib.test"
+local TH = require "coq.lib.test_helpers"
 local ghost = require "coq.completions.ghost"
 local tokens = require "coq.lib.index.tokens"
 
@@ -46,18 +47,11 @@ local ghost_cfg = stub_settings.display.ghost_text
 ---@return integer buf
 ---@return ctx.full ctx
 local mk_ctx = function(lines, row, col)
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(buf, 0, -1, true, lines)
-  local line = lines[row] or ""
-  ---@type ctx.full
-  ---@diagnostic disable-next-line: missing-fields
-  local ctx = {
+  local buf = TH.scratch_buf(lines)
+  local ctx = TH.ctx_of {
     buf = buf,
-    win = 0,
     pos = { row, col, col, col },
-    changedtick = 0,
-    line = line,
-    filetype = "",
+    line = lines[row] or "",
     iskeyword = DEFAULT_ISKEYWORD,
   }
   return buf, ctx
@@ -111,8 +105,8 @@ local mark_details = function(buf, ctx)
   return marks[1] and marks[1][4]
 end
 
-T.describe({ "ghost.show typed-prefix suppression" }, function(test)
-  test({ "renders the untyped tail only" }, function()
+T.describe({ "ghost.show" }, function(test)
+  test({ "typed-prefix: renders the untyped tail only" }, function()
     local buf, ctx = mk_ctx({ "./ft" }, 1, 4)
     ghost.show(ctx, item_of "ftplugin")
     local entry = mark_text(buf, ctx)
@@ -120,22 +114,85 @@ T.describe({ "ghost.show typed-prefix suppression" }, function(test)
     T.eq(entry[1], "plugin")
   end)
 
-  test({ "nothing to render when typed matches the whole word" }, function()
+  test({ "typed-prefix: nothing to render when typed matches the whole word" }, function()
     local buf, ctx = mk_ctx({ "ftplugin" }, 1, 8)
     ghost.show(ctx, item_of "ftplugin")
     T.eq(mark_text(buf, ctx), nil)
   end)
-end)
 
-T.describe({ "ghost.show common-suffix removal" }, function(test)
-  test({ "trims trailing chars already in the buffer" }, function()
+  test({ "cursor left of anchor: bail rather than paint at cursor" }, function()
+    -- show with anchor at col 4; query _extmarks at col 1 (cursor moved back).
+    local buf, ctx = mk_ctx({ "./ft" }, 1, 4)
+    ghost.show(ctx, item_of "ftplugin")
+    local s = vim.b[buf].coq_ghost
+    assert(s, "expected ghost state")
+    -- _extmarks called with a cursor_col before anchor_col → no mark.
+    T.eq(ghost._extmarks(ghost_cfg, s, 1)(), nil)
+  end)
+
+  test({ "common-suffix: trims trailing chars already in the buffer" }, function()
     -- cursor between paren chars: user typed "fido(", cursor before ")".
     -- item word "fido()" — the trailing `)` is already in the buffer.
     local buf, ctx = mk_ctx({ "fido()" }, 1, 5)
     ghost.show(ctx, item_of "fido()")
-    -- typed_overlap("fido(", "fido()") = 5 → tail = ")"
-    -- strip_common_suffix(after=")", suggestion=")") = ""
     T.eq(mark_text(buf, ctx), nil)
+  end)
+
+  test({ "multibyte: CJK advances by codepoint, not byte" }, function()
+    -- "你好世界" — 4 codepoints, 12 bytes. Typed "你好" (6 bytes) → tail "世界".
+    local buf, ctx = mk_ctx({ "你好" }, 1, 6)
+    ghost.show(ctx, item_of "你好世界")
+    local entry = mark_text(buf, ctx)
+    assert(entry, "expected an extmark")
+    T.eq(entry[1], "世界")
+  end)
+
+  test({ "multibyte: emoji prefix never lands mid-codepoint" }, function()
+    local buf, ctx = mk_ctx({ "😀" }, 1, 4)
+    ghost.show(ctx, item_of "😀walks")
+    local entry = mark_text(buf, ctx)
+    assert(entry, "expected an extmark")
+    T.eq(entry[1], "walks")
+  end)
+
+  test({ "subseq cutoff: typed diverges → subseq-stripped tail inline" }, function()
+    -- Subseq match consumes 'f'@1 and 'n'@3 in "function" → remaining "ction".
+    -- Display: "fn" + "ction" = "fnction".
+    local buf, ctx = mk_ctx({ "fn" }, 1, 2)
+    ghost.show(ctx, item_of "function")
+    local entry = mark_text(buf, ctx)
+    assert(entry, "expected an inline extmark")
+    T.eq(entry[1], "ction")
+  end)
+
+  test({ "multi-line: first line inline, rest as virt_lines" }, function()
+    local buf, ctx = mk_ctx({ "" }, 1, 0)
+    ghost.show(ctx, item_of "line1\nline2\nline3")
+    local d = mark_details(buf, ctx)
+    assert(d, "expected an extmark")
+    T.eq(d.virt_text[1][1], "line1")
+    assert(d.virt_lines, "expected virt_lines")
+    T.eq(d.virt_lines[1][1][1], "line2")
+    T.eq(d.virt_lines[2][1][1], "line3")
+  end)
+
+  test({ "snippet body routes through the preview parser" }, function()
+    local buf, ctx = mk_ctx({ "" }, 1, 0)
+    ---@diagnostic disable-next-line: missing-fields
+    local snippet_item = {
+      word = "fido",
+      meta = {
+        uid = "x",
+        source = "snippets",
+        filter = "fido",
+        fuzzy = 0,
+        snippet = "fido(${1:bone})",
+      },
+    } --[[@as completions.Item]]
+    ghost.show(ctx, snippet_item)
+    local entry = mark_text(buf, ctx)
+    assert(entry, "expected an extmark")
+    T.eq(entry[1], "fido(‹bone›)")
   end)
 end)
 
@@ -314,19 +371,6 @@ T.describe({ "ghost.show tab expansion" }, function(test)
   end)
 end)
 
-T.describe({ "ghost.show multi-line via virt_lines" }, function(test)
-  test({ "first line in virt_text, rest in virt_lines" }, function()
-    local buf, ctx = mk_ctx({ "" }, 1, 0)
-    ghost.show(ctx, item_of "line1\nline2\nline3")
-    local d = mark_details(buf, ctx)
-    assert(d, "expected an extmark")
-    T.eq(d.virt_text[1][1], "line1")
-    assert(d.virt_lines, "expected virt_lines")
-    T.eq(d.virt_lines[1][1][1], "line2")
-    T.eq(d.virt_lines[2][1][1], "line3")
-  end)
-end)
-
 T.describe({ "ghost.clear" }, function(test)
   test({ "removes the extmark" }, function()
     local buf, ctx = mk_ctx({ "fi" }, 1, 2)
@@ -334,29 +378,6 @@ T.describe({ "ghost.clear" }, function(test)
     assert(mark_text(buf, ctx), "ghost should be set")
     ghost.clear(buf)
     T.eq(mark_text(buf, ctx), nil)
-  end)
-end)
-
-T.describe({ "ghost typed-prefix suppression :: multibyte" }, function(test)
-  test({ "CJK: ni hao prefix advances by codepoint, not byte" }, function()
-    -- "你好世界" — 4 codepoints, 12 bytes (3 bytes each).
-    -- User typed "你好" (2 codepoints, 6 bytes); item word "你好世界".
-    -- Typed-overlap must report 2 chars and the tail must be "世界" (6 bytes),
-    -- not a corrupted mid-byte slice.
-    local buf, ctx = mk_ctx({ "你好" }, 1, 6)
-    ghost.show(ctx, item_of "你好世界")
-    local entry = mark_text(buf, ctx)
-    assert(entry, "expected an extmark")
-    T.eq(entry[1], "世界")
-  end)
-
-  test({ "emoji prefix: byte-math would mis-split, char-math must not" }, function()
-    -- 😀 is 4 UTF-8 bytes. byte-based sub at byte 2 would land mid-codepoint.
-    local buf, ctx = mk_ctx({ "😀" }, 1, 4)
-    ghost.show(ctx, item_of "😀walks")
-    local entry = mark_text(buf, ctx)
-    assert(entry, "expected an extmark")
-    T.eq(entry[1], "walks")
   end)
 end)
 
@@ -395,38 +416,3 @@ T.describe({ "ghost._remaining" }, function(test)
   end
 end)
 
-T.describe({ "ghost subsequence cutoff" }, function(test)
-  test({ "typed diverges by subseq → subseq-stripped tail inline" }, function()
-    -- Buffer "fn", item "function". Subseq match consumes 'f' at 1 and 'n'
-    -- at 3 → remaining "ction" painted inline at cursor. Display: "fn" +
-    -- "ction" = "fnction".
-    local buf, ctx = mk_ctx({ "fn" }, 1, 2)
-    ghost.show(ctx, item_of "function")
-    local entry = mark_text(buf, ctx)
-    assert(entry, "expected an inline extmark")
-    T.eq(entry[1], "ction")
-  end)
-end)
-
-T.describe({ "ghost snippet preview integration" }, function(test)
-  -- Parser tests live in producers/snippets/preview.test.lua. Here we only
-  -- check that a snippet item's body gets routed through that parser.
-  test({ "ghost.show on a snippet item renders preview text, not raw body" }, function()
-    local buf, ctx = mk_ctx({ "" }, 1, 0)
-    ---@diagnostic disable-next-line: missing-fields
-    local snippet_item = {
-      word = "fido",
-      meta = {
-        uid = "x",
-        source = "snippets",
-        filter = "fido",
-        fuzzy = 0,
-        snippet = "fido(${1:bone})",
-      },
-    } --[[@as completions.Item]]
-    ghost.show(ctx, snippet_item)
-    local entry = mark_text(buf, ctx)
-    assert(entry, "expected an extmark")
-    T.eq(entry[1], "fido(‹bone›)")
-  end)
-end)
