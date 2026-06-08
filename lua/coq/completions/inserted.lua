@@ -1,4 +1,5 @@
 local context = require "coq.lib.context"
+local debug_m = require "coq.lib.debug"
 local errs = require "coq.lib.errs"
 local lsp_util = require "coq.producers.lsp.util"
 local snippet_preview = require "coq.producers.snippets.preview"
@@ -6,6 +7,8 @@ local tokens = require "coq.lib.index.tokens"
 local txt = require "coq.lib.text"
 
 local DEFAULT_ENCODING = "utf-16"
+
+local debug = debug_m.scope "INSERTED"
 
 local M = {}
 
@@ -117,16 +120,20 @@ end
 
 ---@param iskeyword lib.Set<integer>
 ---@param e_ctx completions.EditCtx
----@param word string
+---@param prefix_word string
+---@param suffix_word string
 ---@return completions.Span
-M._fallback_span = function(iskeyword, e_ctx, word)
+M._fallback_span = function(iskeyword, e_ctx, prefix_word, suffix_word)
   local start_col = #e_ctx.before_inserted
     - math.max(
       #tokens.trailing_keyword_before(iskeyword, e_ctx.before_inserted),
-      txt.prefix_overlap(e_ctx.before_inserted, word)
+      txt.prefix_overlap(e_ctx.before_inserted, prefix_word)
     )
   local end_col = e_ctx.col
-    + math.max(#tokens.leading_keyword(iskeyword, e_ctx.after_cursor), txt.suffix_overlap(e_ctx.after_cursor, word))
+    + math.max(
+      #tokens.leading_keyword(iskeyword, e_ctx.after_cursor),
+      txt.suffix_overlap(e_ctx.after_cursor, suffix_word)
+    )
 
   return {
     start_row = e_ctx.cursor_row,
@@ -153,6 +160,21 @@ M._replacement_text = function(preview, i, range, text_edit)
   return i.word or ""
 end
 
+---@param e_ctx completions.EditCtx
+---@return completions.Span
+M._adjust_span_for_insertion = function(e_ctx)
+  local span = assert(e_ctx.span)
+  if span.end_row ~= e_ctx.cursor_row or span.end_col >= e_ctx.col then
+    return span
+  end
+  return {
+    start_row = span.start_row,
+    start_col = span.start_col,
+    end_row = span.end_row,
+    end_col = e_ctx.col,
+  }
+end
+
 ---@param preview boolean
 ---@param ctx ctx.full
 ---@param i completions.Item
@@ -171,8 +193,13 @@ M.span = function(preview, ctx, i, lsp)
   end
 
   local replace_text = M._replacement_text(preview, i, range, text_edit)
-  local match_text = (i.meta.snippet and not preview and (i.word or "")) or replace_text
-  local span = e_ctx.span or M._fallback_span(ctx.iskeyword, e_ctx, match_text)
+
+  local is_snippet = i.meta.snippet ~= nil and not preview
+  local prefix_word = is_snippet and (i.word or "") or replace_text
+  local suffix_word = is_snippet and "" or replace_text
+
+  local span = e_ctx.span and M._adjust_span_for_insertion(e_ctx)
+    or M._fallback_span(ctx.iskeyword, e_ctx, prefix_word, suffix_word)
 
   return span, e_ctx, enc, replace_text
 end
@@ -222,13 +249,16 @@ M.apply = function(settings, ctx, resolver, i)
   end
 
   M._apply_edits(ctx, i, lsp, edits)
+  debug.buf(ctx.buf, "post-apply_edits")
 
   if i.meta.snippet then
     errs.with_reporting(vim.snippet.expand)(i.meta.snippet)
+    debug.buf(ctx.buf, "post-snippet.expand")
   end
 
   if lsp.item and lsp.item.command then
     lsp_util.exec_command(ctx, lsp)
+    debug.buf(ctx.buf, "post-command")
   end
 
   return true

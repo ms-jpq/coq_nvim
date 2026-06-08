@@ -491,6 +491,39 @@ T.describe({ "inserted span :: |before| |word| |after|" }, function(test)
     T.eq(scenario("prefix ", "for", "", { snippet = "for ($1) {$0}" }), "prefix ")
   end)
 
+  test({ "snippet trigger ending in `)` doesn't eat trailing `)`" }, function()
+    -- `vim.schedule(|)` + LSP `function ()` snippet. Trigger word ends in `)`.
+    -- Without suffix_word="" for snippets, suffix_overlap(")", "function ()")
+    -- would return 1 and the buffer's closing `)` would be deleted, leaving the
+    -- snippet body to expand without the trailing `)` to land on.
+    T.eq(
+      scenario("vim.schedule(", "function ()", ")", { snippet = "function ($1)\n\t$0\nend" }),
+      "vim.schedule()"
+    )
+  end)
+
+  test({ "snippet with LSP range covers only typed prefix: cursor extends span" }, function()
+    -- `vim.schedule(fun|)` — user typed "fun", LSP item is "fun()" expanding to
+    -- "function ()..." with a textEdit range covering the original 3-char "fun".
+    -- vim.fn.complete inserted "fun()" (5 chars), so the post-insertion buffer
+    -- has "fun()" at cols 13-17 plus original `)` at col 18. The LSP range
+    -- (13, 16) only covers "fun"; without _adjust_span_for_insertion, the orphan
+    -- "()" from vim.fn.complete survives.
+    local lsp = {
+      position_encoding = "utf-8",
+      item = {
+        textEdit = {
+          newText = "function ($1)",
+          range = { start = { line = 0, character = 13 }, ["end"] = { line = 0, character = 16 } },
+        },
+      },
+    }
+    T.eq(
+      scenario("vim.schedule(", "fun()", ")", { snippet = "function ()\n\t$0\nend", lsp = lsp }),
+      "vim.schedule()"
+    )
+  end)
+
   test({ "InsertReplaceEdit with range_end past line end: units clamped" }, function()
     -- both insert.end and range.end on cursor row, but range_end.character
     -- overshoots after_cursor's encoded length. site-3 clamp keeps strict

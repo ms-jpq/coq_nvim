@@ -9,6 +9,7 @@ local NS = vim.api.nvim_create_namespace "coq.ghost"
 -- https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/inline_completion.lua
 local LSP_INLINE_NS = vim.api.nvim_create_namespace "nvim.lsp.inline_completion"
 local B_KEY = "coq_ghost"
+local MAX_SKIP = 2
 
 local M = {}
 
@@ -131,8 +132,6 @@ M.show = function(ctx, i)
     replaces_rows = replaces_rows(i),
   }
 end
-
-local MAX_SKIP = 2
 
 ---@param typed string
 ---@param str string
