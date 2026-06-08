@@ -57,25 +57,6 @@ M.prefix_overlap = function(haystack, needle)
   return 0
 end
 
----@param subseq string
----@param str string
----@return integer
-M.subseq_end = function(subseq, str)
-  local j = 0
-  for i = 1, #subseq do
-    local c = string.byte(subseq, i)
-    local k = j + 1
-    while k <= #str do
-      if string.byte(str, k) == c then
-        j = k
-        break
-      end
-      k = k + 1
-    end
-  end
-  return j
-end
-
 ---@param a string
 ---@param b string
 ---@return integer

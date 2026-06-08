@@ -132,14 +132,39 @@ M.show = function(ctx, i)
   }
 end
 
+local MAX_SKIP = 2
+
+---@param typed string
+---@param str string
+---@return integer?
+local bounded_subseq_end = function(typed, str)
+  local j = 0
+  for i = 1, #typed do
+    local c = string.byte(typed, i)
+    local stop = math.min(j + 1 + MAX_SKIP, #str)
+    local found = false
+    for k = j + 1, stop do
+      if string.byte(str, k) == c then
+        j = k
+        found = true
+        break
+      end
+    end
+    if not found then
+      return nil
+    end
+  end
+  return j
+end
+
 ---@param typed string
 ---@param candidate string[]
 ---@return string head
 ---@return string[] rest
 M._remaining = function(typed, candidate)
   local first = candidate[1] or ""
-  local pos = txt.subseq_end(typed, first) + 1
-  local head = string.sub(first, pos)
+  local j = bounded_subseq_end(typed, first) or #typed
+  local head = string.sub(first, j + 1)
   local rest = { unpack(candidate, 2) }
   return head, rest
 end

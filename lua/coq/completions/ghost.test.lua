@@ -389,10 +389,24 @@ T.describe({ "ghost._remaining" }, function(test)
     { name = "subseq skip in middle", typed = "fn", candidate = { "function" }, head = "ction", rest = {} },
     { name = "subseq with prefix gap", typed = "nvm", candidate = { "nvim_api_*" }, head = "_api_*", rest = {} },
     { name = "longer subseq match", typed = "fnt", candidate = { "function" }, head = "ion", rest = {} },
-    { name = "no chars match", typed = "xy", candidate = { "abc" }, head = "abc", rest = {} },
+    -- on bounded-subseq failure, fall back to dropping #typed bytes from the candidate.
+    { name = "no chars match → drop #typed", typed = "xy", candidate = { "abc" }, head = "c", rest = {} },
     { name = "empty typed → full body", typed = "", candidate = { "function" }, head = "function", rest = {} },
     { name = "exact match → empty", typed = "while", candidate = { "while" }, head = "", rest = {} },
-    { name = "partial then unmatched", typed = "fnx", candidate = { "function" }, head = "ction", rest = {} },
+    {
+      name = "partial then unmatched → drop #typed",
+      typed = "fnx",
+      candidate = { "function" },
+      head = "ction",
+      rest = {},
+    },
+    {
+      name = "skip budget exceeded → drop #typed",
+      typed = "buv",
+      candidate = { "nvim_buf_get_var" },
+      head = "m_buf_get_var",
+      rest = {},
+    },
     {
       name = "multi-line body",
       typed = "fn",
