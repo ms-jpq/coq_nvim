@@ -69,6 +69,7 @@ local resolve_range = function(buf, enc, cursor_row, cursor_line, range)
   if not range then
     return
   end
+
   local s, e = range.start, range["end"]
   local line_count = vim.api.nvim_buf_line_count(buf)
   if not (s.line >= 0 and s.line <= cursor_row and e and e.line >= s.line and e.line < line_count) then

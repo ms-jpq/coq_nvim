@@ -1,49 +1,43 @@
 # Docs
 
-Use `:COQhelp` to open up a list of help pages!
+Use `:COQ help` to open up a list of help pages!
 
 Help docs are written in `markdown`.
 
-Use `:COQhelp -w` or `:COQhelp --web` to open help pages in a browser window if possible.
+Use `:COQ help -w` or `:COQ help --web` to open help pages in a browser window if possible.
 
-Use `:COQhelp {topic}` or `:COQhelp {topic} --web` to visit a particular topic for more information
+Use `:COQ help {topic}` or `:COQ help {topic} --web` to visit a particular topic for more information
 
-- [:COQhelp config](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CONF.md)
+- [:COQ help v2](./v2.md)
 
-- [:COQhelp keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md)
+- [:COQ help config](./CONF.md)
 
-- [:COQhelp snips](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/SNIPS.md)
+- [:COQ help keybind](./KEYBIND.md)
 
-- [:COQhelp fuzzy](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/FUZZY.md)
+- [:COQ help snips](./SNIPS.md)
 
-- [:COQhelp display](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/DISPLAY.md)
+- [:COQ help fuzzy](./FUZZY.md)
 
-- [:COQhelp sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/SOURCES.md)
+- [:COQ help display](./DISPLAY.md)
 
-- [:COQhelp misc](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/MISC.md)
+- [:COQ help sources](./SOURCES.md)
 
-- [:COQhelp perf](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/PERF.md)
+- [:COQ help misc](./MISC.md)
 
-- [:COQhelp stats](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/STATS.md)
+- [:COQ help perf](./PERF.md)
 
-- [:COQhelp custom_sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)
+- [:COQ help stats](./STATS.md)
+
+- [:COQ help custom_sources](./CUSTOM_SOURCES.md)
 
 ---
 
 ## Commands
 
-### `COQnow`
-
-Launch `coq.nvim` with a greeting.
-
-### `COQdeps`
-
-`:COQdeps` will install all of `coq.nvim`'s dependencies locally.
-
-Dependencies will be privately installed inside `coq.nvim`'s git root under `.vars/runtime`.
-
-Running `rm -rf` on `coq_nvim/` will cleanly remove everything `coq.nvim` installs to your local system.
-
-### `COQstats`
+### `:COQ stats`
 
 Launch a window and show performance data.
+
+### `:COQ snips`
+
+Manage user snippet files: `ls`, `cd`, `edit`, `compile`.

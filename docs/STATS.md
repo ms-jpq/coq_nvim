@@ -1,7 +1,7 @@
 ## How to interpret statistics
 
-```viml
-:COQstats
+```vim
+:COQ stats
 ```
 ![statistics.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/stats.gif)
 
@@ -45,7 +45,7 @@ This is a misleading statistic for several reasons.
 
 The price `coq.nvim` pays for being collaboratively scheduled is that sources are executed concurrently.
 
-This means that one slow source can slow down all sources, with the exception being `LSP`, and `T9`, whose results are mostly calculated by other processes.
+This means that one slow source can slow down all sources, with the exception being `LSP`, whose results are mostly calculated by other processes.
 
 This also means that the time spans are **not additive**. Say five sources each take 40ms to complete, the total execution time is 40ms, not 200ms.
 
