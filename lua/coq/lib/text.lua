@@ -57,18 +57,6 @@ M.prefix_overlap = function(haystack, needle)
   return 0
 end
 
----@param a string
----@param b string
----@return integer
-M.longest_common_prefix = function(a, b)
-  for k = 1, math.min(#a, #b) do
-    if string.byte(a, k) ~= string.byte(b, k) then
-      return k - 1
-    end
-  end
-  return math.min(#a, #b)
-end
-
 ---@param haystack string
 ---@param needle string
 ---@return integer

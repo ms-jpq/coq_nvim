@@ -102,7 +102,7 @@ local edit_ctx = function(preview, ctx, i, enc, range)
   local line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, cursor_row, row, true))
 
   local inserted = preview and "" or ((i.meta.snippet and i.abbr) or i.word or "")
-  local first_nl = string.find(inserted, "[\r\n]")
+  local first_nl = txt.is_multiline(inserted)
   local first_line_len = first_nl and (first_nl - 1) or #inserted
   local original_col = math.max(0, col - first_line_len)
 

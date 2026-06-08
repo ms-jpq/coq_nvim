@@ -68,8 +68,14 @@ end
 ---@param lines string[]
 ---@return string[]
 M._expand_tabs = function(tabstop, start_col, lines)
-  for i, line in ipairs(lines) do
-    if string.find(line, "\t", 1, true) then
+  return vim
+    .iter(lines)
+    :enumerate()
+    :map(function(i, line)
+      if not string.find(line, "\t", 1, true) then
+        return line
+      end
+
       local col = (i == 1) and start_col or 0
       local chunks = coroutine.wrap(function()
         local pos = 1
@@ -88,10 +94,9 @@ M._expand_tabs = function(tabstop, start_col, lines)
           pos = tab + 1
         end
       end)
-      lines[i] = table.concat(vim.iter(chunks):totable())
-    end
-  end
-  return lines
+      return table.concat(vim.iter(chunks):totable())
+    end)
+    :totable()
 end
 
 ---@param ctx ctx.full
@@ -104,7 +109,7 @@ M.show = function(ctx, i)
   local span, e_ctx, _, insert_text = inserted.span(true, ctx, i, i.meta.lsp or {})
   local lines = vim.iter(txt.splitlines(insert_text)):totable()
 
-  if span.start_row == span.end_row and #lines == 1 then
+  if span.start_row == span.end_row then
     local trim = math.max(0, span.end_col - e_ctx.col)
     lines[1] = string.sub(lines[1], 1, #lines[1] - trim)
   end
@@ -266,6 +271,7 @@ M.bind = function(n, settings, ev)
     M.clear(buf)
   end)
 
+  ---@diagnostic disable-next-line: undefined-field
   events.subscribe_latest(n, ev.completion, function(pum_ev)
     atools.scheduled()
 
@@ -274,6 +280,7 @@ M.bind = function(n, settings, ev)
       return
     end
 
+    ---@diagnostic disable-next-line: undefined-field
     if pum_ev.kind ~= "changed" then
       return
     end

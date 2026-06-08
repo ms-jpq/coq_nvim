@@ -29,7 +29,10 @@ local M = {}
 ---@return boolean
 M.still_valid = function(ctx)
   atools.scheduled()
-  return vim.api.nvim_buf_is_valid(ctx.buf) and vim.b[ctx.buf].changedtick == ctx.changedtick
+
+  return vim.api.nvim_win_is_valid(ctx.win)
+    and vim.api.nvim_buf_is_valid(ctx.buf)
+    and vim.b[ctx.buf].changedtick == ctx.changedtick
 end
 
 ---@return ctx.base
