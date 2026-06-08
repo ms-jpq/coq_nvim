@@ -47,6 +47,7 @@ M.bind = function(n, settings, resolver, pum)
   end
 
   events.subscribe_latest(n, pum, function(ev)
+    atools.scheduled()
     local ctx = context.base()
     show.close()
     local changed_ev, item = item_of(ev)

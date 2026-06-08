@@ -1,5 +1,8 @@
 local T = require "coq.lib.test"
 local statsd = require "coq.lib.index.rank.statsd"
+local tokens = require "coq.lib.index.tokens"
+
+local DEFAULT_ISKEYWORD = tokens.parse_charset "@,48-57,_,192-255"
 
 ---@param meta { filter: string, source: string, fuzzy: integer, always_on_top: boolean? }
 ---@return completions.Item
@@ -87,8 +90,16 @@ T.describe({ "rank.statsd.inserted" }, function(test)
     s.inserted(fido())
     -- recency is internal, but observable through summary().inserted under the source bucket
     -- and through the prepare() output's recency map.
-    ---@diagnostic disable-next-line: missing-fields
-    T.eq(s.prepare({ kw = {}, keyword_before = "", buf = 0 } --[[@as ctx.full]]).recency.fido, 2)
+    T.eq(
+      ---@diagnostic disable-next-line: missing-fields
+      s.prepare({
+        iskeyword = DEFAULT_ISKEYWORD,
+        keyword_before = "",
+        buf = 0,
+        linesep = "\n",
+      } --[[@as ctx.full]]).recency.fido,
+      2
+    )
   end)
 
   test({ "inserted(item) bumps the per-source inserted counter" }, function()

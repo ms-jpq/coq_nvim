@@ -16,6 +16,8 @@ local M = {}
 ---@param pum channels.Broadcast<completions.PumEvent>
 M.bind = function(n, settings, resolver, statsd, pum)
   events.subscribe_latest(n, pum, function(ev)
+    atools.scheduled()
+
     if ev.kind ~= "done" then
       return
     end

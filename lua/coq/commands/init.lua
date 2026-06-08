@@ -1,4 +1,3 @@
-local atools = require "coq.lib.atools"
 local help = require "coq.commands.help"
 local lib = require "coq.lib"
 local snippets = require "coq.commands.snippets"
@@ -105,8 +104,6 @@ local DEPRECATED = { COQstats = "stats", COQhelp = "help", COQsnips = "snips" }
 ---@param statsd index.Statsd
 ---@param events completions.Events
 M.bind = function(settings, statsd, events)
-  atools.scheduled()
-
   stats_impl = function()
     stats.show(statsd)
   end

@@ -1,4 +1,3 @@
-local atools = require "coq.lib.atools"
 local default_dict = require "coq.lib.default_dict"
 local itertools = require "coq.lib.itertools"
 local tokens = require "coq.lib.index.tokens"
@@ -149,7 +148,6 @@ M.new = function(settings)
   end
 
   statsd.prepare = function(ctx)
-    atools.scheduled()
     return {
       token = ctx.keyword_before,
       locality = tokens.locality(

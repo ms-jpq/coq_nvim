@@ -42,8 +42,6 @@ end
 ---@param settings config.Settings
 local cd = function(settings)
   local dir = sources.write_dir(settings, fake_ctx())
-
-  atools.scheduled()
   vim.fn.mkdir(dir, "p")
   vim.cmd.cd { args = { dir }, mods = { silent = true } }
 end
@@ -56,8 +54,6 @@ local edit = function(settings, filetype)
   if ft == "" then
     ft = "_"
   end
-
-  atools.scheduled()
   vim.fn.mkdir(dir, "p")
   vim.cmd.edit(vim.fs.joinpath(dir, ft .. ".snip"))
 end
@@ -82,7 +78,6 @@ M.bind = function(settings, events)
   }
 
   return async.entry(function(args)
-    atools.scheduled()
     local action, rest = unpack(args or {})
     local handler = actions[action or "ls"]
     if handler then

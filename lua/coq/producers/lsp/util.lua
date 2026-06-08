@@ -75,7 +75,6 @@ M.exec_command = function(ctx, lsp)
     return
   end
 
-  atools.scheduled()
   local client = vim.lsp.get_client_by_id(lsp.client_id)
   if not client then
     return

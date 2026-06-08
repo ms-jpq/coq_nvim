@@ -372,10 +372,6 @@ Increase `coq_settings.clients.lsp.resolve_timeout`. Applying edits gets slower.
 
 On keystroke only `coq_settings.match.max_results` items are shown. Use the manual completion hotkey to see all.
 
-#### My vim crashed!
-
-**Disable TreeSitter.**
-
 ## If you like this...
 
 Also check out

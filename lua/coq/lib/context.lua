@@ -1,4 +1,3 @@
-local atools = require "coq.lib.atools"
 local lib = require "coq.lib"
 
 ---@class ctx.base
@@ -28,8 +27,6 @@ local M = {}
 ---@param ctx ctx.base
 ---@return boolean
 M.still_valid = function(ctx)
-  atools.scheduled()
-
   return vim.api.nvim_win_is_valid(ctx.win)
     and vim.api.nvim_buf_is_valid(ctx.buf)
     and vim.b[ctx.buf].changedtick == ctx.changedtick
@@ -37,8 +34,6 @@ end
 
 ---@return ctx.base
 M.base = function()
-  atools.scheduled()
-
   local ctx = {}
 
   ctx.win = vim.api.nvim_get_current_win()
