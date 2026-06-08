@@ -24,5 +24,4 @@ T.describe({ "queue" }, function(test)
     q.pop()
     T.eq(q.len(), 0)
   end)
-
 end)

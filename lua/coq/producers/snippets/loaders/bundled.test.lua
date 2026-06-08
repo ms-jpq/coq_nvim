@@ -35,10 +35,7 @@ end)
 
 T.describe({ "bundled.parse :: extends" }, function(test)
   test({ "extends array collected and lowercased" }, function()
-    local _, parents, _ = bundled.parse(
-      src_of "lua",
-      enc { extends = { "C", "Cpp" }, snippets = {} }
-    )
+    local _, parents, _ = bundled.parse(src_of "lua", enc { extends = { "C", "Cpp" }, snippets = {} })
     T.eq(parents_set(parents), { c = true, cpp = true })
   end)
 
@@ -48,10 +45,7 @@ T.describe({ "bundled.parse :: extends" }, function(test)
   end)
 
   test({ "non-string entries in extends are skipped" }, function()
-    local _, parents, _ = bundled.parse(
-      src_of "lua",
-      enc { extends = { "c", 42, "" }, snippets = {} }
-    )
+    local _, parents, _ = bundled.parse(src_of "lua", enc { extends = { "c", 42, "" }, snippets = {} })
     T.eq(parents_set(parents), { c = true })
   end)
 end)
@@ -62,7 +56,7 @@ T.describe({ "bundled.parse :: snippet filtering" }, function(test)
       src_of "lua",
       enc {
         snippets = {
-          { filetype = "lua",    matches = { foo = true }, content = "A" },
+          { filetype = "lua", matches = { foo = true }, content = "A" },
           { filetype = "python", matches = { bar = true }, content = "B" },
         },
       }
@@ -73,10 +67,8 @@ T.describe({ "bundled.parse :: snippet filtering" }, function(test)
   end)
 
   test({ "filetype is case-folded against src" }, function()
-    local _, _, sourced = bundled.parse(
-      src_of "lua",
-      enc { snippets = { { filetype = "LUA", matches = { foo = true }, content = "A" } } }
-    )
+    local _, _, sourced =
+      bundled.parse(src_of "lua", enc { snippets = { { filetype = "LUA", matches = { foo = true }, content = "A" } } })
     T.eq(#sourced.snippets, 1)
   end)
 
@@ -135,20 +127,16 @@ T.describe({ "bundled.parse :: field handling" }, function(test)
   end)
 
   test({ "missing optional fields default to empty string" }, function()
-    local _, _, sourced = bundled.parse(
-      src_of "lua",
-      enc { snippets = { { filetype = "lua", matches = { foo = true } } } }
-    )
+    local _, _, sourced =
+      bundled.parse(src_of "lua", enc { snippets = { { filetype = "lua", matches = { foo = true } } } })
     T.eq(sourced.snippets[1].body, "")
     T.eq(sourced.snippets[1].label, "")
     T.eq(sourced.snippets[1].doc, "")
   end)
 
   test({ "entries missing filetype skipped" }, function()
-    local _, _, sourced = bundled.parse(
-      src_of "lua",
-      enc { snippets = { { matches = { foo = true }, content = "A" } } }
-    )
+    local _, _, sourced =
+      bundled.parse(src_of "lua", enc { snippets = { { matches = { foo = true }, content = "A" } } })
     T.eq(#sourced.snippets, 0)
   end)
 end)

@@ -22,7 +22,7 @@ local stub_chan = {
 local stub_n = { spawn = function() end }
 ---@type completions.Events
 ---@diagnostic disable-next-line: missing-fields, assign-type-mismatch
-local stub_ev = { pum = stub_chan, leave = stub_chan }
+local stub_ev = { completion = stub_chan, leave = stub_chan }
 
 ---@type config.Settings
 ---@diagnostic disable-next-line: missing-fields
@@ -415,4 +415,3 @@ T.describe({ "ghost._remaining" }, function(test)
     end)
   end
 end)
-

@@ -287,7 +287,7 @@ T.describe({ "supervisor" }, function(test)
     -- consumer fully drains. The supervisor's `searching` flag must reset
     -- via the on_cancel hook so the second search's matcher is reachable.
     async.scope(function(n)
-      local sup = supervisor.new { yields("lil") }
+      local sup = supervisor.new { yields "lil" }
 
       -- Start the first search inside a cancellable task without draining.
       local searcher = n.spawn(function()

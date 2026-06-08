@@ -224,4 +224,3 @@ T.describe({ "rank.hybrid._probe_of" }, function(test)
     T.eq(hybrid._probe_of("a", string.rep("a", 1025)), nil)
   end)
 end)
-

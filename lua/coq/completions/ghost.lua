@@ -173,20 +173,16 @@ M._extmarks = function(ghost, s, cursor_col)
       :totable()
 
     for k, line_k in vim.iter(lines):take(row_overlays):enumerate() do
-      local opts = {
-        ephemeral = true,
-        virt_text = line_k ~= "" and { { line_k, ghost.highlight_group } } or {},
-        virt_text_pos = k == 1 and pos or "overlay",
-        hl_mode = "replace",
-      }
-      if k == row_overlays and #virt_lines > 0 then
-        opts.virt_lines = virt_lines
-      end
-
       coroutine.yield {
         row = anchor_row + k - 1,
         col = k == 1 and cursor_col or 0,
-        opts = opts,
+        opts = {
+          -- ephemeral = true,
+          virt_text = line_k ~= "" and { { line_k, ghost.highlight_group } } or {},
+          virt_text_pos = k == 1 and pos or "overlay",
+          hl_mode = "replace",
+          virt_lines = k == row_overlays and #virt_lines > 0 and virt_lines or nil,
+        },
       }
     end
   end)
@@ -202,20 +198,26 @@ M.bind = function(n, settings, ev)
     on_win = function(_, _, buf)
       return state_of(buf) ~= nil
     end,
+    on_buf = function(_, buf)
+      vim.api.nvim_buf_clear_namespace(buf, NS, 0, -1)
+    end,
     on_line = function(_, win, buf, row)
       local s = state_of(buf)
       if s == nil or s.changedtick ~= vim.b[buf].changedtick or lsp_inline_active(buf) then
         return
       end
+
       local anchor_row = unpack(s.anchor)
       if row ~= anchor_row then
         return
       end
+
       local win_row, col = unpack(vim.api.nvim_win_get_cursor(win))
       if row ~= win_row - 1 then
         return
       end
 
+      vim.api.nvim_buf_clear_namespace(buf, NS, 0, -1)
       for mark in M._extmarks(settings.display.ghost_text, s, col) do
         nvim_buf_set_extmark(buf, NS, mark.row, mark.col, mark.opts)
       end
@@ -227,20 +229,20 @@ M.bind = function(n, settings, ev)
     M.clear(buf)
   end)
 
-  events.subscribe_latest(n, ev.pum, function(pum_ev)
+  events.subscribe_latest(n, ev.completion, function(pum_ev)
     if pum_ev.kind ~= "changed" then
       return
     end
 
     atools.scheduled()
     local ci = pum_ev.completed_item
-    if ci == nil or ci.word == nil or ci.word == "" then
+    if type(ci) ~= "table" then
       return
     end
 
     if type(ci.user_data) == "table" and ci.user_data.word then
       M.show(context.full(), ci.user_data --[[@as completions.Item]])
-    else
+    elseif ci.word and ci.word ~= "" then
       M.clear(vim.api.nvim_get_current_buf())
     end
   end)

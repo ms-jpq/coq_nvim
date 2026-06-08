@@ -19,10 +19,13 @@ T.describe({ "neosnippet.parse :: basics" }, function(test)
   end)
 
   test({ "single snippet with body" }, function()
-    local err, _, sourced = neosnippet.parse(src_of "lua", table.concat({
-      "snippet foo",
-      "\tprint('dog')",
-    }, "\n"))
+    local err, _, sourced = neosnippet.parse(
+      src_of "lua",
+      table.concat({
+        "snippet foo",
+        "\tprint('dog')",
+      }, "\n")
+    )
     T.eq(err, nil)
     T.eq(#sourced.snippets, 1)
     T.eq(sourced.snippets[1].word, "foo")
@@ -32,39 +35,51 @@ T.describe({ "neosnippet.parse :: basics" }, function(test)
   end)
 
   test({ "header label after name" }, function()
-    local _, _, sourced = neosnippet.parse(src_of "lua", table.concat({
-      "snippet foo Good Boy",
-      "\tprint('dog')",
-    }, "\n"))
+    local _, _, sourced = neosnippet.parse(
+      src_of "lua",
+      table.concat({
+        "snippet foo Good Boy",
+        "\tprint('dog')",
+      }, "\n")
+    )
     T.eq(sourced.snippets[1].label, "Good Boy")
   end)
 
   test({ "header label in quotes is unwrapped" }, function()
-    local _, _, sourced = neosnippet.parse(src_of "lua", table.concat({
-      'snippet foo "Good Boy"',
-      "\tprint('dog')",
-    }, "\n"))
+    local _, _, sourced = neosnippet.parse(
+      src_of "lua",
+      table.concat({
+        'snippet foo "Good Boy"',
+        "\tprint('dog')",
+      }, "\n")
+    )
     T.eq(sourced.snippets[1].label, "Good Boy")
   end)
 
   test({ "abbr line overrides header label" }, function()
-    local _, _, sourced = neosnippet.parse(src_of "lua", table.concat({
-      "snippet foo header label",
-      "abbr Real Label",
-      "\tprint('dog')",
-    }, "\n"))
+    local _, _, sourced = neosnippet.parse(
+      src_of "lua",
+      table.concat({
+        "snippet foo header label",
+        "abbr Real Label",
+        "\tprint('dog')",
+      }, "\n")
+    )
     T.eq(sourced.snippets[1].label, "Real Label")
   end)
 end)
 
 T.describe({ "neosnippet.parse :: aliases" }, function(test)
   test({ "alias adds extra words sharing the same body" }, function()
-    local _, _, sourced = neosnippet.parse(src_of "lua", table.concat({
-      "snippet foo",
-      "alias bar",
-      "alias baz",
-      "\tprint('dog')",
-    }, "\n"))
+    local _, _, sourced = neosnippet.parse(
+      src_of "lua",
+      table.concat({
+        "snippet foo",
+        "alias bar",
+        "alias baz",
+        "\tprint('dog')",
+      }, "\n")
+    )
     local words = {}
     for _, s in ipairs(sourced.snippets) do
       words[s.word] = s.body
@@ -75,11 +90,14 @@ T.describe({ "neosnippet.parse :: aliases" }, function(test)
   end)
 
   test({ "duplicate alias dedupes" }, function()
-    local _, _, sourced = neosnippet.parse(src_of "lua", table.concat({
-      "snippet foo",
-      "alias foo",
-      "\tprint('dog')",
-    }, "\n"))
+    local _, _, sourced = neosnippet.parse(
+      src_of "lua",
+      table.concat({
+        "snippet foo",
+        "alias foo",
+        "\tprint('dog')",
+      }, "\n")
+    )
     T.eq(#sourced.snippets, 1)
   end)
 end)
@@ -101,11 +119,14 @@ T.describe({ "neosnippet.parse :: directives" }, function(test)
   end)
 
   test({ "comments are skipped" }, function()
-    local err, _, sourced = neosnippet.parse(src_of "lua", table.concat({
-      "# a comment about dogs",
-      "snippet foo",
-      "\tbody",
-    }, "\n"))
+    local err, _, sourced = neosnippet.parse(
+      src_of "lua",
+      table.concat({
+        "# a comment about dogs",
+        "snippet foo",
+        "\tbody",
+      }, "\n")
+    )
     T.eq(err, nil)
     T.eq(#sourced.snippets, 1)
   end)
@@ -120,31 +141,40 @@ end)
 
 T.describe({ "neosnippet.parse :: body handling" }, function(test)
   test({ "blank lines inside body preserved" }, function()
-    local _, _, sourced = neosnippet.parse(src_of "lua", table.concat({
-      "snippet foo",
-      "\tline1",
-      "",
-      "\tline3",
-    }, "\n"))
+    local _, _, sourced = neosnippet.parse(
+      src_of "lua",
+      table.concat({
+        "snippet foo",
+        "\tline1",
+        "",
+        "\tline3",
+      }, "\n")
+    )
     T.eq(sourced.snippets[1].body, "line1\n\nline3")
   end)
 
   test({ "common indentation dedented" }, function()
-    local _, _, sourced = neosnippet.parse(src_of "lua", table.concat({
-      "snippet foo",
-      "\t\tdeeper",
-      "\t\talso_deeper",
-    }, "\n"))
+    local _, _, sourced = neosnippet.parse(
+      src_of "lua",
+      table.concat({
+        "snippet foo",
+        "\t\tdeeper",
+        "\t\talso_deeper",
+      }, "\n")
+    )
     T.eq(sourced.snippets[1].body, "deeper\nalso_deeper")
   end)
 
   test({ "two snippets parsed independently" }, function()
-    local _, _, sourced = neosnippet.parse(src_of "lua", table.concat({
-      "snippet foo",
-      "\tA",
-      "snippet bar",
-      "\tB",
-    }, "\n"))
+    local _, _, sourced = neosnippet.parse(
+      src_of "lua",
+      table.concat({
+        "snippet foo",
+        "\tA",
+        "snippet bar",
+        "\tB",
+      }, "\n")
+    )
     T.eq(#sourced.snippets, 2)
     local map = {}
     for _, s in ipairs(sourced.snippets) do
