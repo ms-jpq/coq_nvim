@@ -1,4 +1,5 @@
 local atools = require "coq.lib.atools"
+local json = require "coq.lib.json"
 
 local M = {}
 
@@ -26,24 +27,6 @@ local safe_name = function(key)
   return (string.gsub(key, "[^%w._-]", function(c)
     return string.format("%%%02x", string.byte(c))
   end))
-end
-
----@param value any
----@return string
-local encode = function(value)
-  return vim.json.encode(value, { sort_keys = true, indent = [[  ]] })
-end
-
----@param s string
----@return any
-M.decode = function(s)
-  local ok, value = pcall(function()
-    return vim.json.decode(s, { luanil = { object = true, array = true } })
-  end)
-  if not ok then
-    return nil
-  end
-  return value
 end
 
 ---@param path string
@@ -79,7 +62,7 @@ M.new = function(spec)
       if valid then
         local raw = atools.fs.slurp(path)
         if raw then
-          local cached = M.decode(raw)
+          local cached = json.decode(raw)
           if cached ~= nil then
             return cached
           end
@@ -90,7 +73,7 @@ M.new = function(spec)
       if value == nil then
         return nil
       end
-      local _ = write_atomic(path, encode(value))
+      local _ = write_atomic(path, json.encode(value, true))
       return value
     end,
     prune = function(key)

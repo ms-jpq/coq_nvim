@@ -100,8 +100,6 @@ vim.lsp.enable(<server>)
 
 - 99% of LSP grammar, 95% of Vim grammar
 
-- [Press key](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md) to jump to next edit region.
-
 ![snippet_norm.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/snip.gif)
 
 - Linked regions

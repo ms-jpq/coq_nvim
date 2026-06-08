@@ -5,7 +5,7 @@ local neosnippet = require "coq.producers.snippets.loaders.neosnippet"
 ---@param filetype string
 ---@return snippets.Source
 local src_of = function(filetype)
-  return { kind = "neosnippet", path = "/tmp/" .. filetype .. ".snippets", mtime = 0, filetype = filetype }
+  return { path = "/tmp/" .. filetype .. ".snippets", mtime = 0, filetype = filetype }
 end
 
 local parents_set = TH.set_of
@@ -31,7 +31,6 @@ T.describe({ "neosnippet.parse :: basics" }, function(test)
     T.eq(sourced.snippets[1].word, "foo")
     T.eq(sourced.snippets[1].body, "print('dog')")
     T.eq(sourced.snippets[1].filetype, "lua")
-    T.eq(sourced.snippets[1].grammar, "lsp")
   end)
 
   test({ "header label after name" }, function()

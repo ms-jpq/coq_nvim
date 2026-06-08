@@ -13,14 +13,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v3
+      - uses: actions/setup-python@v3
 
-      - name: Build
-        env:
+      - run: |-
+          curl --disable --fail --location --no-progress-meter -- 'https://raw.githubusercontent.com/ms-jpq/deb/refs/heads/deb/pubkey.asc' | sudo -- gpg --batch --dearmor --yes --output /etc/apt/trusted.gpg.d/ms-jpq.gpg
+          sudo -- tee -- /etc/apt/sources.list.d/ms-jpq.list <<-'EOF'
+          deb https://raw.githubusercontent.com/ms-jpq/deb/refs/heads/deb/ /
+          EOF
+          sudo -- apt update
+          sudo -- apt install --yes -- neovim
+
+      - env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: |-
           make build

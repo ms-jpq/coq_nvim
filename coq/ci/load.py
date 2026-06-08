@@ -10,9 +10,9 @@ from std2.asyncio.subprocess import call
 from std2.graphlib import recur_sort
 from std2.pickle.decoder import new_decoder
 from std2.pickle.encoder import new_encoder
-from yaml import safe_load
+from json import loads
 
-from ..consts import COMPILATION_YML, TMP_DIR
+from ..consts import COMPILATION_JSON, TMP_DIR
 from ..shared.context import EMPTY_CONTEXT
 from ..shared.settings import EMPTY_COMP, EMPTY_MATCH
 from ..shared.types import SnippetEdit
@@ -57,8 +57,8 @@ async def _git_pull(sem: Semaphore, uri: str) -> None:
 
 async def load() -> LoadedSnips:
     TMP_DIR.mkdir(parents=True, exist_ok=True)
-    yaml = safe_load(COMPILATION_YML.read_bytes())
-    specs = new_decoder[Compilation](Compilation)(yaml)
+    raw = loads(COMPILATION_JSON.read_bytes())
+    specs = new_decoder[Compilation](Compilation)(raw)
 
     sem = Semaphore(value=cpu_count())
     await gather(*(_git_pull(sem, uri=uri) for uri in specs.git))

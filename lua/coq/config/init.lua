@@ -53,7 +53,6 @@ local defaults = require "coq.config.defaults"
 ---@field pre_select boolean
 ---@field manual_complete? string
 ---@field repeat? string
----@field jump_to_mark? string
 ---@field bigger_preview? string
 ---@field eval_snips? string
 ---@field manual_complete_insertion_only boolean

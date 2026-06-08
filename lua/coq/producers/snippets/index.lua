@@ -5,7 +5,6 @@ local util = require "coq.producers.util"
 ---@field word string
 ---@field body string
 ---@field filetype string
----@field grammar "lit"|"lsp"|"snu"
 ---@field label string
 ---@field doc string
 

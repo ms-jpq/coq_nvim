@@ -1,5 +1,5 @@
 local async = require "coq.lib.async"
-local fs_cache = require "coq.lib.fs_cache"
+local json = require "coq.lib.json"
 local txt = require "coq.lib.text"
 
 ---@class ctags.Tag
@@ -50,7 +50,7 @@ M.parse = function(jsonl)
     for line in txt.splitlines(jsonl) do
       if line ~= "" then
         async.sleep(0)
-        local obj = fs_cache.decode(line)
+        local obj = json.decode(line)
 
         if type(obj) == "table" and obj._type == "tag" and obj.name and obj.path then
           coroutine.yield {

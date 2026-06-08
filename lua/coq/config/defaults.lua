@@ -189,7 +189,6 @@ local M = {
   keymap = {
     bigger_preview = "<c-k>",
     eval_snips = nil,
-    jump_to_mark = "<c-h>",
     manual_complete = "<c-space>",
     manual_complete_insertion_only = false,
     pre_select = false,

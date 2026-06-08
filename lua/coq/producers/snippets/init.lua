@@ -68,8 +68,7 @@ local fetch_ft = function(settings, idle_ctx, target)
     local max_mtime = vim.iter(iter):fold(0, function(a, s)
       return math.max(a, s.mtime)
     end)
-    local cached = store.fetch(target, max_mtime) or { extends = {}, items = {} }
-    return { extends = cached.extends, items = cached.items }
+    return store.fetch(target, max_mtime) or { extends = {}, items = {} }
   end)
 end
 

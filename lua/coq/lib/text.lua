@@ -2,6 +2,42 @@ local M = {}
 
 local CR, LF = 13, 10
 
+---@param trim boolean
+---@param x any
+---@return string[]
+M.as_strings = function(trim, x)
+  if x == nil then
+    return {}
+  end
+
+  if type(x) == "string" then
+    local t = trim and vim.trim(x) or x
+    return trim and t == "" and {} or { t }
+  end
+
+  if type(x) == "table" then
+    local acc = {}
+    for _, v in pairs(x) do
+      local t = trim and vim.trim(v) or v
+      if not trim or t ~= "" then
+        table.insert(acc, t)
+      end
+    end
+    return acc
+  end
+
+  error("as_strings: expected string|string[]|nil, got " .. type(x), 2)
+end
+
+---@param trim boolean
+---@param sep string
+---@param x string|string[]|nil
+---@return string
+M.join_or_str = function(trim, sep, x)
+  local joined = table.concat(M.as_strings(false, x), sep)
+  return trim and vim.trim(joined) or joined
+end
+
 ---@param s string
 ---@return lib.Iterator<string>
 M.splitlines = function(s)
@@ -97,6 +133,18 @@ end
 M.startswith = function(prefixes, line)
   for _, p in pairs(prefixes) do
     if vim.startswith(line, p) then
+      return true
+    end
+  end
+  return false
+end
+
+---@param suffixes string[]
+---@param line string
+---@return boolean
+M.endswith = function(suffixes, line)
+  for _, s in pairs(suffixes) do
+    if vim.endswith(line, s) then
       return true
     end
   end

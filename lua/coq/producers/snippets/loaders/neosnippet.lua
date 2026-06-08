@@ -95,7 +95,6 @@ M.parse = function(src, text)
           word = m,
           body = vim.trim(table.concat(vim.iter(txt.dedent(current_lines)):totable(), "\n")),
           filetype = src.filetype,
-          grammar = "lsp",
           label = current_label,
           doc = "",
         })

@@ -25,8 +25,12 @@ def _git_clone(path: Path, repo_name: str) -> None:
     check_call(("git", "clone", uri, str(path)))
 
 
-def _build(cwd: Path) -> None:
+def _build_v2(cwd: Path) -> None:
     check_call((executable, "-m", "coq.ci"), cwd=cwd)
+
+
+def _build_v3(cwd: Path) -> None:
+    check_call((str(cwd / "ci" / "compile_v3.lua"),), cwd=cwd)
 
 
 def _git_alert(cwd: Path) -> None:
@@ -61,5 +65,6 @@ def main() -> None:
     if "CI" in environ:
         _git_identity()
     _git_clone(snips, repo_name="coq.artifacts")
-    _build(_TOP_LV)
+    _build_v2(_TOP_LV)
+    _build_v3(_TOP_LV)
     _git_alert(snips)
