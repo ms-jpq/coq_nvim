@@ -162,7 +162,13 @@ end
 ---@return string[] rest
 M._remaining = function(typed, candidate)
   local first = candidate[1] or ""
-  local j = bounded_subseq_end(typed, first) or #typed
+  local j = bounded_subseq_end(typed, first)
+  if j == nil then
+    j = vim.fn.byteidx(first, vim.fn.strchars(typed))
+    if j < 0 then
+      j = #first
+    end
+  end
   local head = string.sub(first, j + 1)
   local rest = { unpack(candidate, 2) }
   return head, rest
@@ -257,11 +263,17 @@ M.bind = function(n, settings, ev)
   end)
 
   events.subscribe_latest(n, ev.completion, function(pum_ev)
+    atools.scheduled()
+
+    if pum_ev.kind == "done" or pum_ev.kind == "clear" then
+      M.clear(vim.api.nvim_get_current_buf())
+      return
+    end
+
     if pum_ev.kind ~= "changed" then
       return
     end
 
-    atools.scheduled()
     local ci = pum_ev.completed_item
     if type(ci) ~= "table" then
       return

@@ -1,22 +1,26 @@
-local M = {}
-
 ---@class lib.DebugScope
 ---@field enabled boolean
 ---@field notify fun(msg: string)
 ---@field buf fun(buf: integer, tag: string)
 
+local M = {}
+
 ---@param name string
 ---@return lib.DebugScope
-M.scope = function(name)
+M.new = function(name)
   local enabled = os.getenv("COQ_DEBUG_" .. name) ~= nil
 
-  local notify = function(msg)
+  ---@type lib.DebugScope
+  ---@diagnostic disable-next-line: missing-fields
+  local scope = { enabled = enabled }
+
+  scope.notify = function(msg)
     if enabled then
       vim.notify("[coq:" .. name .. "] " .. msg)
     end
   end
 
-  local buf = function(buf, tag)
+  scope.buf = function(buf, tag)
     if not enabled then
       return
     end
@@ -33,7 +37,7 @@ M.scope = function(name)
     vim.notify(("[coq:%s] %s — cursor=(%d,%d)\n%s"):format(name, tag, row, col, table.concat(out, "\n")))
   end
 
-  return { enabled = enabled, notify = notify, buf = buf }
+  return scope
 end
 
 return M

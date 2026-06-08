@@ -496,10 +496,7 @@ T.describe({ "inserted span :: |before| |word| |after|" }, function(test)
     -- Without suffix_word="" for snippets, suffix_overlap(")", "function ()")
     -- would return 1 and the buffer's closing `)` would be deleted, leaving the
     -- snippet body to expand without the trailing `)` to land on.
-    T.eq(
-      scenario("vim.schedule(", "function ()", ")", { snippet = "function ($1)\n\t$0\nend" }),
-      "vim.schedule()"
-    )
+    T.eq(scenario("vim.schedule(", "function ()", ")", { snippet = "function ($1)\n\t$0\nend" }), "vim.schedule()")
   end)
 
   test({ "snippet with LSP range covers only typed prefix: cursor extends span" }, function()
@@ -518,10 +515,7 @@ T.describe({ "inserted span :: |before| |word| |after|" }, function(test)
         },
       },
     }
-    T.eq(
-      scenario("vim.schedule(", "fun()", ")", { snippet = "function ()\n\t$0\nend", lsp = lsp }),
-      "vim.schedule()"
-    )
+    T.eq(scenario("vim.schedule(", "fun()", ")", { snippet = "function ()\n\t$0\nend", lsp = lsp }), "vim.schedule()")
   end)
 
   test({ "InsertReplaceEdit with range_end past line end: units clamped" }, function()

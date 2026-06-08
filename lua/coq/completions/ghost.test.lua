@@ -407,6 +407,15 @@ T.describe({ "ghost._remaining" }, function(test)
       head = "m_buf_get_var",
       rest = {},
     },
+    -- regression: candidate starts with multi-byte `‹` (3 bytes UTF-8).
+    -- byte-count fallback would slice mid-codepoint and surface as `<80><b9>`.
+    {
+      name = "fallback respects codepoint boundary",
+      typed = "f",
+      candidate = { "‹bone› then" },
+      head = "bone› then",
+      rest = {},
+    },
     {
       name = "multi-line body",
       typed = "fn",

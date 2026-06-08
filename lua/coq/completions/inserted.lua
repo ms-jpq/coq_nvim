@@ -1,6 +1,5 @@
 local context = require "coq.lib.context"
 local debug_m = require "coq.lib.debug"
-local errs = require "coq.lib.errs"
 local lsp_util = require "coq.producers.lsp.util"
 local snippet_preview = require "coq.producers.snippets.preview"
 local tokens = require "coq.lib.index.tokens"
@@ -8,7 +7,7 @@ local txt = require "coq.lib.text"
 
 local DEFAULT_ENCODING = "utf-16"
 
-local debug = debug_m.scope "INSERTED"
+local debug = debug_m.new "INSERTED"
 
 local M = {}
 
@@ -236,6 +235,27 @@ M._apply_edits = function(ctx, i, lsp, additional_edits)
   vim.lsp.util.apply_text_edits(all_edits, ctx.buf, enc)
 end
 
+---@param ctx ctx.full
+---@param body string
+M._snippet_expand = function(ctx, body)
+  local ok, err = pcall(vim.snippet.expand, body)
+  if ok then
+    return
+  end
+  local row, col = unpack(vim.api.nvim_win_get_cursor(ctx.win))
+  vim.lsp.util.apply_text_edits({
+    {
+      range = {
+        start = { line = row - 1, character = col },
+        ["end"] = { line = row - 1, character = col },
+      },
+      newText = body,
+    },
+  }, ctx.buf, "utf-8")
+
+  vim.notify(err, vim.log.levels.WARN)
+end
+
 -- https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/completion.lua
 ---@param settings config.Settings
 ---@param ctx ctx.full
@@ -252,7 +272,7 @@ M.apply = function(settings, ctx, resolver, i)
   debug.buf(ctx.buf, "post-apply_edits")
 
   if i.meta.snippet then
-    errs.with_reporting(vim.snippet.expand)(i.meta.snippet)
+    M._snippet_expand(ctx, i.meta.snippet)
     debug.buf(ctx.buf, "post-snippet.expand")
   end
 
