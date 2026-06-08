@@ -87,7 +87,7 @@ local extmark_opts = function(ghost_settings, buf, cursor_col)
   if s == nil then
     return nil
   end
-  local first = ghost._extmarks(ghost_settings, buf, s, cursor_col)()
+  local first = ghost._extmarks(ghost_settings, s, cursor_col)()
   return first and first.opts
 end
 
@@ -194,12 +194,13 @@ T.describe({ "ghost.show range-driven overlay" }, function(test)
     T.eq(d.virt_text_pos, "inline")
   end)
 
-  test({ "control chars trump range — eol still wins" }, function()
+  test({ "tab inside ranged candidate expands; stays overlay" }, function()
     local buf, ctx = mk_ctx({ "" }, 1, 0)
     ghost.show(ctx, item_with_range("\tbody", 0, 5))
     local d = mark_details(buf, ctx)
     assert(d, "expected an extmark")
-    T.eq(d.virt_text_pos, "win_col") -- nvim normalizes eol+virt_text_win_col → win_col
+    T.eq(d.virt_text_pos, "overlay")
+    T.eq(d.virt_text[1][1], string.rep(" ", vim.bo[buf].tabstop) .. "body")
   end)
 end)
 
@@ -241,7 +242,7 @@ T.describe({ "ghost.show multi-line range" }, function(test)
     -- (anchor at cursor col, others at col 0).
     local buf, ctx = mk_ctx({ "dog", "good", "fido" }, 1, 0)
     ghost.show(ctx, item_ml_range("puppy\nclever\nfido", 0, 0, 2, 4))
-    local marks = vim.iter(ghost._extmarks(ghost_cfg, buf, vim.b[buf].coq_ghost, ctx.pos[2])):totable()
+    local marks = vim.iter(ghost._extmarks(ghost_cfg, vim.b[buf].coq_ghost, ctx.pos[2])):totable()
     T.eq(#marks, 3)
     -- Anchor is (0, 0); cursor col is 0 too. Marks 2+ overlay at col 0
     -- on rows 1 and 2 (anchor_row + k - 1).
@@ -262,7 +263,7 @@ T.describe({ "ghost.show multi-line range" }, function(test)
     -- 2-row range, 4-line newText → 2 overlays, 2 surplus → virt_lines on mark 2
     local buf, ctx = mk_ctx({ "a", "b" }, 1, 0)
     ghost.show(ctx, item_ml_range("L1\nL2\nL3\nL4", 0, 0, 1, 1))
-    local marks = vim.iter(ghost._extmarks(ghost_cfg, buf, vim.b[buf].coq_ghost, ctx.pos[2])):totable()
+    local marks = vim.iter(ghost._extmarks(ghost_cfg, vim.b[buf].coq_ghost, ctx.pos[2])):totable()
     T.eq(#marks, 2)
     T.eq(marks[1].opts.virt_text[1][1], "L1")
     T.eq(marks[2].opts.virt_text[1][1], "L2")
@@ -275,7 +276,7 @@ T.describe({ "ghost.show multi-line range" }, function(test)
     -- 3-row range, 1-line newText → 1 mark (anchor), buffer rows 2,3 leak (limitation)
     local buf, ctx = mk_ctx({ "a", "b", "c" }, 1, 0)
     ghost.show(ctx, item_ml_range("once", 0, 0, 2, 1))
-    local marks = vim.iter(ghost._extmarks(ghost_cfg, buf, vim.b[buf].coq_ghost, ctx.pos[2])):totable()
+    local marks = vim.iter(ghost._extmarks(ghost_cfg, vim.b[buf].coq_ghost, ctx.pos[2])):totable()
     T.eq(#marks, 1)
     T.eq(marks[1].opts.virt_text[1][1], "once")
   end)
@@ -284,7 +285,7 @@ T.describe({ "ghost.show multi-line range" }, function(test)
     -- 1-row range stays as single overlay anchor; surplus lines as virt_lines.
     local buf, ctx = mk_ctx({ "fi" }, 1, 2)
     ghost.show(ctx, item_ml_range("fido\nbark", 0, 0, 0, 2))
-    local marks = vim.iter(ghost._extmarks(ghost_cfg, buf, vim.b[buf].coq_ghost, ctx.pos[2])):totable()
+    local marks = vim.iter(ghost._extmarks(ghost_cfg, vim.b[buf].coq_ghost, ctx.pos[2])):totable()
     T.eq(#marks, 1)
     T.eq(marks[1].opts.virt_text[1][1], "do") -- "fi" prefix consumed
     assert(marks[1].opts.virt_lines, "expected virt_lines")
@@ -292,16 +293,16 @@ T.describe({ "ghost.show multi-line range" }, function(test)
   end)
 end)
 
-T.describe({ "ghost.show control-char fallback" }, function(test)
-  test({ "switches to eol when first line has \\t" }, function()
+T.describe({ "ghost.show tab expansion" }, function(test)
+  test({ "expands \\t to spaces from anchor column; stays inline" }, function()
     local buf, ctx = mk_ctx({ "if " }, 1, 3)
     ghost.show(ctx, item_of "\tbody")
     local d = mark_details(buf, ctx)
     assert(d, "expected an extmark")
-    -- nvim reports `win_col` when virt_text_win_col is set (we set both as
-    -- a copilot-style "anchor at cursor virtcol" — nvim resolves to win_col).
-    T.eq(d.virt_text_pos, "win_col")
-    assert(d.virt_text_win_col ~= nil, "expected virt_text_win_col")
+    T.eq(d.virt_text_pos, "inline")
+    local ts = vim.bo[buf].tabstop
+    local gap = ts - (3 % ts)
+    T.eq(d.virt_text[1][1], string.rep(" ", gap) .. "body")
   end)
 
   test({ "uses inline for plain text" }, function()
@@ -359,16 +360,51 @@ T.describe({ "ghost typed-prefix suppression :: multibyte" }, function(test)
   end)
 end)
 
-T.describe({ "ghost fuzzy / divergent-typed overlay" }, function(test)
-  test({ "typed diverges → overlay full body at anchor column" }, function()
-    -- Buffer "fn", item "function". Body painted at anchor_col=0 with
-    -- overlay — body covers typed text, user sees "function" on top of "fn".
+T.describe({ "ghost._remaining" }, function(test)
+  ---@type { name: string, typed: string, candidate: string[], head: string, rest: string[] }[]
+  local cases = {
+    { name = "strict prefix", typed = "wh", candidate = { "while" }, head = "ile", rest = {} },
+    { name = "subseq skip in middle", typed = "fn", candidate = { "function" }, head = "ction", rest = {} },
+    { name = "subseq with prefix gap", typed = "nvm", candidate = { "nvim_api_*" }, head = "_api_*", rest = {} },
+    { name = "longer subseq match", typed = "fnt", candidate = { "function" }, head = "ion", rest = {} },
+    { name = "no chars match", typed = "xy", candidate = { "abc" }, head = "abc", rest = {} },
+    { name = "empty typed → full body", typed = "", candidate = { "function" }, head = "function", rest = {} },
+    { name = "exact match → empty", typed = "while", candidate = { "while" }, head = "", rest = {} },
+    { name = "partial then unmatched", typed = "fnx", candidate = { "function" }, head = "ction", rest = {} },
+    {
+      name = "multi-line body",
+      typed = "fn",
+      candidate = { "func", "tion" },
+      head = "c",
+      rest = { "tion" },
+    },
+    {
+      name = "empty typed multi-line",
+      typed = "",
+      candidate = { "a", "b", "c" },
+      head = "a",
+      rest = { "b", "c" },
+    },
+  }
+  for _, c in ipairs(cases) do
+    test({ c.name }, function()
+      local head, rest = ghost._remaining(c.typed, c.candidate)
+      T.eq(head, c.head)
+      T.eq(rest, c.rest)
+    end)
+  end
+end)
+
+T.describe({ "ghost subsequence cutoff" }, function(test)
+  test({ "typed diverges by subseq → subseq-stripped tail inline" }, function()
+    -- Buffer "fn", item "function". Subseq match consumes 'f' at 1 and 'n'
+    -- at 3 → remaining "ction" painted inline at cursor. Display: "fn" +
+    -- "ction" = "fnction".
     local buf, ctx = mk_ctx({ "fn" }, 1, 2)
     ghost.show(ctx, item_of "function")
-    local opts = extmark_opts(ghost_cfg, buf, ctx.pos[2])
-    assert(opts and opts.virt_text, "expected an extmark")
-    T.eq(opts.virt_text[1][1], "function")
-    T.eq(opts.virt_text_pos, "overlay")
+    local entry = mark_text(buf, ctx)
+    assert(entry, "expected an inline extmark")
+    T.eq(entry[1], "ction")
   end)
 end)
 
