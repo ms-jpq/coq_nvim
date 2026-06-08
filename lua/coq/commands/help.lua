@@ -6,6 +6,7 @@ local M = {}
 
 M.TOPICS = {
   index = "README",
+  v2 = "V2",
   config = "CONF",
   keybind = "KEYBIND",
   snips = "SNIPS",

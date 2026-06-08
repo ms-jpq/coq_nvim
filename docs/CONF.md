@@ -77,7 +77,7 @@ Will give you the following error message:
 
 ## Specifics
 
-v2 attaches on `setup()` — there is no `auto_start` or `xdg` option. See [v2](./v2.md).
+v2 attaches on `setup()` — there is no `auto_start` or `xdg` option. See [v2](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/V2.md).
 
 - [:COQ help keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md)
 

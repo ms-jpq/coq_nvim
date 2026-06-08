@@ -8,27 +8,27 @@ Use `:COQ help -w` or `:COQ help --web` to open help pages in a browser window i
 
 Use `:COQ help {topic}` or `:COQ help {topic} --web` to visit a particular topic for more information
 
-- [:COQ help v2](./v2.md)
+- [:COQ help v2](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/V2.md)
 
-- [:COQ help config](./CONF.md)
+- [:COQ help config](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CONF.md)
 
-- [:COQ help keybind](./KEYBIND.md)
+- [:COQ help keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md)
 
-- [:COQ help snips](./SNIPS.md)
+- [:COQ help snips](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/SNIPS.md)
 
-- [:COQ help fuzzy](./FUZZY.md)
+- [:COQ help fuzzy](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/FUZZY.md)
 
-- [:COQ help display](./DISPLAY.md)
+- [:COQ help display](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/DISPLAY.md)
 
-- [:COQ help sources](./SOURCES.md)
+- [:COQ help sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/SOURCES.md)
 
-- [:COQ help misc](./MISC.md)
+- [:COQ help misc](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/MISC.md)
 
-- [:COQ help perf](./PERF.md)
+- [:COQ help perf](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/PERF.md)
 
-- [:COQ help stats](./STATS.md)
+- [:COQ help stats](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/STATS.md)
 
-- [:COQ help custom_sources](./CUSTOM_SOURCES.md)
+- [:COQ help custom_sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)
 
 ---
 

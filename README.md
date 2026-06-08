@@ -304,13 +304,7 @@ Plug 'ms-jpq/coq.thirdparty', {'branch': '3p'}
 
 ## Documentation
 
-To start `coq`
-
-```vim
-:COQ help [topic]
-```
-
-- [:COQ help v2](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/v2.md)
+- [:COQ help v2](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/V2.md)
 
 - [:COQ help config](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CONF.md)
 

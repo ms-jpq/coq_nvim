@@ -48,14 +48,7 @@ Manually trigger completions, with a longer timeout.
 "<c-space>"
 ```
 
-For snippet placeholder navigation, use `vim.snippet.jump(1)` / `vim.snippet.jump(-1)`:
-
-```lua
-vim.keymap.set({ "i", "s" }, "<c-h>", function() vim.snippet.jump(1) end)
-vim.keymap.set({ "i", "s" }, "<c-l>", function() vim.snippet.jump(-1) end)
-```
-
-See [v2](./v2.md) for the keymap options that were changed / removed.
+See [v2](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/V2.md) for the keymap options that were changed / removed.
 
 ## Custom keybindings
 
