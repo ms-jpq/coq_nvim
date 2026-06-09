@@ -97,6 +97,10 @@ local probe = function(ft)
       :map(function(m)
         return m.text
       end)
+      -- M.keywords drops runs shorter than MIN_LEN; mirror that here.
+      :filter(function(w)
+        return #w >= tokens.MIN_LEN
+      end)
       :totable()
   end)
   vim.api.nvim_buf_delete(buf, { force = true })

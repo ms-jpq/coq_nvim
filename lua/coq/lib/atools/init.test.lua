@@ -23,6 +23,18 @@ T.describe({ "atools.spawn" }, function(test)
     T.eq(result.stdout, "fido\nlil\nspot")
   end)
 
+  test({ "returns nil when the binary is missing instead of raising ENOENT" }, function()
+    local result
+    local ok = false
+    async.scope(function()
+      ok = pcall(function()
+        result = atools.spawn { "coq-no-such-dog-binary", "woof" }
+      end)
+    end)
+    T.eq(ok, true)
+    T.eq(result, nil)
+  end)
+
   test({ "ambient cancel kills the child before it finishes naturally" }, function()
     -- pcall returning ok=false IS the proof the child was killed. If
     -- cancel didn't propagate, atools.spawn would wait the full `sleep 60`

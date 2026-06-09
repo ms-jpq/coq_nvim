@@ -7,7 +7,7 @@ local M = {}
 
 M.WHITES = set.new { string.byte " ", string.byte "\t", string.byte "\n", string.byte "\r" }
 
-M.MIN_LEN = 2
+M.MIN_LEN = 3
 
 ---@param s string
 ---@return integer
@@ -100,12 +100,12 @@ M.keywords = function(kw, text)
     ---@param run string
     local yield = function(kind, run)
       if kind == "kw" then
-        if #run > M.MIN_LEN then
+        if #run >= M.MIN_LEN then
           coroutine.yield(run)
         end
         if pending_sym then
           local joined = pending_sym .. run
-          if #joined > M.MIN_LEN then
+          if #joined >= M.MIN_LEN then
             coroutine.yield(joined)
           end
         end
