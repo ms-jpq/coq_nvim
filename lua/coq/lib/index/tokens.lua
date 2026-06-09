@@ -77,29 +77,31 @@ do
   end
 end
 
+local KW, SYM, WS = 1, 2, 3
+
 ---@param kw lib.Set<integer>
 ---@param text lib.Iterator<string>
 ---@return lib.Iterator<string>
 M.keywords = function(kw, text)
   return async.wrap(function()
     ---@param b integer
-    ---@return "kw" | "sym" | "ws"
+    ---@return integer
     local classify = function(b)
       if kw[b] then
-        return "kw"
+        return KW
       elseif M.WHITES[b] then
-        return "ws"
+        return WS
       else
-        return "sym"
+        return SYM
       end
     end
 
     local pending_sym = nil
 
-    ---@param kind "kw" | "sym" | "ws"
+    ---@param kind integer
     ---@param run string
     local yield = function(kind, run)
-      if kind == "kw" then
+      if kind == KW then
         if #run >= M.MIN_LEN then
           coroutine.yield(run)
         end
@@ -110,7 +112,7 @@ M.keywords = function(kw, text)
           end
         end
         pending_sym = nil
-      elseif kind == "sym" then
+      elseif kind == SYM then
         pending_sym = run
       else
         pending_sym = nil
