@@ -1,4 +1,4 @@
-if vim.fn.has "nvim-0.12" == 0 then
+if vim.g.coq_v1 or vim.fn.has "nvim-0.12" == 0 then
   return require "coq.legacy"
 end
 
