@@ -64,6 +64,18 @@ local CORPUS = {
   "Mr. Dr. Sr. Jr. e.g. i.e. etc.",
   "2026-05-30T12:34:56Z +0000",
   "v1.2.3-beta+build.42",
+
+  -- multibyte: the dog is the same in every script
+  "café señor jalapeño naïve résumé Zürich",
+  "der schnelle braune Hund Über Größe",
+  "быстрая коричневая собака перепрыгнула",
+  "γρήγορος καφέ σκύλος over τον οκνηρό",
+  "速い茶色の犬 が怠け者の上を跳ぶ",
+  "빠른 갈색 개 가 게으른",
+  "naïve_café señor2 Über_Größe γρήγορος3 собака_x",
+  "Beag.naïve->Über::Größe(σκύλος) собака.field",
+  "emoji 🐕 dog 🐶 puppy 🦮 guide tail",
+  "combining é vs é mañana cooperate",
 }
 
 ---@return string[]
@@ -120,7 +132,7 @@ T.test({ "tokens.parity across all filetypes" }, function()
     local actual = vim
       .iter(tokens.keywords(kw, itertools.intersperse("\n", lines)))
       :filter(function(w)
-        return kw[string.byte(w, 1)] ~= nil
+        return kw[string.byte(w, 1)] == tokens.KW
       end)
       :totable()
     if not vim.deep_equal(actual, expected) then

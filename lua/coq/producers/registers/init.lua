@@ -9,23 +9,6 @@ local worker = require "coq.lib.worker"
 
 local SOURCE = "registers"
 
----@type table<integer, true>
-local BASIC_KW = (function()
-  local kw = {}
-  for b = string.byte "0", string.byte "9" do
-    kw[b] = true
-  end
-  for b = string.byte "A", string.byte "Z" do
-    kw[b] = true
-  end
-  for b = string.byte "a", string.byte "z" do
-    kw[b] = true
-  end
-  kw[string.byte "_"] = true
-  kw[string.byte "-"] = true
-  return kw
-end)()
-
 local index_of = util.once(index_m.new)
 
 local M = {}
@@ -44,13 +27,14 @@ M.getreg = function(name)
   return text
 end
 
+---@param iskeyword table<integer, integer>
 ---@param register string
 ---@param text string
 ---@return lib.Iterator<registers.Item>
-local word_items = function(register, text)
+local word_items = function(iskeyword, register, text)
   return async.wrap(function()
     for word in
-      tokens.keywords(BASIC_KW, vim.iter { text } --[[@as lib.Iterator<string>]])
+      tokens.keywords(iskeyword, vim.iter { text } --[[@as lib.Iterator<string>]])
     do
       coroutine.yield {
         word = word,
@@ -61,15 +45,16 @@ local word_items = function(register, text)
   end)
 end
 
+---@param iskeyword table<integer, integer>
 ---@param register string
 ---@param text string
 ---@return lib.Iterator<registers.Item>
-local line_items = function(register, text)
+local line_items = function(iskeyword, register, text)
   return async.wrap(function()
     for line in txt.splitlines(text) do
       local stripped = txt.lstrip(line)
       if stripped ~= "" then
-        local head = tokens.keywords(BASIC_KW, vim.iter { stripped } --[[@as lib.Iterator<string>]])()
+        local head = tokens.keywords(iskeyword, vim.iter { stripped } --[[@as lib.Iterator<string>]])()
         if head ~= nil then
           coroutine.yield {
             word = head,
@@ -84,11 +69,10 @@ local line_items = function(register, text)
 end
 
 ---@param settings config.Settings
----@param _ idle.Ctx
-M.idle = function(settings, _)
-  local opts = settings.clients.registers
-  local word_set = set.new(opts.words)
-  local line_set = set.new(opts.lines)
+---@param idle_ctx idle.Ctx
+M.idle = function(settings, idle_ctx)
+  local word_set = set.new(settings.clients.registers.words)
+  local line_set = set.new(settings.clients.registers.lines)
   local names = vim.tbl_keys(vim.tbl_extend("force", word_set, line_set))
 
   if #names == 0 then
@@ -113,12 +97,12 @@ M.idle = function(settings, _)
       local bucket = {}
       by_register[entry.register] = bucket
       if word_set[entry.register] then
-        for item in word_items(entry.register, text) do
+        for item in word_items(idle_ctx.ctx.iskeyword, entry.register, text) do
           table.insert(bucket, item)
         end
       end
       if line_set[entry.register] then
-        for item in line_items(entry.register, text) do
+        for item in line_items(idle_ctx.ctx.iskeyword, entry.register, text) do
           table.insert(bucket, item)
         end
       end

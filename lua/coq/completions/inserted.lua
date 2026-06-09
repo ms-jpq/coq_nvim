@@ -122,7 +122,7 @@ local edit_ctx = function(preview, ctx, i, enc, range)
   }
 end
 
----@param iskeyword lib.Set<integer>
+---@param iskeyword table<integer, integer>
 ---@param e_ctx completions.EditCtx
 ---@param prefix_word string
 ---@param suffix_word string

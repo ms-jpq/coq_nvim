@@ -13,7 +13,7 @@ local lib = require "coq.lib"
 ---@field cwd string
 ---@field filename string
 ---@field linesep string
----@field iskeyword lib.Set<integer>
+---@field iskeyword table<integer, integer>
 ---@field wildignore string
 ---@field comment [string, string]
 ---@field line_before string

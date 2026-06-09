@@ -3,6 +3,8 @@ local buffers = require "coq.lib.buffers"
 local default_dict = require "coq.lib.default_dict"
 local set = require "coq.lib.set"
 
+local WS, SYM, KW = 0, 1, 2
+
 local M = {}
 
 M.WHITES = set.new { string.byte " ", string.byte "\t", string.byte "\n", string.byte "\r" }
@@ -50,10 +52,11 @@ local ranges_of = function(entry)
 end
 
 do
+  M.WS, M.SYM, M.KW = WS, SYM, KW
   local charset_cache = {}
 
   ---@param spec string
-  ---@return lib.Set<integer>
+  ---@return table<integer, integer>
   M.parse_charset = function(spec)
     local hit = charset_cache[spec]
     if hit then
@@ -72,30 +75,21 @@ do
       end
     end
 
-    charset_cache[spec] = kw
-    return kw
+    local cls = {}
+    for b = 0, 255 do
+      cls[b] = kw[b] and KW or (M.WHITES[b] and WS or SYM)
+    end
+
+    charset_cache[spec] = cls
+    return cls
   end
 end
 
-local KW, SYM, WS = 1, 2, 3
-
----@param kw lib.Set<integer>
+---@param cls table<integer, integer>  byte -> WS | SYM | KW (from parse_charset)
 ---@param text lib.Iterator<string>
 ---@return lib.Iterator<string>
-M.keywords = function(kw, text)
+M.keywords = function(cls, text)
   return async.wrap(function()
-    ---@param b integer
-    ---@return integer
-    local classify = function(b)
-      if kw[b] then
-        return KW
-      elseif M.WHITES[b] then
-        return WS
-      else
-        return SYM
-      end
-    end
-
     local pending_sym = nil
 
     ---@param kind integer
@@ -124,9 +118,9 @@ M.keywords = function(kw, text)
     for chunk in text do
       local i, n = 1, #chunk
       while i <= n do
-        local kind = classify(string.byte(chunk, i))
+        local kind = cls[string.byte(chunk, i)]
         local start = i
-        while i <= n and classify(string.byte(chunk, i)) == kind do
+        while i <= n and cls[string.byte(chunk, i)] == kind do
           i = i + 1
         end
         local piece = string.sub(chunk, start, i - 1)
@@ -148,49 +142,45 @@ M.keywords = function(kw, text)
   end)
 end
 
----@param kw lib.Set<integer>
+---@param cls table<integer, integer>
 ---@param line string
 ---@return string
-M.trailing_keyword_before = function(kw, line)
+M.trailing_keyword_before = function(cls, line)
   local i = #line
-  while i > 0 and kw[string.byte(line, i)] do
+  while i > 0 and cls[string.byte(line, i)] == KW do
     i = i - 1
   end
   return string.sub(line, i + 1)
 end
 
----@param kw lib.Set<integer>
+---@param cls table<integer, integer>
 ---@param line string
 ---@return string
-M.match_prefix = function(kw, line)
-  local k = M.trailing_keyword_before(kw, line)
+M.match_prefix = function(cls, line)
+  local k = M.trailing_keyword_before(cls, line)
   if k ~= "" then
     return k
   end
-  return M.trailing_symbol_before(kw, line)
+  return M.trailing_symbol_before(cls, line)
 end
 
----@param kw lib.Set<integer>
+---@param cls table<integer, integer>
 ---@param line string
 ---@return string
-M.trailing_symbol_before = function(kw, line)
+M.trailing_symbol_before = function(cls, line)
   local i = #line
-  while i > 0 do
-    local b = string.byte(line, i)
-    if kw[b] or M.WHITES[b] then
-      break
-    end
+  while i > 0 and cls[string.byte(line, i)] == SYM do
     i = i - 1
   end
   return string.sub(line, i + 1)
 end
 
----@param kw lib.Set<integer>
+---@param cls table<integer, integer>
 ---@param line string
 ---@return string
-M.leading_keyword = function(kw, line)
+M.leading_keyword = function(cls, line)
   local i = 0
-  while i < #line and kw[string.byte(line, i + 1)] do
+  while i < #line and cls[string.byte(line, i + 1)] == KW do
     i = i + 1
   end
   return string.sub(line, 1, i)
@@ -202,14 +192,14 @@ M.surround = function(ctx)
   return buffers.lines_around_cursor(ctx.buf)
 end
 
----@param kw lib.Set<integer>
+---@param cls table<integer, integer>
 ---@param text lib.Iterator<string>
 ---@return table<string, integer>
-M.locality = function(kw, text)
+M.locality = function(cls, text)
   local acc = default_dict.new(function()
     return 0
   end)
-  for word in M.keywords(kw, text) do
+  for word in M.keywords(cls, text) do
     acc[word] = acc[word] + 1
   end
   return acc --[[@as table<string, integer>]]
