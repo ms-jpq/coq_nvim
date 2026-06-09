@@ -244,8 +244,8 @@ M.promote = function(buf)
   local ft = vim.bo[buf].filetype
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
 
-  vim.cmd "silent! pedit COQ-preview"
-  vim.cmd "wincmd P"
+  vim.cmd.pedit { args = { "COQ-preview" }, mods = { silent = true, emsg_silent = true } }
+  vim.cmd.wincmd [[P]]
 
   local new_buf = vim.api.nvim_get_current_buf()
   do
@@ -258,7 +258,7 @@ M.promote = function(buf)
   if ft ~= "" then
     vim.bo[new_buf].filetype = ft
   end
-  vim.cmd "wincmd p"
+  vim.cmd.wincmd [[p]]
 end
 
 ---@param ctx ctx.base
