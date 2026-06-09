@@ -52,7 +52,6 @@ local defaults = require "coq.config.defaults"
 ---@field recommended boolean
 ---@field pre_select boolean
 ---@field manual_complete? string
----@field repeat? string
 ---@field bigger_preview? string
 ---@field eval_snips? string
 ---@field manual_complete_insertion_only boolean
@@ -92,7 +91,6 @@ local defaults = require "coq.config.defaults"
 ---@class config.SnippetClient: config.BaseClient
 ---@field always_on_top boolean
 ---@field user_path? string
----@field warn string[]
 
 ---@class config.CtagsClient: config.BaseClient
 ---@field always_on_top boolean

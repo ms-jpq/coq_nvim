@@ -43,7 +43,6 @@ local M = {
       enabled = true,
       short_name = "SP",
       user_path = nil,
-      warn = { "missing", "outdated" },
       weight_adjust = 0.1,
     },
 
@@ -193,7 +192,6 @@ local M = {
     manual_complete_insertion_only = false,
     pre_select = false,
     recommended = true,
-    ["repeat"] = nil,
   },
 
   limits = {

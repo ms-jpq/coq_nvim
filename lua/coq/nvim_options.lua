@@ -72,8 +72,16 @@ local manual_complete = function(keymap)
   end, { noremap = true, expr = true })
 
   if not keymap.manual_complete_insertion_only then
-    vim.keymap.set({ "n", "v" }, keymap.manual_complete, [[<c-\><c-n>i<c-x><c-u>]], { noremap = true })
+    vim.keymap.set({ "n", "v" }, keymap.manual_complete, [[<c-\><c-n>i<c-x><c-u>]])
   end
+end
+
+---@param keymap config.KeyMapping
+local eval_snips = function(keymap)
+  if not keymap.eval_snips then
+    return
+  end
+  vim.keymap.set({ "n", "v" }, keymap.eval_snips, [[<cmd>COQ snips eval<cr>]])
 end
 
 ---@param events completions.Events
@@ -94,6 +102,7 @@ M.apply = function(settings, events)
   completeopt(settings.keymap)
   recommended_keymaps(settings.keymap)
   manual_complete(settings.keymap)
+  eval_snips(settings.keymap)
   complete_func(events)
 end
 

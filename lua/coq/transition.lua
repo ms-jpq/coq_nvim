@@ -71,7 +71,6 @@ local REMOVED_OPTIONS = {
   { "display.pum.x_truncate_len" },
   { "display.pum.y_max_len", "use `vim.o.pumheight = N` — neovim's built-in PUM row cap." },
   { "display.pum.y_ratio", "compute yourself: `vim.o.pumheight = math.floor(vim.o.lines * 0.3)`." },
-  { "keymap.eval_snips", "bind a key to `:COQsnips compile` yourself." },
   {
     "keymap.jump_to_mark",
     "v2 leans on neovim's built-in `vim.snippet`. Bind it yourself: `vim.keymap.set({'i','s'}, '<c-h>', function() vim.snippet.jump(1) end)`.",
