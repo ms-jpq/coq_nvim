@@ -1,6 +1,6 @@
 local M = {}
 
-local L, R = "‹", "›"
+local L, R = "<", ">"
 
 ---@param body string
 ---@return string
