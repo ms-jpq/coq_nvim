@@ -40,12 +40,16 @@ M.spawn = function(argv, opts)
 
     local stdin_f, exit_f, stdout_f, stderr_f = async.future(), async.future(), async.future(), async.future()
 
-    local handle = assert(vim.uv.spawn(argv[1], {
+    local handle = vim.uv.spawn(argv[1], {
       args = vim.list_slice(argv, 2),
       stdio = { stdin_pipe, stdout_pipe, stderr_pipe },
     }, function(code, signal)
       exit_f.resolve(true, { code = code, signal = signal })
-    end))
+    end)
+
+    if not handle then
+      return nil
+    end
 
     defer(function()
       close(handle)
