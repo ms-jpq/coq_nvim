@@ -7,6 +7,8 @@ local M = {}
 
 M.WHITES = set.new { string.byte " ", string.byte "\t", string.byte "\n", string.byte "\r" }
 
+M.MIN_LEN = 2
+
 ---@param s string
 ---@return integer
 local decode = function(s)
@@ -98,9 +100,14 @@ M.keywords = function(kw, text)
     ---@param run string
     local yield = function(kind, run)
       if kind == "kw" then
-        coroutine.yield(run)
+        if #run > M.MIN_LEN then
+          coroutine.yield(run)
+        end
         if pending_sym then
-          coroutine.yield(pending_sym .. run)
+          local joined = pending_sym .. run
+          if #joined > M.MIN_LEN then
+            coroutine.yield(joined)
+          end
         end
         pending_sym = nil
       elseif kind == "sym" then
