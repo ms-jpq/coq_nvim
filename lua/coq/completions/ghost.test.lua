@@ -1,6 +1,7 @@
 local T = require "coq.lib.test"
 local TH = require "coq.lib.test_helpers"
 local ghost = require "coq.completions.ghost"
+local preview = require "coq.producers.snippets.preview"
 local tokens = require "coq.lib.index.tokens"
 
 local NS = vim.api.nvim_create_namespace "coq.ghost"
@@ -193,7 +194,7 @@ T.describe({ "ghost.show" }, function(test)
     ghost.show(ctx, snippet_item)
     local entry = mark_text(buf, ctx)
     assert(entry, "expected an extmark")
-    T.eq(entry[1], "fido(‹bone›)")
+    T.eq(entry[1], "fido(" .. preview.L .. "bone" .. preview.R .. ")")
   end)
 end)
 
