@@ -12,7 +12,7 @@ local M = {}
 
 ---@param buf integer
 M.query = function(buf)
-  if not vim.api.nvim_buf_is_valid(buf) then
+  if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
     return
   end
 
