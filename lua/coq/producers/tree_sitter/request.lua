@@ -1,3 +1,4 @@
+local atools = require "coq.lib.atools"
 local buffers = require "coq.lib.buffers"
 
 local M = {}
@@ -11,7 +12,7 @@ local M = {}
 
 ---@param buf integer
 M.query = function(buf)
-  if not buffers.is_live(buf) then
+  if not vim.api.nvim_buf_is_valid(buf) then
     return
   end
 
@@ -36,9 +37,6 @@ M.query = function(buf)
 
   local trees = parser:parse() or {}
   local tick = vim.b[buf].changedtick
-  if not buffers.is_live(buf) or vim.b[buf].changedtick ~= tick then
-    return
-  end
 
   for _, tree in pairs(trees) do
     for capture_id, node in query:iter_captures(tree:root(), buf, lo, hi) do
@@ -62,7 +60,8 @@ M.query = function(buf)
             return
           end
 
-          if not buffers.is_live(buf) or vim.b[buf].changedtick ~= tick then
+          atools.scheduled()
+          if not vim.api.nvim_buf_is_valid(buf) or vim.b[buf].changedtick ~= tick then
             return
           end
         end

@@ -1,6 +1,5 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
-local buffers = require "coq.lib.buffers"
 local closable = require "coq.lib.closable"
 local lsp_util = require "coq.producers.lsp.util"
 local mpmc = require "coq.lib.channels.mpmc"
@@ -170,7 +169,7 @@ end
 ---@return lib.Iterator<lsp.RequestItem[]> iter
 M.query = function(ignored, ctx)
   return closable.iter(function(defer)
-    if not buffers.is_live(ctx.buf) then
+    if not vim.api.nvim_buf_is_valid(ctx.buf) then
       return
     end
 

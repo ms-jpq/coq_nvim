@@ -1,6 +1,6 @@
 local async = require "coq.lib.async"
+local atools = require "coq.lib.atools"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
-local buffers = require "coq.lib.buffers"
 local index_m = require "coq.producers.tree_sitter.index"
 local lib = require "coq.lib"
 local path_fmt = require "coq.producers.path_fmt"
@@ -23,7 +23,8 @@ local M = {}
 ---@param previous? treesitter.Meta
 ---@return treesitter.Meta?
 M.buffer_meta = function(buf, previous)
-  if not buffers.is_live(buf) then
+  atools.scheduled()
+  if not vim.api.nvim_buf_is_valid(buf) then
     return nil
   end
 

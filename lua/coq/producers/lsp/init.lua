@@ -1,3 +1,4 @@
+local atools = require "coq.lib.atools"
 local closable = require "coq.lib.closable"
 local lib = require "coq.lib"
 local match = require "coq.lib.index.rank.match"
@@ -16,12 +17,12 @@ M.new = function()
     idle = lib.noop,
     search = function(settings, ctx)
       return closable.iter(function(defer)
-        local opts = settings.clients.lsp
+        atools.scheduled()
         local lhs, rhs = unpack(settings.display.pum.source_context)
-        local menu = lhs .. opts.short_name .. rhs
+        local menu = lhs .. settings.clients.lsp.short_name .. rhs
 
-        local ignored = set.new(opts.ignored_servers)
-        local pinned = set.new(opts.always_on_top)
+        local ignored = set.new(settings.clients.lsp.ignored_servers)
+        local pinned = set.new(settings.clients.lsp.always_on_top)
 
         local close, query = request.query(ignored, ctx)
         defer(close)

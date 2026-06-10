@@ -28,7 +28,8 @@ local M = {}
 ---@param previous? buffer.Meta
 ---@return buffer.Meta?
 M.buffer_meta = function(max_bytes, buf, previous)
-  if not buffers.is_live(buf) then
+  atools.scheduled()
+  if not vim.api.nvim_buf_is_valid(buf) then
     return nil
   end
 
