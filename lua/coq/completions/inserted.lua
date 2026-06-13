@@ -209,7 +209,7 @@ M.span = function(preview, ctx, i, lsp)
   local suffix_word = is_snippet and "" or replace_text
 
   local span = e_ctx.span and M._clamp_span(e_ctx, replace_text)
-    or M._fallback_span(ctx.iskeyword, e_ctx, prefix_word, suffix_word)
+    or M._fallback_span(tokens.parse_charset(ctx.iskeyword), e_ctx, prefix_word, suffix_word)
 
   return span, e_ctx, enc, replace_text
 end

@@ -132,8 +132,10 @@ do
         if entry.text ~= nil and entry.text ~= cache[entry.id] then
           index_of(settings).prune { pane = entry.id }
           if entry.text ~= "" then
-            local words =
-              tokens.keywords(idle_ctx.ctx.iskeyword, vim.iter { entry.text } --[[@as lib.Iterator<string>]])
+            local words = tokens.keywords(
+              tokens.parse_charset(idle_ctx.ctx.iskeyword),
+              vim.iter { entry.text } --[[@as lib.Iterator<string>]]
+            )
 
             for i, word in vim.iter(words):enumerate() do
               index_of(settings).insert { pane = entry.id, word = word, meta = entry.pane.meta }

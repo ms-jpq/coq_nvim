@@ -46,21 +46,14 @@ end
 ---@param removed integer[]?
 ---@return idle.Ctx
 local idle_ctx = function(updated, removed)
-  local u, r = {}, {}
-  for _, b in pairs(updated or {}) do
-    u[b] = true
-  end
-  for _, b in pairs(removed or {}) do
-    r[b] = true
-  end
   return {
     ---@diagnostic disable-next-line: missing-fields
     ctx = {},
     cache_dir = "/tmp",
     config_dir = "/tmp",
     rtps = {},
-    updated = u,
-    removed = r,
+    updated = updated or {},
+    removed = removed or {},
   } --[[@as idle.Ctx]]
 end
 

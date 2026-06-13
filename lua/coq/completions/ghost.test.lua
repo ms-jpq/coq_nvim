@@ -2,10 +2,9 @@ local T = require "coq.lib.test"
 local TH = require "coq.lib.test_helpers"
 local ghost = require "coq.completions.ghost"
 local preview = require "coq.producers.snippets.preview"
-local tokens = require "coq.lib.index.tokens"
 
 local NS = vim.api.nvim_create_namespace "coq.ghost"
-local DEFAULT_ISKEYWORD = tokens.parse_charset "@,48-57,_,192-255"
+local DEFAULT_ISKEYWORD = "@,48-57,_,192-255"
 
 -- `bind` wires up the stateful API (M.show, M.clear, etc.) plus event
 -- subscriptions. Tests exercise `M.show` directly and inspect `_extmarks`,

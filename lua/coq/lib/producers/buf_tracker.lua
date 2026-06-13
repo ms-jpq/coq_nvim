@@ -18,11 +18,11 @@ M.new = function(spec)
   return function(idle_ctx)
     local changes = {}
 
-    for buf in pairs(idle_ctx.removed) do
+    for _, buf in pairs(idle_ctx.removed) do
       changes[buf] = { true, state[buf], nil }
     end
 
-    for buf in pairs(idle_ctx.updated) do
+    for _, buf in pairs(idle_ctx.updated) do
       local compared = spec.compare(buf, state[buf])
 
       if compared ~= nil then

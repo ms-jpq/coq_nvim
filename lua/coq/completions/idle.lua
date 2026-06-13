@@ -9,8 +9,8 @@ local set = require "coq.lib.set"
 ---@field config_dir string
 ---@field cache_dir string
 ---@field rtps string[]
----@field updated table<integer, true>
----@field removed table<integer, true>
+---@field updated integer[]
+---@field removed integer[]
 
 local M = {}
 
@@ -55,8 +55,8 @@ M.bind = function(n, settings, sup, events)
       config_dir = config_dir,
       cache_dir = cache_dir,
       rtps = rtps,
-      updated = snapshot.updated,
-      removed = snapshot.removed,
+      updated = vim.tbl_keys(snapshot.updated),
+      removed = vim.tbl_keys(snapshot.removed),
     })
   end)
 end

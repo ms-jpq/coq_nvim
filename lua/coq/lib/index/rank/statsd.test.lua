@@ -1,8 +1,7 @@
 local T = require "coq.lib.test"
 local statsd = require "coq.lib.index.rank.statsd"
-local tokens = require "coq.lib.index.tokens"
 
-local DEFAULT_ISKEYWORD = tokens.parse_charset "@,48-57,_,192-255"
+local DEFAULT_ISKEYWORD = "@,48-57,_,192-255"
 
 ---@param meta { filter: string, source: string, fuzzy: integer, always_on_top: boolean? }
 ---@return completions.Item

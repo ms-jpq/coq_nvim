@@ -26,7 +26,7 @@ end
 ---@return ctx.full
 local ctx_of = function(ctx_overrides)
   local tokens = require "coq.lib.index.tokens"
-  local iskeyword = tokens.parse_charset "@,48-57,_,192-255"
+  local iskeyword = "@,48-57,_,192-255"
   local base = {
     win = 0,
     buf = 0,
@@ -53,7 +53,7 @@ local ctx_of = function(ctx_overrides)
   local merged = vim.tbl_deep_extend("force", base, ctx_overrides)
   -- derive keyword_before from line_before unless explicitly overridden
   if ctx_overrides.keyword_before == nil then
-    merged.keyword_before = tokens.trailing_keyword_before(iskeyword, merged.line_before)
+    merged.keyword_before = tokens.trailing_keyword_before(tokens.parse_charset(iskeyword), merged.line_before)
   end
   return merged --[[@as ctx.full]]
 end

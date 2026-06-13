@@ -151,7 +151,7 @@ M.new = function(settings)
     return {
       token = ctx.keyword_before,
       locality = tokens.locality(
-        ctx.iskeyword,
+        tokens.parse_charset(ctx.iskeyword),
         itertools.intersperse(ctx.linesep, vim.iter(tokens.surround(ctx)) --[[@as lib.Iterator<string>]])
       ),
       recency = recency,

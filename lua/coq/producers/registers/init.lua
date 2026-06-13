@@ -90,6 +90,7 @@ M.idle = function(settings, idle_ctx)
     end
   end, names))
 
+  local iskeyword = tokens.parse_charset(idle_ctx.ctx.iskeyword)
   local by_register = {}
   for _, entry in pairs(fetched) do
     local text = entry.text
@@ -97,12 +98,12 @@ M.idle = function(settings, idle_ctx)
       local bucket = {}
       by_register[entry.register] = bucket
       if word_set[entry.register] then
-        for item in word_items(idle_ctx.ctx.iskeyword, entry.register, text) do
+        for item in word_items(iskeyword, entry.register, text) do
           table.insert(bucket, item)
         end
       end
       if line_set[entry.register] then
-        for item in line_items(idle_ctx.ctx.iskeyword, entry.register, text) do
+        for item in line_items(iskeyword, entry.register, text) do
           table.insert(bucket, item)
         end
       end

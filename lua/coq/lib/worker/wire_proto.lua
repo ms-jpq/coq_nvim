@@ -1,49 +1,30 @@
--- Worker IPC wire protocol: 4-byte LE length prefix + mpack body.
+-- Worker IPC wire protocol: newline-delimited JSON.
 
-local HEADER_SIZE = 4
-local BYTE = 256
+local json = require "coq.lib.json"
 
 local M = {}
 
 ---@param body table
 ---@return string
 M.encode = function(body)
-  local payload = vim.mpack.encode(body)
-  local n = #payload
-  return string.char(
-    n % BYTE,
-    math.floor(n / BYTE) % BYTE,
-    math.floor(n / (BYTE * BYTE)) % BYTE,
-    math.floor(n / (BYTE * BYTE * BYTE)) % BYTE
-  ) .. payload
+  return vim.json.encode(body) .. "\n"
 end
 
 ---@return fun(data: string): fun(): table?
 M.decoder = function()
-  local buf, pos = "", 1
+  local buf = ""
 
   return function(data)
-    if pos > 1 then
-      buf = string.sub(buf, pos)
-      pos = 1
-    end
     buf = buf .. data
 
     return function()
-      local avail = #buf - pos + 1
-      if avail < HEADER_SIZE then
+      local nl = string.find(buf, "\n", 1, true)
+      if not nl then
         return nil
       end
-
-      local b1, b2, b3, b4 = string.byte(buf, pos, pos + HEADER_SIZE - 1)
-      local n = b1 + b2 * BYTE + b3 * BYTE * BYTE + b4 * BYTE * BYTE * BYTE
-      if avail < HEADER_SIZE + n then
-        return nil
-      end
-
-      local body = string.sub(buf, pos + HEADER_SIZE, pos + HEADER_SIZE + n - 1)
-      pos = pos + HEADER_SIZE + n
-      return vim.mpack.decode(body)
+      local line = string.sub(buf, 1, nl - 1)
+      buf = string.sub(buf, nl + 1)
+      return vim.json.decode(line, json.DECODE_OPTS)
     end
   end
 end

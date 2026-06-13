@@ -1,7 +1,6 @@
 local T = require "coq.lib.test"
 local TH = require "coq.lib.test_helpers"
 local inserted = require "coq.completions.inserted"
-local tokens = require "coq.lib.index.tokens"
 
 -- `word_range` runs AFTER `complete()` has already inserted the chosen word, so
 -- the fixtures describe the post-insert buffer: `line` is what's on screen,
@@ -16,7 +15,7 @@ local apply = function(opts)
   local ctx = TH.ctx_of {
     buf = buf,
     pos = { 1, opts.col, opts.col, opts.col },
-    iskeyword = tokens.parse_charset(vim.bo[buf].iskeyword),
+    iskeyword = vim.bo[buf].iskeyword,
   }
   local item = {
     word = opts.word,
@@ -60,10 +59,9 @@ local insert_replace = function(enc, newText, s, insert_end, replace_end)
 end
 
 T.describe({ "inserted.word_range" }, function(test)
-  test({ "InsertReplaceEdit past-cursor end is clamped to the cursor" }, function()
-    -- COQ's contract: completion replaces up to the cursor, never past it —
-    -- regardless of whether the server sent replace or range. The LSP's
-    -- replace["end"]=4 is clamped to col=2 (the cursor), so "XYZ" survives.
+  test({ "InsertReplaceEdit.replace is honored verbatim past the cursor" }, function()
+    -- Same-row LSP ranges are trusted as-is. InsertReplaceEdit.replace is the
+    -- server's explicit "consume this much" contract — past-cursor is intended.
     local out, span, repl = apply {
       line = "abXYZ",
       col = 2,
@@ -71,19 +69,19 @@ T.describe({ "inserted.word_range" }, function(test)
       lsp = insert_replace("utf-8", "ab", 0, 2, 4),
     }
     T.eq(repl, "ab")
-    T.eq(span, { 0, 0, 0, 2 })
-    T.eq(out, "abXYZ")
+    T.eq(span, { 0, 0, 0, 4 })
+    T.eq(out, "abZ")
   end)
 
-  test({ "InsertReplaceEdit covering the whole identifier is clamped too" }, function()
-    -- replace["end"]=5 would swallow all of "XYZ"; clamp keeps it intact.
+  test({ "InsertReplaceEdit covering the whole identifier deletes it" }, function()
+    -- replace["end"]=5 swallows all of "XYZ" past the cursor — server's call.
     local out = apply {
       line = "abXYZ",
       col = 2,
       word = "ab",
       lsp = insert_replace("utf-8", "ab", 0, 2, 5),
     }
-    T.eq(out, "abXYZ")
+    T.eq(out, "ab")
   end)
 
   test({ "pure insert (replace end at cursor) deletes nothing past the cursor" }, function()
@@ -97,16 +95,16 @@ T.describe({ "inserted.word_range" }, function(test)
     T.eq(out, "abXYZ")
   end)
 
-  test({ "past-cursor multibyte suffix is preserved by the clamp" }, function()
-    -- suffix "café" — even with replace["end"]=5 (utf-16), the clamp keeps
-    -- everything from the cursor onward intact.
+  test({ "past-cursor multibyte suffix consumed via utf-16 unit counts" }, function()
+    -- suffix "café" — 5 bytes, 4 utf-16 units. replace["end"]=5 → 3 units past
+    -- the cursor → delete "caf", keep the multibyte "é".
     local out = apply {
       line = "abcafé",
       col = 2,
       word = "ab",
       lsp = insert_replace("utf-16", "ab", 0, 2, 5),
     }
-    T.eq(out, "abcafé")
+    T.eq(out, "abé")
   end)
 
   test({ "plain textEdit (no insert anchor) falls back to the keyword under cursor" }, function()
@@ -156,7 +154,7 @@ local make_ctx = function(lines)
     buf = buf,
     pos = { 1, #first, #first, #first },
     changedtick = vim.b[buf].changedtick,
-    iskeyword = tokens.parse_charset(vim.bo[buf].iskeyword),
+    iskeyword = vim.bo[buf].iskeyword,
   }
   return ctx, buf
 end
@@ -197,7 +195,7 @@ local scenario = function(before, word, after, opts)
   local ctx = TH.ctx_of {
     buf = buf,
     pos = { row, col, col, col },
-    iskeyword = tokens.parse_charset(vim.bo[buf].iskeyword),
+    iskeyword = vim.bo[buf].iskeyword,
   }
   local item = {
     word = word,
@@ -517,13 +515,13 @@ T.describe({ "inserted span :: |before| |word| |after|" }, function(test)
     T.eq(scenario("vim.schedule(", "function ()", ")", { snippet = "function ($1)\n\t$0\nend" }), "vim.schedule()")
   end)
 
-  test({ "snippet with LSP range covers only typed prefix: cursor extends span" }, function()
+  test({ "snippet with LSP range covers only typed prefix: LSP range honored verbatim" }, function()
     -- `vim.schedule(fun|)` — user typed "fun", LSP item is "fun()" expanding to
     -- "function ()..." with a textEdit range covering the original 3-char "fun".
     -- vim.fn.complete inserted "fun()" (5 chars), so the post-insertion buffer
     -- has "fun()" at cols 13-17 plus original `)` at col 18. The LSP range
-    -- (13, 16) only covers "fun"; without _adjust_span_for_insertion, the orphan
-    -- "()" from vim.fn.complete survives.
+    -- (13, 16) only covers "fun"; same-row end is trusted, so the orphan "()"
+    -- from vim.fn.complete survives into the snippet expansion site.
     local lsp = {
       position_encoding = "utf-8",
       item = {
@@ -533,7 +531,7 @@ T.describe({ "inserted span :: |before| |word| |after|" }, function(test)
         },
       },
     }
-    T.eq(scenario("vim.schedule(", "fun()", ")", { snippet = "function ()\n\t$0\nend", lsp = lsp }), "vim.schedule()")
+    T.eq(scenario("vim.schedule(", "fun()", ")", { snippet = "function ()\n\t$0\nend", lsp = lsp }), "vim.schedule(())")
   end)
 
   test({ "InsertReplaceEdit with range_end past line end: units clamped" }, function()

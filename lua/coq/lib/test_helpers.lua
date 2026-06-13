@@ -24,7 +24,6 @@ end
 ---@param overrides? table
 ---@return ctx.full
 M.ctx_of = function(overrides)
-  local tokens = require "coq.lib.index.tokens"
   local base = {
     win = 0,
     buf = 0,
@@ -36,7 +35,7 @@ M.ctx_of = function(overrides)
     cwd = "",
     filename = "",
     linesep = "\n",
-    iskeyword = tokens.parse_charset "@,48-57,_,192-255",
+    iskeyword = "@,48-57,_,192-255",
     wildignore = "",
     comment = { "", "" },
     line_before = "",
