@@ -60,10 +60,10 @@ local insert_replace = function(enc, newText, s, insert_end, replace_end)
 end
 
 T.describe({ "inserted.word_range" }, function(test)
-  test({ "InsertReplaceEdit deletes exactly the replace span past the cursor" }, function()
-    -- post-insert line "abXYZ", cursor after "ab" (col 2), suffix "XYZ".
-    -- replace["end"]=4 → 2 units past the cursor → delete "XY" only, keep "Z".
-    -- (the keyword heuristic would have swallowed all of "XYZ".)
+  test({ "InsertReplaceEdit past-cursor end is clamped to the cursor" }, function()
+    -- COQ's contract: completion replaces up to the cursor, never past it —
+    -- regardless of whether the server sent replace or range. The LSP's
+    -- replace["end"]=4 is clamped to col=2 (the cursor), so "XYZ" survives.
     local out, span, repl = apply {
       line = "abXYZ",
       col = 2,
@@ -71,19 +71,19 @@ T.describe({ "inserted.word_range" }, function(test)
       lsp = insert_replace("utf-8", "ab", 0, 2, 4),
     }
     T.eq(repl, "ab")
-    T.eq(span, { 0, 0, 0, 4 })
-    T.eq(out, "abZ")
+    T.eq(span, { 0, 0, 0, 2 })
+    T.eq(out, "abXYZ")
   end)
 
-  test({ "replace span to end of identifier matches the keyword heuristic" }, function()
-    -- replace["end"]=5 → 3 units → the whole "XYZ" suffix.
+  test({ "InsertReplaceEdit covering the whole identifier is clamped too" }, function()
+    -- replace["end"]=5 would swallow all of "XYZ"; clamp keeps it intact.
     local out = apply {
       line = "abXYZ",
       col = 2,
       word = "ab",
       lsp = insert_replace("utf-8", "ab", 0, 2, 5),
     }
-    T.eq(out, "ab")
+    T.eq(out, "abXYZ")
   end)
 
   test({ "pure insert (replace end at cursor) deletes nothing past the cursor" }, function()
@@ -97,16 +97,16 @@ T.describe({ "inserted.word_range" }, function(test)
     T.eq(out, "abXYZ")
   end)
 
-  test({ "replace span counts encoded units, not bytes (utf-16)" }, function()
-    -- suffix "café" — 5 bytes, 4 utf-16 units. replace["end"]=5 → 3 units past
-    -- the cursor → delete "caf", keep the multibyte "é".
+  test({ "past-cursor multibyte suffix is preserved by the clamp" }, function()
+    -- suffix "café" — even with replace["end"]=5 (utf-16), the clamp keeps
+    -- everything from the cursor onward intact.
     local out = apply {
       line = "abcafé",
       col = 2,
       word = "ab",
       lsp = insert_replace("utf-16", "ab", 0, 2, 5),
     }
-    T.eq(out, "abé")
+    T.eq(out, "abcafé")
   end)
 
   test({ "plain textEdit (no insert anchor) falls back to the keyword under cursor" }, function()
@@ -406,6 +406,24 @@ T.describe({ "inserted span :: |before| |word| |after|" }, function(test)
 
   test({ "prior row preserved when completing on later row: 'line1\\n' fido '' → 'line1\\nfido'" }, function()
     T.eq(scenario("line1\n", "fido", ""), "line1\nfido")
+  end)
+
+  test({ "lua_ls-shape: multi-row past-cursor end is clamped, next line preserved" }, function()
+    -- The lua_ls bug pattern: cursor on row 0 col 4 (after "fido"), server
+    -- returns a textEdit whose range ends on a LATER row. Before the clamp,
+    -- this spliced the next line into the cursor row; now end.row > cursor.row
+    -- snaps end to (cursor_row, cursor_col), leaving the buffer intact past
+    -- the cursor.
+    local lsp = {
+      position_encoding = "utf-8",
+      item = {
+        textEdit = {
+          newText = "fido",
+          range = { start = { line = 0, character = 0 }, ["end"] = { line = 1, character = 2 } },
+        },
+      },
+    }
+    T.eq(scenario("", "fido", "\nbar", { lsp = lsp }), "fido\nbar")
   end)
 
   -- ---------------------------------------------------------------------------

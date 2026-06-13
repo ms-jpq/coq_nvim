@@ -21,6 +21,7 @@ local M = {}
 ---@class completions.EditCtx
 ---@field cursor_row integer
 ---@field col integer
+---@field cursor_line string
 ---@field before_inserted string
 ---@field after_cursor string
 ---@field start_line string
@@ -56,7 +57,7 @@ end
 ---@return lsp.Range?
 M.text_edit = function(lsp)
   local te = lsp and lsp.item and lsp.item.textEdit
-  return te, te and (te.range or te.replace)
+  return te, te and (te.replace or te.range)
 end
 
 ---@param buf integer
@@ -114,6 +115,7 @@ local edit_ctx = function(preview, ctx, i, enc, range)
   return {
     cursor_row = cursor_row,
     col = col,
+    cursor_line = line,
     before_inserted = string.sub(line, 1, original_col),
     after_cursor = string.sub(line, col + 1),
     start_line = start_line or line,
@@ -165,18 +167,22 @@ M._replacement_text = function(preview, i, range, text_edit)
 end
 
 ---@param e_ctx completions.EditCtx
+---@param replace_text string
 ---@return completions.Span
-M._adjust_span_for_insertion = function(e_ctx)
+M._clamp_span = function(e_ctx, replace_text)
   local span = assert(e_ctx.span)
-  if span.end_row ~= e_ctx.cursor_row or span.end_col >= e_ctx.col then
-    return span
+  local start_row, start_col = span.start_row, span.start_col
+  local end_row, end_col = span.end_row, span.end_col
+
+  if start_row == e_ctx.cursor_row and start_col > e_ctx.col then
+    start_col = e_ctx.col
   end
-  return {
-    start_row = span.start_row,
-    start_col = span.start_col,
-    end_row = span.end_row,
-    end_col = e_ctx.col,
-  }
+
+  if end_row > e_ctx.cursor_row and not txt.is_multiline(replace_text) then
+    end_row, end_col = e_ctx.cursor_row, e_ctx.col
+  end
+
+  return { start_row = start_row, start_col = start_col, end_row = end_row, end_col = end_col }
 end
 
 ---@param preview boolean
@@ -202,7 +208,7 @@ M.span = function(preview, ctx, i, lsp)
   local prefix_word = is_snippet and (i.word or "") or replace_text
   local suffix_word = is_snippet and "" or replace_text
 
-  local span = e_ctx.span and M._adjust_span_for_insertion(e_ctx)
+  local span = e_ctx.span and M._clamp_span(e_ctx, replace_text)
     or M._fallback_span(ctx.iskeyword, e_ctx, prefix_word, suffix_word)
 
   return span, e_ctx, enc, replace_text
@@ -214,8 +220,10 @@ end
 ---@return lsp.TextEdit
 M._main_edit = function(ctx, i, lsp)
   local span, e_ctx, enc, replace_text = M.span(false, ctx, i, lsp)
+  local end_line = span.end_row == e_ctx.cursor_row and e_ctx.cursor_line or e_ctx.end_line
+
   local start_col = math.min(span.start_col, #e_ctx.start_line)
-  local end_col = math.min(span.end_col, #e_ctx.end_line)
+  local end_col = math.min(span.end_col, #end_line)
 
   return {
     range = {
@@ -225,7 +233,7 @@ M._main_edit = function(ctx, i, lsp)
       },
       ["end"] = {
         line = span.end_row,
-        character = vim.str_utfindex(e_ctx.end_line, enc, end_col, true),
+        character = vim.str_utfindex(end_line, enc, end_col, true),
       },
     },
     newText = replace_text,
