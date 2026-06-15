@@ -10,6 +10,8 @@ end
 ---@return integer lo
 ---@return integer hi
 M.window_around_cursor = function(buf)
+  assert(not vim.in_fast_event(), debug.traceback("coq: window_around_cursor in fast event context", 2))
+
   local count = vim.api.nvim_buf_line_count(buf)
   local win = vim.fn.bufwinid(buf)
   local row = win == -1 and 0 or (unpack(vim.api.nvim_win_get_cursor(win)) - 1)
