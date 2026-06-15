@@ -1,5 +1,4 @@
 local async = require "coq.lib.async"
-local buffers = require "coq.lib.buffers"
 local default_dict = require "coq.lib.default_dict"
 local set = require "coq.lib.set"
 
@@ -184,12 +183,6 @@ M.leading_keyword = function(cls, line)
     i = i + 1
   end
   return string.sub(line, 1, i)
-end
-
----@param ctx ctx.full
----@return string[]
-M.surround = function(ctx)
-  return buffers.lines_around_cursor(ctx.buf)
 end
 
 ---@param cls table<integer, integer>
