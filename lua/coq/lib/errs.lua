@@ -62,7 +62,10 @@ M.check_raise = function(es)
 
   if #non_cancel == 0 then
     error(es[1], 0)
-  elseif #non_cancel == 1 then
+  end
+
+  -- TODO: consumes cancels
+  if #non_cancel == 1 then
     error(non_cancel[1], 0)
   else
     error(M.group(non_cancel), 0)
