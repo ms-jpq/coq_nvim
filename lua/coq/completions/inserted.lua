@@ -176,14 +176,19 @@ M._clamp_span = function(e_ctx, replace_text)
   local start_row, start_col = span.start_row, span.start_col
   local end_row, end_col = span.end_row, span.end_col
 
-  if start_row == e_ctx.cursor_row and start_col > e_ctx.col then
+  local start_past_cursor = start_row == e_ctx.cursor_row and start_col > e_ctx.col
+  if start_past_cursor then
     start_col = e_ctx.col
   end
 
-  if end_row > e_ctx.cursor_row and not txt.is_multiline(replace_text) then
+  local multirow_with_singleline_replace = end_row > e_ctx.cursor_row and not txt.is_multiline(replace_text)
+  if multirow_with_singleline_replace then
     end_row, end_col = e_ctx.cursor_row, e_ctx.col
-  elseif end_row == e_ctx.cursor_row and end_col >= e_ctx.original_col and end_col < e_ctx.col then
-    end_col = e_ctx.col
+  else
+    local end_in_inserted_region = end_row == e_ctx.cursor_row and end_col >= e_ctx.original_col and end_col < e_ctx.col
+    if end_in_inserted_region then
+      end_col = e_ctx.col
+    end
   end
 
   return { start_row = start_row, start_col = start_col, end_row = end_row, end_col = end_col }
