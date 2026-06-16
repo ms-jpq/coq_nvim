@@ -21,6 +21,7 @@ local M = {}
 ---@class completions.EditCtx
 ---@field cursor_row integer
 ---@field col integer
+---@field original_col integer
 ---@field cursor_line string
 ---@field before_inserted string
 ---@field after_cursor string
@@ -115,6 +116,7 @@ local edit_ctx = function(preview, ctx, i, enc, range)
   return {
     cursor_row = cursor_row,
     col = col,
+    original_col = original_col,
     cursor_line = line,
     before_inserted = string.sub(line, 1, original_col),
     after_cursor = string.sub(line, col + 1),
@@ -180,6 +182,8 @@ M._clamp_span = function(e_ctx, replace_text)
 
   if end_row > e_ctx.cursor_row and not txt.is_multiline(replace_text) then
     end_row, end_col = e_ctx.cursor_row, e_ctx.col
+  elseif end_row == e_ctx.cursor_row and end_col >= e_ctx.original_col and end_col < e_ctx.col then
+    end_col = e_ctx.col
   end
 
   return { start_row = start_row, start_col = start_col, end_row = end_row, end_col = end_col }

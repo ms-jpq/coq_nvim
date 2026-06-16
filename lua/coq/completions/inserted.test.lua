@@ -515,13 +515,14 @@ T.describe({ "inserted span :: |before| |word| |after|" }, function(test)
     T.eq(scenario("vim.schedule(", "function ()", ")", { snippet = "function ($1)\n\t$0\nend" }), "vim.schedule()")
   end)
 
-  test({ "snippet with LSP range covers only typed prefix: LSP range honored verbatim" }, function()
+  test({ "snippet with LSP range covers only typed prefix: PUM-region end is translated" }, function()
     -- `vim.schedule(fun|)` — user typed "fun", LSP item is "fun()" expanding to
-    -- "function ()..." with a textEdit range covering the original 3-char "fun".
-    -- vim.fn.complete inserted "fun()" (5 chars), so the post-insertion buffer
-    -- has "fun()" at cols 13-17 plus original `)` at col 18. The LSP range
-    -- (13, 16) only covers "fun"; same-row end is trusted, so the orphan "()"
-    -- from vim.fn.complete survives into the snippet expansion site.
+    -- "function ()..." with a textEdit range covering the original 3-char "fun"
+    -- in PRE-PUM coords. vim.fn.complete then inserted "fun()" (5 chars), so the
+    -- post-insertion buffer has "fun()" at cols 13-17 plus original `)` at
+    -- col 18. The LSP's end=16 lands inside the PUM-inserted region
+    -- [original_col=13, col=18) and gets translated to col=18; the snippet body
+    -- expands at the cursor with no orphan "()" left behind.
     local lsp = {
       position_encoding = "utf-8",
       item = {
@@ -531,7 +532,27 @@ T.describe({ "inserted span :: |before| |word| |after|" }, function(test)
         },
       },
     }
-    T.eq(scenario("vim.schedule(", "fun()", ")", { snippet = "function ()\n\t$0\nend", lsp = lsp }), "vim.schedule(())")
+    T.eq(scenario("vim.schedule(", "fun()", ")", { snippet = "function ()\n\t$0\nend", lsp = lsp }), "vim.schedule()")
+  end)
+
+  test({ "PUM-region overlap: LSP textEdit ending pre-PUM-cursor is translated to post-cursor" }, function()
+    -- The exitCode duplication regression. Pre-PUM buffer was "  process.exit"
+    -- with cursor at col 14. User picks "exitCode" → vim.fn.complete replaces
+    -- the typed "exit" (cols 10..14) with "exitCode", buffer becomes
+    -- "  process.exitCode" with cursor at col 18. LSP textEdit still references
+    -- pre-PUM cols (10, 14) with newText "exitCode" — applied naively, the LSP
+    -- replaces "exit" of "exitCode" with "exitCode", leaving "exitCodeCode".
+    -- The PUM-region clamp translates end=14 → col=18, making the apply a no-op.
+    local lsp = {
+      position_encoding = "utf-8",
+      item = {
+        textEdit = {
+          newText = "exitCode",
+          range = { start = { line = 0, character = 10 }, ["end"] = { line = 0, character = 14 } },
+        },
+      },
+    }
+    T.eq(scenario("  process.", "exitCode", "", { lsp = lsp }), "  process.exitCode")
   end)
 
   test({ "InsertReplaceEdit with range_end past line end: units clamped" }, function()
