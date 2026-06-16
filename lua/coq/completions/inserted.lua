@@ -170,23 +170,37 @@ end
 
 ---@param e_ctx completions.EditCtx
 ---@param replace_text string
----@return completions.Span
+---@return completions.Span?
 M._clamp_span = function(e_ctx, replace_text)
   local span = assert(e_ctx.span)
   local start_row, start_col = span.start_row, span.start_col
   local end_row, end_col = span.end_row, span.end_col
 
-  local start_past_cursor = start_row == e_ctx.cursor_row and start_col > e_ctx.col
-  if start_past_cursor then
-    start_col = e_ctx.col
+  local inverted = start_row > end_row or (start_row == end_row and start_col > end_col)
+  if inverted then
+    return nil
   end
 
-  local multirow_with_singleline_replace = end_row > e_ctx.cursor_row and not txt.is_multiline(replace_text)
-  if multirow_with_singleline_replace then
-    end_row, end_col = e_ctx.cursor_row, e_ctx.col
-  else
+  do
+    local start_past_cursor = start_row == e_ctx.cursor_row and start_col > e_ctx.col
+    local start_in_inserted_region = start_row == e_ctx.cursor_row
+      and start_col > e_ctx.original_col
+      and start_col < e_ctx.col
+
+    if start_past_cursor then
+      start_col = e_ctx.col
+    elseif start_in_inserted_region then
+      start_col = e_ctx.original_col
+    end
+  end
+
+  do
+    local multirow_with_singleline_replace = end_row > e_ctx.cursor_row and not txt.is_multiline(replace_text)
     local end_in_inserted_region = end_row == e_ctx.cursor_row and end_col >= e_ctx.original_col and end_col < e_ctx.col
-    if end_in_inserted_region then
+
+    if multirow_with_singleline_replace then
+      end_row, end_col = e_ctx.cursor_row, e_ctx.col
+    elseif end_in_inserted_region then
       end_col = e_ctx.col
     end
   end

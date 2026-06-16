@@ -535,6 +535,25 @@ T.describe({ "inserted span :: |before| |word| |after|" }, function(test)
     T.eq(scenario("vim.schedule(", "fun()", ")", { snippet = "function ()\n\t$0\nend", lsp = lsp }), "vim.schedule()")
   end)
 
+  test({ "PUM-region overlap: LSP start inside inserted region is pulled to its start" }, function()
+    -- Mirror of the exitCode end-side case. A buggy server returns
+    -- range.start strictly inside the PUM-inserted bytes [original_col, col)
+    -- — e.g., start=12 when original_col=10, col=18. Without the start clamp
+    -- the apply replaces only the tail of the inserted word and duplicates
+    -- the head ("exitCode" → "exexitCode"). With the clamp, start pulls back
+    -- to original_col=10 and the apply is a clean no-op.
+    local lsp = {
+      position_encoding = "utf-8",
+      item = {
+        textEdit = {
+          newText = "exitCode",
+          range = { start = { line = 0, character = 12 }, ["end"] = { line = 0, character = 14 } },
+        },
+      },
+    }
+    T.eq(scenario("  process.", "exitCode", "", { lsp = lsp }), "  process.exitCode")
+  end)
+
   test({ "PUM-region overlap: LSP textEdit ending pre-PUM-cursor is translated to post-cursor" }, function()
     -- The exitCode duplication regression. Pre-PUM buffer was "  process.exit"
     -- with cursor at col 14. User picks "exitCode" → vim.fn.complete replaces
