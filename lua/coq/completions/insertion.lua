@@ -39,6 +39,7 @@ end
 ---@param statsd index.Statsd
 ---@param iter lib.Iterator<completions.Item[]>
 M.complete = function(ctx, settings, statsd, iter)
+  atools.scheduled()
   local prepared = statsd.prepare(ctx)
 
   local topk = topk_m.new(settings.match.max_results, item.dedup_key)

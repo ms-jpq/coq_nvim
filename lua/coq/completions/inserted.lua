@@ -285,6 +285,8 @@ M.apply = function(settings, ctx, resolver, i)
     return
   end
 
+  debug.notify(vim.inspect { lsp = lsp, edits = edits })
+  debug.buf(ctx.buf, "pre-apply_edits")
   M._apply_edits(ctx, i, lsp, edits)
   debug.buf(ctx.buf, "post-apply_edits")
 
