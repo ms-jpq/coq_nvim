@@ -8,6 +8,17 @@ local M = {}
 
 M.WHITES = set.new { string.byte " ", string.byte "\t", string.byte "\n", string.byte "\r" }
 
+local MB_WS_NBSP = "\xc2\xa0" -- U+00A0
+local MB_WS_IDEOGRAPHIC = "\xe3\x80\x80" -- U+3000
+
+---@param s string
+---@return string
+M._strip_mb_ws = function(s)
+  s = string.gsub(s, MB_WS_NBSP, "  ")
+  s = string.gsub(s, MB_WS_IDEOGRAPHIC, "   ")
+  return s
+end
+
 M.MIN_LEN = 3
 
 ---@param s string
@@ -115,6 +126,7 @@ M.keywords = function(cls, text)
     local acc_kind, acc = nil, {}
 
     for chunk in text do
+      chunk = M._strip_mb_ws(chunk)
       local i, n = 1, #chunk
       while i <= n do
         local kind = cls[string.byte(chunk, i)]
@@ -145,6 +157,7 @@ end
 ---@param line string
 ---@return string
 M.trailing_keyword_before = function(cls, line)
+  line = M._strip_mb_ws(line)
   local i = #line
   while i > 0 and cls[string.byte(line, i)] == KW do
     i = i - 1
@@ -167,6 +180,7 @@ end
 ---@param line string
 ---@return string
 M.trailing_symbol_before = function(cls, line)
+  line = M._strip_mb_ws(line)
   local i = #line
   while i > 0 and cls[string.byte(line, i)] == SYM do
     i = i - 1
@@ -178,6 +192,7 @@ end
 ---@param line string
 ---@return string
 M.leading_keyword = function(cls, line)
+  line = M._strip_mb_ws(line)
   local i = 0
   while i < #line and cls[string.byte(line, i + 1)] == KW do
     i = i + 1

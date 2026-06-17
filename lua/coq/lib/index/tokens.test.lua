@@ -220,6 +220,18 @@ T.describe({ "tokens.trailing_keyword_before" }, function(test)
     local with_dash = tokens.parse_charset "@,48-57,_,-"
     T.eq(tokens.trailing_keyword_before(with_dash, "kebab-case"), "kebab-case")
   end)
+
+  test({ "splits on NBSP (U+00A0) like ASCII space" }, function()
+    T.eq(tokens.trailing_keyword_before(kw, "fido\xc2\xa0spot"), "spot")
+  end)
+
+  test({ "splits on ideographic space (U+3000) like ASCII space" }, function()
+    T.eq(tokens.trailing_keyword_before(kw, "fido\xe3\x80\x80spot"), "spot")
+  end)
+
+  test({ "trailing NBSP leaves nothing" }, function()
+    T.eq(tokens.trailing_keyword_before(kw, "fido\xc2\xa0"), "")
+  end)
 end)
 
 T.describe({ "tokens.trailing_symbol_before" }, function(test)

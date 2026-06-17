@@ -17,13 +17,13 @@ local table_block = function(sources, headers, row_of)
 
   local col0_w = 0
   for _, s in pairs(sources) do
-    col0_w = math.max(col0_w, #s)
+    col0_w = math.max(col0_w, vim.fn.strdisplaywidth(s))
   end
   local col_w = {}
   for _, h in pairs(headers) do
-    col_w[h] = #h
+    col_w[h] = vim.fn.strdisplaywidth(h)
     for _, s in pairs(sources) do
-      col_w[h] = math.max(col_w[h], #row_of(s, h))
+      col_w[h] = math.max(col_w[h], vim.fn.strdisplaywidth(row_of(s, h)))
     end
   end
 
@@ -34,7 +34,7 @@ local table_block = function(sources, headers, row_of)
     end
     local header_line = table.concat(head, H_SEP)
     coroutine.yield(header_line)
-    coroutine.yield(string.rep(V_SEP, #header_line))
+    coroutine.yield(string.rep(V_SEP, vim.fn.strdisplaywidth(header_line)))
 
     for _, s in pairs(sources) do
       local row = { txt.pad_right(s, col0_w) }

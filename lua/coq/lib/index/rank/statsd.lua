@@ -153,7 +153,10 @@ M.new = function(settings)
       token = ctx.keyword_before,
       locality = tokens.locality(
         tokens.parse_charset(ctx.iskeyword),
-        itertools.intersperse(ctx.linesep, vim.iter(buffers.lines_around_cursor(ctx.buf)) --[[@as lib.Iterator<string>]])
+        itertools.intersperse(
+          ctx.linesep,
+          vim.iter(buffers.lines_around_cursor(ctx.buf)) --[[@as lib.Iterator<string>]]
+        )
       ),
       recency = recency,
       source_bias = source_bias,

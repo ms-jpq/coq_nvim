@@ -125,7 +125,7 @@ M.show = function(ctx, i)
 
   if span.start_row == span.end_row then
     local trim = math.max(0, span.end_col - e_ctx.col)
-    lines[1] = string.sub(lines[1], 1, #lines[1] - trim)
+    lines[1] = txt.truncate_to_codepoint(lines[1], #lines[1] - trim)
   end
 
   if #lines == 0 or (#lines == 1 and lines[1] == "") then

@@ -160,6 +160,52 @@ T.describe({ "text.prefix_overlap" }, function(test)
   end)
 end)
 
+T.describe({ "text.truncate_to_codepoint" }, function(test)
+  test({ "no-op when max_bytes covers the whole string" }, function()
+    T.eq(txt.truncate_to_codepoint("labrador", 8), "labrador")
+    T.eq(txt.truncate_to_codepoint("labrador", 99), "labrador")
+  end)
+
+  test({ "ASCII cuts at the exact byte" }, function()
+    T.eq(txt.truncate_to_codepoint("labrador", 3), "lab")
+  end)
+
+  test({ "mid-codepoint cut snaps back to the previous boundary" }, function()
+    -- 你好 = 0xE4 0xBD 0xA0 0xE5 0xA5 0xBD (6 bytes).
+    -- max=2 lands inside the first codepoint → "".
+    T.eq(txt.truncate_to_codepoint("你好", 2), "")
+    -- max=3 ends exactly on the first codepoint → "你".
+    T.eq(txt.truncate_to_codepoint("你好", 3), "你")
+    -- max=5 lands inside the second codepoint → "你".
+    T.eq(txt.truncate_to_codepoint("你好", 5), "你")
+  end)
+
+  test({ "max_bytes <= 0 returns empty" }, function()
+    T.eq(txt.truncate_to_codepoint("你好", 0), "")
+    T.eq(txt.truncate_to_codepoint("你好", -1), "")
+  end)
+
+  test({ "snap also pulls trailing lone lead bytes back into safety" }, function()
+    -- "ab你" = 0x61 0x62 0xE4 0xBD 0xA0. max=4 ends on a continuation → "ab".
+    T.eq(txt.truncate_to_codepoint("ab你", 4), "ab")
+  end)
+end)
+
+T.describe({ "text.pad_right" }, function(test)
+  test({ "pads ASCII to byte-equals-display width" }, function()
+    T.eq(txt.pad_right("ab", 5), "ab   ")
+  end)
+  test({ "no-op when content already at or past target width" }, function()
+    T.eq(txt.pad_right("labrador", 4), "labrador")
+    T.eq(txt.pad_right("labrador", 8), "labrador")
+  end)
+  test({ "pads to display columns, not bytes, on multi-byte content" }, function()
+    -- "你" is 3 bytes, 2 display columns.
+    -- Target width 5 → 3 trailing spaces (5 - 2 cols).
+    T.eq(txt.pad_right("你", 5), "你   ")
+  end)
+end)
+
 T.describe({ "text.suffix_overlap" }, function(test)
   test({ "full overlap when needle is a prefix of haystack" }, function()
     T.eq(txt.suffix_overlap("@param@param", "@param"), 6)

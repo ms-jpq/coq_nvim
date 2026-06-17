@@ -80,6 +80,29 @@ M.is_multiline = function(s)
   return string.find(s, "[\r\n]") ~= nil
 end
 
+---@param b integer
+---@return boolean
+local is_utf8_continuation = function(b)
+  return b >= 0x80 and b < 0xC0
+end
+
+---@param s string
+---@param max_bytes integer
+---@return string
+M.truncate_to_codepoint = function(s, max_bytes)
+  if max_bytes <= 0 then
+    return ""
+  end
+  if max_bytes >= #s then
+    return s
+  end
+  local n = max_bytes
+  while n > 0 and is_utf8_continuation(string.byte(s, n + 1)) do
+    n = n - 1
+  end
+  return string.sub(s, 1, n)
+end
+
 ---@param haystack string
 ---@param needle string
 ---@return integer
@@ -112,13 +135,15 @@ M.lstrip = function(s)
   return (string.gsub(s, "^%s+", ""))
 end
 
----Right-pad `text` with spaces until it is at least `width` columns wide.
----No-op when `#text >= width`.
+---Right-pad `text` with spaces until it occupies at least `width` display
+---columns. Uses `strdisplaywidth` so multi-byte content pads to the
+---correct visual width, not its byte length.
 ---@param text string
 ---@param width integer
 ---@return string
 M.pad_right = function(text, width)
-  return width > #text and text .. string.rep(" ", width - #text) or text
+  local w = vim.fn.strdisplaywidth(text)
+  return width > w and text .. string.rep(" ", width - w) or text
 end
 
 ---@param s string
