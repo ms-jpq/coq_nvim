@@ -122,11 +122,10 @@ end
 ---@param iter T
 ---@return T
 M.shape = function(settings, ctx, iter)
-  local kw = ctx.keyword_before
   local shaped = vim
     .iter(iter)
     :filter(function(hit)
-      return hit.item.word ~= kw
+      return hit.item.word ~= ctx.match_before
     end)
     :unique(function(hit)
       return hit.item.word

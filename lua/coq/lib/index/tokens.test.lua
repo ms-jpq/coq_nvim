@@ -176,6 +176,15 @@ T.describe({ "tokens.keywords with symbol prefixes" }, function(test)
     T.eq(toks "@@@", {})
   end)
 
+  test({ "symbol prefix promotes a short keyword when joined clears MIN_LEN" }, function()
+    T.eq(toks "@@fo", { "@@fo" })
+    T.eq(toks "->ab", { "->ab" })
+  end)
+
+  test({ "joined below MIN_LEN still drops" }, function()
+    T.eq(toks "@f", {})
+  end)
+
   test({ "keyword followed by symbol does not get suffix" }, function()
     T.eq(toks "foo->", { "foo" })
   end)
