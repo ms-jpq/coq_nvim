@@ -102,6 +102,12 @@ M.setup = function(opts)
     async.scope(function(n)
       atools.scheduled()
 
+      vim.api.nvim_create_autocmd("VimLeavePre", {
+        group = lib.group,
+        once = true,
+        callback = n.cancel,
+      })
+
       local merged = vim.tbl_deep_extend("force", vim.g.coq_settings or {}, opts or {})
       local settings = config.merged(merged)
       transition.audit(merged)
