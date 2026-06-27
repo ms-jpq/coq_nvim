@@ -3,6 +3,7 @@ local context = require "coq.lib.context"
 local errs = require "coq.lib.errs"
 local events = require "coq.completions.events"
 local inserted = require "coq.completions.inserted"
+local lsp_util = require "coq.producers.lsp.util"
 local txt = require "coq.lib.text"
 
 local NS = vim.api.nvim_create_namespace "coq.ghost"
@@ -50,7 +51,8 @@ end
 ---@param i completions.Item
 ---@return integer? rows
 local function replaces_rows(i)
-  local _, r = inserted.text_edit(i.meta.lsp)
+  local main = lsp_util.main_edit(i.meta.lsp and i.meta.lsp.item)
+  local r = main and main.range
   if r == nil or (r.start.line == r["end"].line and r.start.character == r["end"].character) then
     return nil
   end
@@ -120,7 +122,7 @@ M.show = function(ctx, i)
     return M.clear(ctx.buf)
   end
 
-  local span, e_ctx, _, insert_text = inserted.span(true, ctx, i, i.meta.lsp or {})
+  local span, e_ctx, insert_text = inserted.span(true, ctx, i, lsp_util.main_edit(i.meta.lsp and i.meta.lsp.item))
   local lines = vim.iter(txt.splitlines(insert_text)):totable()
 
   if span.start_row == span.end_row then

@@ -7,13 +7,13 @@ local lsp_util = require "coq.producers.lsp.util"
 
 ---@class completions.Resolver
 ---@field reset fun()
----@field resolve fun(ctx: ctx.base, item: completions.Item, timeout_ms?: integer): completions.ItemLspMeta?
+---@field resolve fun(ctx: ctx.base, meta: completions.ItemMeta, timeout_ms?: integer): completions.ItemLspMeta?
 
 ---@param ctx ctx.base
----@param item completions.Item
+---@param meta completions.ItemMeta
 ---@return completions.ItemLspMeta?
-local lsp_fetch = function(ctx, item)
-  local lsp = item.meta.lsp
+local lsp_fetch = function(ctx, meta)
+  local lsp = meta.lsp
   if not lsp then
     return nil
   end
@@ -23,13 +23,13 @@ local lsp_fetch = function(ctx, item)
 end
 
 ---@class resolver.Instance: lib.ClosableState
----@field resolve fun(ctx: ctx.base, item: completions.Item, timeout_ms?: integer): completions.ItemLspMeta?
+---@field resolve fun(ctx: ctx.base, meta: completions.ItemMeta, timeout_ms?: integer): completions.ItemLspMeta?
 
 ---@param n async.Nursery
----@param lord completions.TimeLord
----@param fetch fun(ctx: ctx.base, item: completions.Item): completions.ItemLspMeta?
+---@param timelord completions.TimeLord
+---@param fetch fun(ctx: ctx.base, meta: completions.ItemMeta): completions.ItemLspMeta?
 ---@return resolver.Instance
-local new = function(n, lord, fetch)
+local new = function(n, timelord, fetch)
   local cache = {}
   local handles = lib.weak({}, "v")
 
@@ -39,8 +39,8 @@ local new = function(n, lord, fetch)
     end
   end)
 
-  local resolve = function(ctx, item, timeout_ms)
-    local key = item.meta.uid
+  local resolve = function(ctx, meta, timeout_ms)
+    local key = meta.uid
     local f = cache[key]
 
     if not f then
@@ -48,8 +48,8 @@ local new = function(n, lord, fetch)
       cache[key] = f
 
       local h = n.spawn(function()
-        local ok, v = pcall(fetch, ctx, item)
-        f.resolve(ok and v or item.meta.lsp)
+        local ok, v = pcall(fetch, ctx, meta)
+        f.resolve(ok and v or nil)
         if not ok then
           cache[key] = nil
           if not cancel.is(v) then
@@ -61,8 +61,7 @@ local new = function(n, lord, fetch)
     end
 
     if timeout_ms and timeout_ms > 0 then
-      return lord.guard("resolve:" .. (item.meta.lsp and item.meta.lsp.server_name or ""), timeout_ms, f.await)
-        or item.meta.lsp
+      return timelord.guard("resolve:" .. (meta.lsp and meta.lsp.server_name or ""), timeout_ms, f.await)
     end
     return f.await()
   end
@@ -78,24 +77,24 @@ end
 local M = {}
 
 ---@param n async.Nursery
----@param lord completions.TimeLord
----@param fetch? fun(ctx: ctx.base, item: completions.Item): completions.ItemLspMeta?
+---@param timelord completions.TimeLord
+---@param fetch? fun(ctx: ctx.base, meta: completions.ItemMeta): completions.ItemLspMeta?
 ---@return completions.Resolver
-M.new = function(n, lord, fetch)
+M.new = function(n, timelord, fetch)
   fetch = fetch or lsp_fetch
 
-  local instance = new(n, lord, fetch)
+  local instance = new(n, timelord, fetch)
 
   ---@diagnostic disable-next-line: missing-fields
   local resolver = {} ---@type completions.Resolver
 
   resolver.reset = function()
     instance.close()
-    instance = new(n, lord, fetch)
+    instance = new(n, timelord, fetch)
   end
 
-  resolver.resolve = function(ctx, item, timeout_ms)
-    return instance.resolve(ctx, item, timeout_ms)
+  resolver.resolve = function(ctx, meta, timeout_ms)
+    return instance.resolve(ctx, meta, timeout_ms)
   end
 
   return resolver

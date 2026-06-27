@@ -205,7 +205,7 @@ local resolve_doc = function(ctx, settings, resolver, item)
     local lsp_item = meta.lsp.item
     if lsp_item and not lsp_item.documentation and not lsp_item.detail then
       local timeout_ms = math.floor(settings.display.preview.resolve_timeout * 1000)
-      local lsp = resolver.resolve(ctx, item, timeout_ms)
+      local lsp = resolver.resolve(ctx, meta, timeout_ms) or meta.lsp
       lsp_item = lsp and lsp.item
     end
 

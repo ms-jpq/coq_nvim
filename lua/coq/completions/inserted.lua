@@ -6,8 +6,6 @@ local snippet_preview = require "coq.producers.snippets.preview"
 local tokens = require "coq.lib.index.tokens"
 local txt = require "coq.lib.text"
 
-local DEFAULT_ENCODING = "utf-16"
-
 local debug = debug_m.new "INSERTED"
 
 local M = {}
@@ -19,6 +17,7 @@ local M = {}
 ---@field end_col integer
 
 ---@class completions.EditCtx
+---@field encoding string
 ---@field cursor_row integer
 ---@field col integer
 ---@field original_col integer
@@ -32,44 +31,30 @@ local M = {}
 ---@param settings config.Settings
 ---@param ctx ctx.full
 ---@param resolver completions.Resolver
----@param i completions.Item
----@return completions.ItemLspMeta? lsp
----@return lsp.TextEdit[] edits
-M._resolve = function(settings, ctx, resolver, i)
-  local lsp = i.meta.lsp or {}
-  local edits = (lsp.item and lsp.item.additionalTextEdits) or {}
-  if #edits > 0 then
-    return lsp, edits
-  end
-
+---@param meta completions.ItemMeta
+---@return lsp.TextEdit? original_main_edit
+---@return lsp.TextEdit? resolved_main_edit
+---@return lsp.TextEdit[] resolved_addn_edits
+M._resolve = function(settings, ctx, resolver, meta)
   local timeout_ms = math.floor(settings.clients.lsp.resolve_timeout * 1000)
-  lsp = resolver.resolve(ctx, i, timeout_ms) or lsp
-  edits = (lsp.item and lsp.item.additionalTextEdits) or {}
 
-  atools.scheduled()
-  if not context.still_valid(ctx) then
-    return nil, {}
-  end
-  return lsp, edits
-end
+  local original_main_edit = lsp_util.main_edit(meta.lsp and meta.lsp.item)
+  local resolved = resolver.resolve(ctx, meta, timeout_ms)
+  local resolved_main_edit = lsp_util.main_edit(resolved and resolved.item)
+  local addn_edits = resolved and lsp_util.addn_edits(resolved.item) or lsp_util.addn_edits(meta.lsp and meta.lsp.item)
 
----@param lsp completions.ItemLspMeta?
----@return lsp.TextEdit | lsp.InsertReplaceEdit?
----@return lsp.Range?
-M.text_edit = function(lsp)
-  local te = lsp and lsp.item and lsp.item.textEdit
-  return te, te and (te.replace or te.range)
+  return original_main_edit, resolved_main_edit, addn_edits
 end
 
 ---@param buf integer
----@param enc string
+---@param encoding string
 ---@param cursor_row integer
 ---@param cursor_line string
 ---@param range? lsp.Range
 ---@return string? start_line
 ---@return string? end_line
 ---@return completions.Span? span
-local resolve_range = function(buf, enc, cursor_row, cursor_line, range)
+local resolve_range = function(buf, encoding, cursor_row, cursor_line, range)
   if not range then
     return
   end
@@ -86,8 +71,8 @@ local resolve_range = function(buf, enc, cursor_row, cursor_line, range)
   local start_line = read(s.line)
   local end_line = (e.line == s.line) and start_line or read(e.line)
 
-  local ok_s, start_col = pcall(vim.str_byteindex, start_line, enc, s.character, true)
-  local ok_e, end_col = pcall(vim.str_byteindex, end_line, enc, e.character, true)
+  local ok_s, start_col = pcall(vim.str_byteindex, start_line, encoding, s.character, true)
+  local ok_e, end_col = pcall(vim.str_byteindex, end_line, encoding, e.character, true)
   if not (ok_s and ok_e) then
     return
   end
@@ -98,10 +83,10 @@ end
 ---@param preview boolean
 ---@param ctx ctx.full
 ---@param i completions.Item
----@param enc string
 ---@param range? lsp.Range
 ---@return completions.EditCtx
-local edit_ctx = function(preview, ctx, i, enc, range)
+local edit_ctx = function(preview, ctx, i, range)
+  local encoding = lsp_util.encoding(i)
   local row, col = unpack(ctx.pos)
   local cursor_row = row - 1
   local line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, cursor_row, row, true))
@@ -111,9 +96,10 @@ local edit_ctx = function(preview, ctx, i, enc, range)
   local first_line_len = first_nl and (first_nl - 1) or #inserted
   local original_col = math.max(0, col - first_line_len)
 
-  local start_line, end_line, span = resolve_range(ctx.buf, enc, cursor_row, line, range)
+  local start_line, end_line, span = resolve_range(ctx.buf, encoding, cursor_row, line, range)
 
   return {
+    encoding = encoding,
     cursor_row = cursor_row,
     col = col,
     original_col = original_col,
@@ -211,21 +197,18 @@ end
 ---@param preview boolean
 ---@param ctx ctx.full
 ---@param i completions.Item
----@param lsp completions.ItemLspMeta
+---@param main lsp.TextEdit?
 ---@return completions.Span span
 ---@return completions.EditCtx e_ctx
----@return string enc
 ---@return string replace_text
-M.span = function(preview, ctx, i, lsp)
-  local text_edit, range = M.text_edit(lsp)
-
-  local enc = lsp.position_encoding or DEFAULT_ENCODING
-  local e_ctx = edit_ctx(preview, ctx, i, enc, range)
+M.span = function(preview, ctx, i, main)
+  local range = main and main.range
+  local e_ctx = edit_ctx(preview, ctx, i, range)
   if not e_ctx.span then
-    text_edit, range = nil, nil
+    main, range = nil, nil
   end
 
-  local replace_text = M._replacement_text(preview, i, range, text_edit)
+  local replace_text = M._replacement_text(preview, i, range, main)
 
   local is_snippet = i.meta.snippet ~= nil and not preview
   local prefix_word = is_snippet and (i.word or "") or replace_text
@@ -234,15 +217,17 @@ M.span = function(preview, ctx, i, lsp)
   local span = e_ctx.span and M._clamp_span(e_ctx, replace_text)
     or M._fallback_span(tokens.parse_charset(ctx.iskeyword), e_ctx, prefix_word, suffix_word)
 
-  return span, e_ctx, enc, replace_text
+  return span, e_ctx, replace_text
 end
 
 ---@param ctx ctx.full
 ---@param i completions.Item
----@param lsp completions.ItemLspMeta
+---@param original_main lsp.TextEdit?
+---@param resolved_main lsp.TextEdit?
 ---@return lsp.TextEdit
-M._main_edit = function(ctx, i, lsp)
-  local span, e_ctx, enc, replace_text = M.span(false, ctx, i, lsp)
+M._main_edit = function(ctx, i, original_main, resolved_main)
+  local main = resolved_main or original_main
+  local span, e_ctx, replace_text = M.span(false, ctx, i, main)
   local end_line = span.end_row == e_ctx.cursor_row and e_ctx.cursor_line or e_ctx.end_line
 
   local start_col = math.min(span.start_col, #e_ctx.start_line)
@@ -252,11 +237,11 @@ M._main_edit = function(ctx, i, lsp)
     range = {
       start = {
         line = span.start_row,
-        character = vim.str_utfindex(e_ctx.start_line, enc, start_col, true),
+        character = vim.str_utfindex(e_ctx.start_line, e_ctx.encoding, start_col, true),
       },
       ["end"] = {
         line = span.end_row,
-        character = vim.str_utfindex(end_line, enc, end_col, true),
+        character = vim.str_utfindex(end_line, e_ctx.encoding, end_col, true),
       },
     },
     newText = replace_text,
@@ -265,12 +250,13 @@ end
 
 ---@param ctx ctx.full
 ---@param i completions.Item
----@param lsp completions.ItemLspMeta
+---@param original_main lsp.TextEdit?
+---@param resolved_main lsp.TextEdit?
 ---@param additional_edits lsp.TextEdit[]
-M._apply_edits = function(ctx, i, lsp, additional_edits)
-  local enc = lsp.position_encoding or DEFAULT_ENCODING
-  local main_edit = M._main_edit(ctx, i, lsp)
-  local all_edits = vim.list_extend({ main_edit }, additional_edits)
+M._apply_edits = function(ctx, i, original_main, resolved_main, additional_edits)
+  local enc = lsp_util.encoding(i)
+  local main = M._main_edit(ctx, i, original_main, resolved_main)
+  local all_edits = vim.list_extend({ main }, additional_edits)
   vim.lsp.util.apply_text_edits(all_edits, ctx.buf, enc)
 end
 
@@ -303,14 +289,15 @@ end
 ---@param i completions.Item
 ---@return true?
 M.apply = function(settings, ctx, resolver, i)
-  local lsp, edits = M._resolve(settings, ctx, resolver, i)
-  if not lsp then
+  local orig_main, resolved_main, addn_edits = M._resolve(settings, ctx, resolver, i.meta)
+  atools.scheduled()
+  if not context.still_valid(ctx) then
     return
   end
 
-  debug.notify(vim.inspect { lsp = lsp, edits = edits })
+  debug.notify(vim.inspect { orig_main = orig_main, resolved_main = resolved_main, addn_edits = addn_edits })
   debug.buf(ctx.buf, "pre-apply_edits")
-  M._apply_edits(ctx, i, lsp, edits)
+  M._apply_edits(ctx, i, orig_main, resolved_main, addn_edits)
   debug.buf(ctx.buf, "post-apply_edits")
 
   if i.meta.snippet then
@@ -318,8 +305,8 @@ M.apply = function(settings, ctx, resolver, i)
     debug.buf(ctx.buf, "post-snippet.expand")
   end
 
-  if lsp.item and lsp.item.command then
-    lsp_util.exec_command(ctx, lsp)
+  if i.meta.lsp and i.meta.lsp.item and i.meta.lsp.item.command then
+    lsp_util.exec_command(ctx, i.meta.lsp)
     debug.buf(ctx.buf, "post-command")
   end
 

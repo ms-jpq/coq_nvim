@@ -18,13 +18,13 @@ T.describe({ "resolver" }, function(test)
   test({ "caches resolved results by uid" }, function()
     local calls = 0
     async.scope(function(n)
-      local r = resolver_m.new(n, LORD, function(_, item)
+      local r = resolver_m.new(n, LORD, function(_, meta)
         calls = calls + 1
-        return item.meta.lsp
+        return meta.lsp
       end)
       local item = lsp_item "fido"
-      local a = r.resolve(CTX, item)
-      local b = r.resolve(CTX, item)
+      local a = r.resolve(CTX, item.meta)
+      local b = r.resolve(CTX, item.meta)
       T.eq(a, item.meta.lsp)
       T.eq(b, item.meta.lsp)
     end)
@@ -36,15 +36,15 @@ T.describe({ "resolver" }, function(test)
   test({ "shares cache across distinct tables of equal content" }, function()
     local calls = 0
     async.scope(function(n)
-      local r = resolver_m.new(n, LORD, function(_, item)
+      local r = resolver_m.new(n, LORD, function(_, meta)
         calls = calls + 1
-        return item.meta.lsp
+        return meta.lsp
       end)
       local highlight_copy = lsp_item "fido"
       local commit_copy = lsp_item "fido"
       assert(highlight_copy ~= commit_copy, "fixture must use distinct tables")
-      r.resolve(CTX, highlight_copy)
-      r.resolve(CTX, commit_copy)
+      r.resolve(CTX, highlight_copy.meta)
+      r.resolve(CTX, commit_copy.meta)
     end)
     T.eq(calls, 1)
   end)
@@ -55,19 +55,19 @@ T.describe({ "resolver" }, function(test)
     async.scope(function(n)
       local gate = async.future()
       local started = async.future()
-      local r = resolver_m.new(n, LORD, function(_, item)
+      local r = resolver_m.new(n, LORD, function(_, meta)
         calls = calls + 1
         started.resolve()
         gate.await()
-        return item.meta.lsp
+        return meta.lsp
       end)
       local item = lsp_item "spot"
 
       n.spawn(function()
-        got.a = r.resolve(CTX, item)
+        got.a = r.resolve(CTX, item.meta)
       end)
       n.spawn(function()
-        got.b = r.resolve(CTX, item)
+        got.b = r.resolve(CTX, item.meta)
       end)
 
       started.await()
@@ -81,14 +81,14 @@ T.describe({ "resolver" }, function(test)
   test({ "reset clears state and re-fetches" }, function()
     local calls = 0
     async.scope(function(n)
-      local r = resolver_m.new(n, LORD, function(_, item)
+      local r = resolver_m.new(n, LORD, function(_, meta)
         calls = calls + 1
-        return item.meta.lsp
+        return meta.lsp
       end)
       local item = lsp_item "lil"
-      r.resolve(CTX, item)
+      r.resolve(CTX, item.meta)
       r.reset()
-      r.resolve(CTX, item)
+      r.resolve(CTX, item.meta)
     end)
     T.eq(calls, 2)
   end)
@@ -102,7 +102,7 @@ T.describe({ "resolver" }, function(test)
       local started = async.future()
       local release = async.future()
       local hold = true
-      local r = resolver_m.new(n, LORD, function(_, item)
+      local r = resolver_m.new(n, LORD, function(_, meta)
         calls = calls + 1
         if hold then
           hold = false
@@ -110,25 +110,25 @@ T.describe({ "resolver" }, function(test)
           release.await()
           error(cancel.new(), 0) -- cycle-1 fetch cancels in-flight
         end
-        return item.meta.lsp
+        return meta.lsp
       end)
       local item = lsp_item "fido"
 
       -- cycle 1: kick off a fetch and leave it parked in-flight
       n.spawn(function()
-        r.resolve(CTX, item)
+        r.resolve(CTX, item.meta)
       end)
       started.await()
 
       -- new cycle; its fetch succeeds and caches under the same uid
       r.reset()
-      r.resolve(CTX, item)
+      r.resolve(CTX, item.meta)
 
       -- now let cycle-1's fetch unwind; its cleanup must not touch cycle 2
       release.resolve()
 
       -- cycle 2's entry survives → no third fetch
-      r.resolve(CTX, item)
+      r.resolve(CTX, item.meta)
     end)
     T.eq(calls, 2)
   end)
@@ -141,8 +141,8 @@ T.describe({ "resolver" }, function(test)
         return nil
       end)
       local item = { word = "rex", meta = { uid = "rex", source = "BF", filter = "rex", fuzzy = 0 } } --[[@as completions.Item]]
-      T.eq(r.resolve(CTX, item), nil)
-      T.eq(r.resolve(CTX, item), nil)
+      T.eq(r.resolve(CTX, item.meta), nil)
+      T.eq(r.resolve(CTX, item.meta), nil)
     end)
     T.eq(calls, 1)
   end)

@@ -2,6 +2,8 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local lib = require "coq.lib"
 
+local DEFAULT_ENCODING = "utf-16"
+
 local M = {}
 
 ---@param client vim.lsp.Client
@@ -81,6 +83,33 @@ M.exec_command = function(ctx, lsp)
   end
 
   client:exec_cmd(command, { bufnr = ctx.buf })
+end
+
+---@param item lsp.CompletionItem?
+---@return lsp.TextEdit?
+M.main_edit = function(item)
+  local te = item and item.textEdit
+  if not te then
+    return nil
+  end
+
+  ---@cast te -nil
+  return {
+    range = te.replace or te.range,
+    newText = te.newText,
+  }
+end
+
+---@param item lsp.CompletionItem?
+---@return lsp.TextEdit[]
+M.addn_edits = function(item)
+  return item and item.additionalTextEdits or {}
+end
+
+---@param item completions.Item
+M.encoding = function(item)
+  local lsp = item.meta.lsp or {}
+  return lsp.position_encoding or DEFAULT_ENCODING
 end
 
 return M
