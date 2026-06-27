@@ -208,10 +208,10 @@ T.describe({ "producers.util.item" }, function(test)
       filter = "fido",
       fuzzy = 0,
       doc = doc,
-      snippet = "fido()$0",
+      lsp = { item = { insertTextFormat = 2, insertText = "fido()$0" } },
     })
     T.eq(item.meta.doc, doc)
-    T.eq(item.meta.snippet, "fido()$0")
+    T.eq(item.meta.lsp ~= nil, true)
   end)
 
   test({ "optional fields stay nil when omitted" }, function()
@@ -222,7 +222,7 @@ T.describe({ "producers.util.item" }, function(test)
     )
     T.eq(item.meta.always_on_top, nil)
     T.eq(item.meta.doc, nil)
-    T.eq(item.meta.snippet, nil)
+    T.eq(item.meta.lsp, nil)
   end)
 end)
 

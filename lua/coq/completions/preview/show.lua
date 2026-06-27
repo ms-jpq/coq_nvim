@@ -1,6 +1,7 @@
 local atools = require "coq.lib.atools"
 local float = require "coq.lib.float"
 local lib = require "coq.lib"
+local lsp_util = require "coq.producers.lsp.util"
 local paths_preview = require "coq.producers.paths.preview"
 local txt = require "coq.lib.text"
 
@@ -217,8 +218,9 @@ local resolve_doc = function(ctx, settings, resolver, item)
     end
   end
 
-  if meta.snippet then
-    return vim.iter(txt.splitlines(meta.snippet)):totable(), ctx.filetype
+  local snippet = lsp_util.snippet(meta.lsp and meta.lsp.item)
+  if snippet then
+    return vim.iter(txt.splitlines(snippet)):totable(), ctx.filetype
   end
 
   local multi = multiline_insert(item)

@@ -187,7 +187,7 @@ T.describe({ "ghost.show" }, function(test)
         source = "snippets",
         filter = "fido",
         fuzzy = 0,
-        snippet = "fido(${1:bone})",
+        lsp = { item = { insertTextFormat = 2, insertText = "fido(${1:bone})" } },
       },
     } --[[@as completions.Item]]
     ghost.show(ctx, snippet_item)

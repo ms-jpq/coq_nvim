@@ -50,7 +50,7 @@ end
 local item_of = function(settings, ctx, raw, encoding)
   local label = raw.label or ""
   local insert_text = raw.insertText or label
-  local is_snippet = raw.insertTextFormat == 2
+  local is_snippet = raw.insertTextFormat == vim.lsp.protocol.InsertTextFormat.Snippet
   local filter = raw.filterText or label
   local kind = vim.lsp.protocol.CompletionItemKind[raw.kind] or ""
   return util.item(settings, SOURCE, {
@@ -59,7 +59,6 @@ local item_of = function(settings, ctx, raw, encoding)
     kind = kind,
     filter = filter,
     fuzzy = match.score(ctx.keyword_before, filter),
-    snippet = is_snippet and insert_text or nil,
     lsp = {
       item = raw,
       position_encoding = encoding,

@@ -1,7 +1,7 @@
 local T = require "coq.lib.test"
 local TH = require "coq.lib.test_helpers"
-local lsp_util = require "coq.producers.lsp.util"
 local inserted = require "coq.completions.inserted"
+local lsp_util = require "coq.producers.lsp.util"
 
 -- `word_range` runs AFTER `complete()` has already inserted the chosen word, so
 -- the fixtures describe the post-insert buffer: `line` is what's on screen,
@@ -21,11 +21,20 @@ local apply = function(opts)
   local item = {
     word = opts.word,
     abbr = opts.abbr,
-    meta = { uid = "x", source = "LSP", filter = opts.word or "", fuzzy = 0, snippet = opts.snippet },
+    meta = { uid = "x", source = "LSP", filter = opts.word or "", fuzzy = 0 },
   }
   local lsp = opts.lsp or {}
+  if opts.snippet then
+    if lsp.item then
+      lsp.item.insertTextFormat = vim.lsp.protocol.InsertTextFormat.Snippet
+      lsp.item.insertText = opts.snippet
+    else
+      lsp = { item = { insertTextFormat = vim.lsp.protocol.InsertTextFormat.Snippet, insertText = opts.snippet } }
+    end
+    item.meta.lsp = lsp
+  end
 
-  local edit = inserted._main_edit(ctx, item, lsp_util.main_edit(lsp.item), nil)
+  local edit = inserted._main_edit(ctx, item, lsp_util.main_edit(lsp.item))
   local enc = lsp.position_encoding or "utf-16"
   vim.lsp.util.apply_text_edits({ edit }, buf, enc)
   local out = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, true), "\n")
@@ -201,11 +210,20 @@ local scenario = function(before, word, after, opts)
   local item = {
     word = word,
     abbr = opts.abbr,
-    meta = { uid = "x", source = "LSP", filter = word, fuzzy = 0, snippet = opts.snippet },
+    meta = { uid = "x", source = "LSP", filter = word, fuzzy = 0 },
   }
   local lsp = opts.lsp or {}
+  if opts.snippet then
+    if lsp.item then
+      lsp.item.insertTextFormat = vim.lsp.protocol.InsertTextFormat.Snippet
+      lsp.item.insertText = opts.snippet
+    else
+      lsp = { item = { insertTextFormat = vim.lsp.protocol.InsertTextFormat.Snippet, insertText = opts.snippet } }
+    end
+    item.meta.lsp = lsp
+  end
 
-  local edit = inserted._main_edit(ctx, item, lsp_util.main_edit(lsp.item), nil)
+  local edit = inserted._main_edit(ctx, item, lsp_util.main_edit(lsp.item))
   local enc = lsp.position_encoding or "utf-16"
   vim.lsp.util.apply_text_edits({ edit }, buf, enc)
   local out = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, true), "\n")
@@ -598,7 +616,7 @@ T.describe({ "inserted._apply_edits" }, function(test)
     local ctx, buf = make_ctx { "fid" }
     ---@diagnostic disable-next-line: missing-fields
     local item = { word = "fido", meta = { uid = "x", source = "LSP", filter = "fid", fuzzy = 0 } } --[[@as completions.Item]]
-    inserted._apply_edits(ctx, item, nil, nil, {})
+    inserted._apply_edits(ctx, item, nil, {})
     T.eq(lines_of(buf), { "fido" })
   end)
 
@@ -608,9 +626,9 @@ T.describe({ "inserted._apply_edits" }, function(test)
     local item = {
       word = "fido",
       abbr = "fido",
-      meta = { uid = "x", source = "LSP", filter = "fid", fuzzy = 0, snippet = "fido($0)" },
+      meta = { uid = "x", source = "LSP", filter = "fid", fuzzy = 0, lsp = { item = { insertTextFormat = 2, insertText = "fido($0)" } } },
     } --[[@as completions.Item]]
-    inserted._apply_edits(ctx, item, nil, nil, {})
+    inserted._apply_edits(ctx, item, nil, {})
     T.eq(lines_of(buf), { "" })
   end)
 
@@ -648,7 +666,7 @@ T.describe({ "inserted._apply_edits" }, function(test)
       },
     }
     local original_main = { range = lsp.item.textEdit.range, newText = lsp.item.textEdit.newText }
-    inserted._apply_edits(ctx, item, original_main, nil, additional)
+    inserted._apply_edits(ctx, item, original_main, additional)
     T.eq(lines_of(buf), { "line-1", "line-2", "line-3", "ignored", "IMPORTleave-me-alone" })
   end)
 end)
@@ -687,7 +705,7 @@ T.describe({ "inserted._resolve" }, function(test)
       return nil
     end)
     async.scope(function()
-      local _, _, addn = inserted._resolve(settings_of(), ctx, resolver, item.meta)
+      local _, addn = inserted._resolve(settings_of(), ctx, resolver, item.meta)
       T.eq(#addn, 1)
     end)
     T.eq(called, true)
@@ -709,7 +727,7 @@ T.describe({ "inserted._resolve" }, function(test)
       } --[[@as completions.ItemLspMeta]]
     end)
     async.scope(function()
-      local _, _, addn = inserted._resolve(settings_of(), ctx, resolver, item.meta)
+      local _, addn = inserted._resolve(settings_of(), ctx, resolver, item.meta)
       T.eq(#addn, 1)
       T.eq(addn[1].newText, "y")
     end)
@@ -726,10 +744,10 @@ T.describe({ "inserted._resolve" }, function(test)
     local resolver = fake_resolver(function()
       return nil
     end)
-    local orig_main_val
+    local main_val
     async.scope(function()
-      orig_main_val, _, _ = inserted._resolve(settings_of(), ctx, resolver, item.meta)
+      main_val, _ = inserted._resolve(settings_of(), ctx, resolver, item.meta)
     end)
-    T.eq(orig_main_val, nil)
+    T.eq(main_val, nil)
   end)
 end)

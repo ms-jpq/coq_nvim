@@ -32,18 +32,19 @@ local M = {}
 ---@param ctx ctx.full
 ---@param resolver completions.Resolver
 ---@param meta completions.ItemMeta
----@return lsp.TextEdit? original_main_edit
----@return lsp.TextEdit? resolved_main_edit
----@return lsp.TextEdit[] resolved_addn_edits
+---@return lsp.TextEdit? main_edit
+---@return lsp.TextEdit[] addn_edits
+---@return string? snippet
 M._resolve = function(settings, ctx, resolver, meta)
   local timeout_ms = math.floor(settings.clients.lsp.resolve_timeout * 1000)
-
-  local original_main_edit = lsp_util.main_edit(meta.lsp and meta.lsp.item)
   local resolved = resolver.resolve(ctx, meta, timeout_ms)
-  local resolved_main_edit = lsp_util.main_edit(resolved and resolved.item)
-  local addn_edits = resolved and lsp_util.addn_edits(resolved.item) or lsp_util.addn_edits(meta.lsp and meta.lsp.item)
 
-  return original_main_edit, resolved_main_edit, addn_edits
+  local meta_item = meta.lsp and meta.lsp.item
+  local main_edit = resolved and lsp_util.main_edit(resolved.item) or lsp_util.main_edit(meta_item)
+  local addn_edits = resolved and lsp_util.addn_edits(resolved.item) or lsp_util.addn_edits(meta_item)
+  local snippet = resolved and lsp_util.snippet(resolved.item) or lsp_util.snippet(meta_item)
+
+  return main_edit, addn_edits, snippet
 end
 
 ---@param buf integer
@@ -91,7 +92,8 @@ local edit_ctx = function(preview, ctx, i, range)
   local cursor_row = row - 1
   local line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, cursor_row, row, true))
 
-  local inserted = preview and "" or ((i.meta.snippet and i.abbr) or i.word or "")
+  local snippet = lsp_util.snippet(i.meta.lsp and i.meta.lsp.item)
+  local inserted = preview and "" or ((snippet and i.abbr) or i.word or "")
   local first_nl = txt.is_multiline(inserted)
   local first_line_len = first_nl and (first_nl - 1) or #inserted
   local original_col = math.max(0, col - first_line_len)
@@ -143,8 +145,9 @@ end
 ---@param text_edit? lsp.TextEdit | lsp.InsertReplaceEdit
 ---@return string
 M._replacement_text = function(preview, i, range, text_edit)
-  if i.meta.snippet then
-    return preview and snippet_preview.preview(i.meta.snippet) or ""
+  local snippet = lsp_util.snippet(i.meta.lsp and i.meta.lsp.item)
+  if snippet then
+    return preview and snippet_preview.preview(snippet) or ""
   end
 
   if range then
@@ -210,7 +213,7 @@ M.span = function(preview, ctx, i, main)
 
   local replace_text = M._replacement_text(preview, i, range, main)
 
-  local is_snippet = i.meta.snippet ~= nil and not preview
+  local is_snippet = lsp_util.snippet(i.meta.lsp and i.meta.lsp.item) and not preview
   local prefix_word = is_snippet and (i.word or "") or replace_text
   local suffix_word = is_snippet and "" or replace_text
 
@@ -222,11 +225,9 @@ end
 
 ---@param ctx ctx.full
 ---@param i completions.Item
----@param original_main lsp.TextEdit?
----@param resolved_main lsp.TextEdit?
+---@param main lsp.TextEdit?
 ---@return lsp.TextEdit
-M._main_edit = function(ctx, i, original_main, resolved_main)
-  local main = resolved_main or original_main
+M._main_edit = function(ctx, i, main)
   local span, e_ctx, replace_text = M.span(false, ctx, i, main)
   local end_line = span.end_row == e_ctx.cursor_row and e_ctx.cursor_line or e_ctx.end_line
 
@@ -250,13 +251,12 @@ end
 
 ---@param ctx ctx.full
 ---@param i completions.Item
----@param original_main lsp.TextEdit?
----@param resolved_main lsp.TextEdit?
+---@param main lsp.TextEdit?
 ---@param additional_edits lsp.TextEdit[]
-M._apply_edits = function(ctx, i, original_main, resolved_main, additional_edits)
+M._apply_edits = function(ctx, i, main, additional_edits)
   local enc = lsp_util.encoding(i)
-  local main = M._main_edit(ctx, i, original_main, resolved_main)
-  local all_edits = vim.list_extend({ main }, additional_edits)
+  local edit = M._main_edit(ctx, i, main)
+  local all_edits = vim.list_extend({ edit }, additional_edits)
   vim.lsp.util.apply_text_edits(all_edits, ctx.buf, enc)
 end
 
@@ -289,19 +289,19 @@ end
 ---@param i completions.Item
 ---@return true?
 M.apply = function(settings, ctx, resolver, i)
-  local orig_main, resolved_main, addn_edits = M._resolve(settings, ctx, resolver, i.meta)
+  local main, addn_edits, snippet = M._resolve(settings, ctx, resolver, i.meta)
   atools.scheduled()
   if not context.still_valid(ctx) then
     return
   end
 
-  debug.notify(vim.inspect { orig_main = orig_main, resolved_main = resolved_main, addn_edits = addn_edits })
+  debug.notify(vim.inspect { main = main, addn_edits = addn_edits, snippet = snippet })
   debug.buf(ctx.buf, "pre-apply_edits")
-  M._apply_edits(ctx, i, orig_main, resolved_main, addn_edits)
+  M._apply_edits(ctx, i, main, addn_edits)
   debug.buf(ctx.buf, "post-apply_edits")
 
-  if i.meta.snippet then
-    M._apply_snippet(ctx, i.meta.snippet)
+  if snippet then
+    M._apply_snippet(ctx, snippet)
     debug.buf(ctx.buf, "post-snippet.expand")
   end
 

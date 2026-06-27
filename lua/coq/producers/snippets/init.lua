@@ -140,7 +140,7 @@ M.matcher = util.batched(function(settings, ctx)
       kind = "Snippet",
       filter = hit.item.word,
       fuzzy = hit.fuzzy,
-      snippet = hit.item.body,
+      lsp = { item = { insertTextFormat = vim.lsp.protocol.InsertTextFormat.Snippet, insertText = hit.item.body } },
       doc = util.doc(ctx.filetype, doc_lines(hit.item)),
     })
 

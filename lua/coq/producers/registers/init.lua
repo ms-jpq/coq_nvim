@@ -137,7 +137,6 @@ M.matcher = util.batched(function(settings, ctx)
       kind = "Text",
       filter = hit.item.word,
       fuzzy = hit.fuzzy,
-      snippet = hit.item.linewise and hit.item.line or nil,
       doc = { lines = { doc_line }, filetype = "" },
     })
     if not coroutine.yield(item) then

@@ -46,7 +46,6 @@ M.new = function()
                   uid = util.uid(),
                   filter = filter,
                   fuzzy = match.score(ctx.keyword_before, filter),
-                  snippet = is_snippet and insert_text or nil,
                   source = SOURCE,
                   always_on_top = pinned[entry.client_name] == true,
                   lsp = {

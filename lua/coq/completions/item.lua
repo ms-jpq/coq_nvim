@@ -1,3 +1,5 @@
+local lsp_util = require "coq.producers.lsp.util"
+
 ---@class completions.ItemLspMeta
 ---@field client_id? integer
 ---@field item? lsp.CompletionItem
@@ -13,7 +15,6 @@
 ---@field filter string
 ---@field fuzzy number
 ---@field always_on_top? boolean
----@field snippet? string
 ---@field doc? completions.ItemDoc
 ---@field path? string
 ---@field lsp? completions.ItemLspMeta
@@ -27,8 +28,9 @@ local M = {}
 ---@return string
 M.dedup_key = function(item)
   local meta = item.meta
-  if meta.snippet then
-    return "snip\0" .. meta.snippet
+  local snippet = lsp_util.snippet(meta.lsp and meta.lsp.item)
+  if snippet then
+    return "snip\0" .. snippet
   end
   local edit = meta.lsp and meta.lsp.item and meta.lsp.item.textEdit
 
@@ -83,7 +85,7 @@ M.to_nvim = function(icons, item)
     dup = 1,
     equal = 1,
     empty = 1,
-    word = item.meta.snippet and item.abbr or item.word,
+    word = lsp_util.snippet(item.meta.lsp and item.meta.lsp.item) and item.abbr or item.word,
     abbr = item.abbr or item.word,
     abbr_hlgroup = item.abbr_hlgroup,
     menu = item.menu,

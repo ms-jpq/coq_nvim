@@ -86,7 +86,6 @@ end
 ---@field filter string
 ---@field fuzzy number
 ---@field doc? completions.ItemDoc
----@field snippet? string
 ---@field path? string
 ---@field lsp? completions.ItemLspMeta
 
@@ -109,7 +108,6 @@ M.item = function(settings, source, spec)
       source = source,
       always_on_top = opts.always_on_top,
       doc = spec.doc,
-      snippet = spec.snippet,
       path = spec.path,
       lsp = spec.lsp,
     },

@@ -106,6 +106,18 @@ M.addn_edits = function(item)
   return item and item.additionalTextEdits or {}
 end
 
+---@param item lsp.CompletionItem?
+---@return string? snippet_body
+M.snippet = function(item)
+  if not item then
+    return nil
+  end
+  if item.insertTextFormat ~= vim.lsp.protocol.InsertTextFormat.Snippet then
+    return nil
+  end
+  return item.insertText or (item.textEdit and item.textEdit.newText) or nil
+end
+
 ---@param item completions.Item
 M.encoding = function(item)
   local lsp = item.meta.lsp or {}
