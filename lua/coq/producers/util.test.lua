@@ -208,6 +208,7 @@ T.describe({ "producers.util.item" }, function(test)
       filter = "fido",
       fuzzy = 0,
       doc = doc,
+      ---@diagnostic disable-next-line: missing-fields
       lsp = { item = { insertTextFormat = 2, insertText = "fido()$0" } },
     })
     T.eq(item.meta.doc, doc)

@@ -140,8 +140,14 @@ M.matcher = util.batched(function(settings, ctx)
       kind = "Snippet",
       filter = hit.item.word,
       fuzzy = hit.fuzzy,
-      lsp = { item = { insertTextFormat = vim.lsp.protocol.InsertTextFormat.Snippet, insertText = hit.item.body } },
       doc = util.doc(ctx.filetype, doc_lines(hit.item)),
+      lsp = {
+        item = {
+          label = hit.item.label ~= "" and hit.item.label or hit.item.word,
+          insertTextFormat = vim.lsp.protocol.InsertTextFormat.Snippet,
+          insertText = hit.item.body,
+        },
+      },
     })
 
     if not coroutine.yield(item) then

@@ -34,6 +34,7 @@ local apply = function(opts)
     item.meta.lsp = lsp
   end
 
+  ---@diagnostic disable-next-line: param-type-mismatch
   local edit = inserted._main_edit(ctx, item, lsp_util.main_edit(lsp.item))
   local enc = lsp.position_encoding or "utf-16"
   vim.lsp.util.apply_text_edits({ edit }, buf, enc)
@@ -223,6 +224,7 @@ local scenario = function(before, word, after, opts)
     item.meta.lsp = lsp
   end
 
+  ---@diagnostic disable-next-line: param-type-mismatch
   local edit = inserted._main_edit(ctx, item, lsp_util.main_edit(lsp.item))
   local enc = lsp.position_encoding or "utf-16"
   vim.lsp.util.apply_text_edits({ edit }, buf, enc)
@@ -626,7 +628,14 @@ T.describe({ "inserted._apply_edits" }, function(test)
     local item = {
       word = "fido",
       abbr = "fido",
-      meta = { uid = "x", source = "LSP", filter = "fid", fuzzy = 0, lsp = { item = { insertTextFormat = 2, insertText = "fido($0)" } } },
+      meta = {
+        uid = "x",
+        source = "LSP",
+        filter = "fid",
+        fuzzy = 0,
+        ---@diagnostic disable-next-line: missing-fields
+        lsp = { item = { insertTextFormat = 2, insertText = "fido($0)" } },
+      },
     } --[[@as completions.Item]]
     inserted._apply_edits(ctx, item, nil, {})
     T.eq(lines_of(buf), { "" })

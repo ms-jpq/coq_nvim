@@ -187,6 +187,7 @@ T.describe({ "ghost.show" }, function(test)
         source = "snippets",
         filter = "fido",
         fuzzy = 0,
+        ---@diagnostic disable-next-line: missing-fields
         lsp = { item = { insertTextFormat = 2, insertText = "fido(${1:bone})" } },
       },
     } --[[@as completions.Item]]
