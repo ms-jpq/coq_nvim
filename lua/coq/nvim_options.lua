@@ -27,7 +27,7 @@ local recommended_keymaps = function(keymap)
   end
   local expr = { noremap = true, expr = true }
 
-  for _, key in pairs { "<esc>", "<c-c>", "<bs>", "<c-w>", "<c-u>" } do
+  for _, key in pairs { "<esc>", "<c-c>", "<bs>", "<c-w>", "<c-u>", "<c-r>" } do
     vim.keymap.set({ "i" }, key, function()
       return (vim.fn.pumvisible() == 1 and M.CE or "") .. key
     end, expr)
