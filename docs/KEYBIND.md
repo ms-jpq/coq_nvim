@@ -95,6 +95,7 @@ vim.api.nvim_set_keymap(
 vim.api.nvim_set_keymap('i', '<Tab>', [[pumvisible() ? "\<C-n>" : "\<Tab>"]], { expr = true, silent = true })
 vim.api.nvim_set_keymap('i', '<S-Tab>', [[pumvisible() ? "\<C-p>" : "\<BS>"]], { expr = true, silent = true })
 
+-- Allows to complete selection with special characters
 local keys = "?!@#$%^&*+-=`\"',./\\:;<>()[]{} "
 for i = 1, #keys do
   local keymap = keys:sub(i, i)
