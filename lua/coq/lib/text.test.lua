@@ -1,0 +1,223 @@
+local T = require "coq.lib.test"
+local txt = require "coq.lib.text"
+
+local drain = function(iter)
+  local out = {}
+  for v in iter do
+    table.insert(out, v)
+  end
+  return out
+end
+
+T.describe({ "text.splitlines" }, function(test)
+  test({ "yields a single line for a separator-free string" }, function()
+    T.eq(drain(txt.splitlines "labrador"), { "labrador" })
+  end)
+
+  test({ "splits on LF" }, function()
+    T.eq(drain(txt.splitlines "lil\nspot\nfido"), { "lil", "spot", "fido" })
+  end)
+
+  test({ "splits on CRLF as one separator" }, function()
+    T.eq(drain(txt.splitlines "lil\r\nspot\r\nfido"), { "lil", "spot", "fido" })
+  end)
+
+  test({ "splits on bare CR" }, function()
+    T.eq(drain(txt.splitlines "lil\rspot\rfido"), { "lil", "spot", "fido" })
+  end)
+
+  test({ "mixes line endings in one input" }, function()
+    T.eq(drain(txt.splitlines "a\nb\r\nc\rd"), { "a", "b", "c", "d" })
+  end)
+
+  test({ "a trailing separator yields a final empty line" }, function()
+    T.eq(drain(txt.splitlines "lil\n"), { "lil", "" })
+    T.eq(drain(txt.splitlines "lil\r\n"), { "lil", "" })
+    T.eq(drain(txt.splitlines "lil\r"), { "lil", "" })
+  end)
+
+  test({ "empty input yields one empty line" }, function()
+    T.eq(drain(txt.splitlines ""), { "" })
+  end)
+
+  test({ "consecutive separators yield empty lines between them" }, function()
+    T.eq(drain(txt.splitlines "a\n\nb"), { "a", "", "b" })
+    T.eq(drain(txt.splitlines "a\r\n\r\nb"), { "a", "", "b" })
+  end)
+
+  test({ "iter is idempotent on nil — calls past end stay nil" }, function()
+    local iter = txt.splitlines "lil"
+    T.eq(iter(), "lil")
+    T.eq(iter(), nil)
+    T.eq(iter(), nil)
+  end)
+end)
+
+T.describe({ "text.is_multiline" }, function(test)
+  test({ "flat strings are not multiline" }, function()
+    T.eq(txt.is_multiline "labrador", false)
+    T.eq(txt.is_multiline "", false)
+  end)
+
+  test({ "LF, CR, or CRLF all count" }, function()
+    T.eq(txt.is_multiline "lil\nspot", true)
+    T.eq(txt.is_multiline "lil\rspot", true)
+    T.eq(txt.is_multiline "lil\r\nspot", true)
+  end)
+
+  test({ "a trailing separator alone counts" }, function()
+    T.eq(txt.is_multiline "lil\n", true)
+  end)
+end)
+
+T.describe({ "text.lstrip" }, function(test)
+  test({ "strips leading whitespace only" }, function()
+    T.eq(txt.lstrip "   labrador", "labrador")
+    T.eq(txt.lstrip "\t\nlabrador  ", "labrador  ")
+  end)
+  test({ "no leading whitespace is a no-op" }, function()
+    T.eq(txt.lstrip "labrador", "labrador")
+  end)
+  test({ "all-whitespace becomes empty" }, function()
+    T.eq(txt.lstrip "   ", "")
+  end)
+end)
+
+T.describe({ "text.rstrip" }, function(test)
+  test({ "strips trailing whitespace only" }, function()
+    T.eq(txt.rstrip "labrador   ", "labrador")
+    T.eq(txt.rstrip "  labrador\t\n", "  labrador")
+  end)
+  test({ "no trailing whitespace is a no-op" }, function()
+    T.eq(txt.rstrip "labrador", "labrador")
+  end)
+  test({ "all-whitespace becomes empty" }, function()
+    T.eq(txt.rstrip "   ", "")
+  end)
+end)
+
+T.describe({ "text.has_any_prefix" }, function(test)
+  test({ "matches when any prefix matches" }, function()
+    T.eq(txt.startswith({ "lil", "spot" }, "spotlight"), true)
+  end)
+  test({ "no match when none of the prefixes apply" }, function()
+    T.eq(txt.startswith({ "lil", "spot" }, "fido"), false)
+  end)
+  test({ "empty prefix list is false" }, function()
+    T.eq(txt.startswith({}, "labrador"), false)
+  end)
+  test({ "empty line matches only against an empty prefix" }, function()
+    T.eq(txt.startswith({ "lil" }, ""), false)
+    T.eq(txt.startswith({ "" }, ""), true)
+  end)
+end)
+
+T.describe({ "text.dedent" }, function(test)
+  ---@param lines string[]
+  ---@return string[]
+  local collect = function(lines)
+    return vim.iter(txt.dedent(lines)):totable()
+  end
+  test({ "strips the common leading whitespace from every line" }, function()
+    T.eq(collect { "    lil", "    spot", "    fido" }, { "lil", "spot", "fido" })
+  end)
+  test({ "with no common indent, body is unchanged" }, function()
+    T.eq(collect { "lil", "  spot", "fido" }, { "lil", "  spot", "fido" })
+  end)
+  test({ "ignores whitespace-only lines when computing the common prefix" }, function()
+    T.eq(collect { "    lil", "", "    spot" }, { "lil", "", "spot" })
+  end)
+  test({ "partial common prefix keeps the remainder" }, function()
+    T.eq(collect { "  lil", "    spot" }, { "lil", "  spot" })
+  end)
+  test({ "a single line is dedented" }, function()
+    T.eq(collect { "\tlabrador" }, { "labrador" })
+  end)
+  test({ "tabs and spaces are treated literally (must match exactly)" }, function()
+    T.eq(collect { "\tlil", "  spot" }, { "\tlil", "  spot" })
+  end)
+  test({ "empty input yields empty" }, function()
+    T.eq(collect {}, {})
+  end)
+end)
+
+T.describe({ "text.prefix_overlap" }, function(test)
+  test({ "full overlap when needle is a suffix of haystack" }, function()
+    T.eq(txt.prefix_overlap("@@for", "@for"), 4)
+  end)
+  test({ "partial overlap at the boundary" }, function()
+    T.eq(txt.prefix_overlap("fo", "for"), 2)
+  end)
+  test({ "no overlap" }, function()
+    T.eq(txt.prefix_overlap("xy", "for"), 0)
+  end)
+  test({ "either side empty yields zero" }, function()
+    T.eq(txt.prefix_overlap("", "for"), 0)
+    T.eq(txt.prefix_overlap("fido", ""), 0)
+  end)
+  test({ "needle longer than haystack capped by haystack length" }, function()
+    T.eq(txt.prefix_overlap("@", "@for"), 1)
+  end)
+end)
+
+T.describe({ "text.truncate_to_codepoint" }, function(test)
+  test({ "no-op when max_bytes covers the whole string" }, function()
+    T.eq(txt.truncate_to_codepoint("labrador", 8), "labrador")
+    T.eq(txt.truncate_to_codepoint("labrador", 99), "labrador")
+  end)
+
+  test({ "ASCII cuts at the exact byte" }, function()
+    T.eq(txt.truncate_to_codepoint("labrador", 3), "lab")
+  end)
+
+  test({ "mid-codepoint cut snaps back to the previous boundary" }, function()
+    -- 你好 = 0xE4 0xBD 0xA0 0xE5 0xA5 0xBD (6 bytes).
+    -- max=2 lands inside the first codepoint → "".
+    T.eq(txt.truncate_to_codepoint("你好", 2), "")
+    -- max=3 ends exactly on the first codepoint → "你".
+    T.eq(txt.truncate_to_codepoint("你好", 3), "你")
+    -- max=5 lands inside the second codepoint → "你".
+    T.eq(txt.truncate_to_codepoint("你好", 5), "你")
+  end)
+
+  test({ "max_bytes <= 0 returns empty" }, function()
+    T.eq(txt.truncate_to_codepoint("你好", 0), "")
+    T.eq(txt.truncate_to_codepoint("你好", -1), "")
+  end)
+
+  test({ "snap also pulls trailing lone lead bytes back into safety" }, function()
+    -- "ab你" = 0x61 0x62 0xE4 0xBD 0xA0. max=4 ends on a continuation → "ab".
+    T.eq(txt.truncate_to_codepoint("ab你", 4), "ab")
+  end)
+end)
+
+T.describe({ "text.pad_right" }, function(test)
+  test({ "pads ASCII to byte-equals-display width" }, function()
+    T.eq(txt.pad_right("ab", 5), "ab   ")
+  end)
+  test({ "no-op when content already at or past target width" }, function()
+    T.eq(txt.pad_right("labrador", 4), "labrador")
+    T.eq(txt.pad_right("labrador", 8), "labrador")
+  end)
+  test({ "pads to display columns, not bytes, on multi-byte content" }, function()
+    -- "你" is 3 bytes, 2 display columns.
+    -- Target width 5 → 3 trailing spaces (5 - 2 cols).
+    T.eq(txt.pad_right("你", 5), "你   ")
+  end)
+end)
+
+T.describe({ "text.suffix_overlap" }, function(test)
+  test({ "full overlap when needle is a prefix of haystack" }, function()
+    T.eq(txt.suffix_overlap("@param@param", "@param"), 6)
+  end)
+  test({ "partial overlap at the boundary" }, function()
+    T.eq(txt.suffix_overlap("do", "fido"), 2)
+  end)
+  test({ "no overlap" }, function()
+    T.eq(txt.suffix_overlap("xy", "for"), 0)
+  end)
+  test({ "either side empty yields zero" }, function()
+    T.eq(txt.suffix_overlap("", "for"), 0)
+    T.eq(txt.suffix_overlap("fido", ""), 0)
+  end)
+end)

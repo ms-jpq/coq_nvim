@@ -48,7 +48,9 @@ def _use_cache(match: MatchOptions, cache: _CacheCtx, ctx: Context) -> bool:
         and cache.commit_id == ctx.commit_id
         and ctx.buf_id == cache.buf_id
         and row == cache.row
-        and (bool(cache.words_before) == bool(ctx.words_before) or bool(cache.ws_before))
+        and (
+            bool(cache.words_before) == bool(ctx.words_before) or bool(cache.ws_before)
+        )
         and multi_set_ratio(
             ctx.syms_before, cache.syms_before, look_ahead=match.look_ahead
         )
@@ -92,7 +94,7 @@ class CacheWorker(Interruptible):
             col=-1,
             syms_before="",
             words_before="",
-            ws_before=""
+            ws_before="",
         )
         self._clients: MutableSet[str] = set()
         self._cached: MutableMapping[bytes, Completion] = {}
@@ -102,6 +104,7 @@ class CacheWorker(Interruptible):
 
     def set_cache(
         self,
+        keywords: AbstractSet[str],
         items: Mapping[Optional[str], Iterable[Completion]],
         skip_db: bool,
     ) -> None:
@@ -113,7 +116,7 @@ class CacheWorker(Interruptible):
             for key, val in new_comps.items():
                 if self._supervisor.comp.smart:
                     for word in coalesce(
-                        self._supervisor.match.unifying_chars,
+                        keywords,
                         include_syms=True,
                         backwards=None,
                         chars=val.sort_by,
@@ -143,7 +146,7 @@ class CacheWorker(Interruptible):
             col=col,
             syms_before=context.syms_before,
             words_before=context.words_before,
-            ws_before=context.ws_before
+            ws_before=context.ws_before,
         )
 
         use_cache = _use_cache(

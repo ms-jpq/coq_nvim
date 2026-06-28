@@ -54,7 +54,7 @@ ie.
 Vim:
 
 ```vim
-let g:coq_settings = { 'match.look_ahead': 'dog' }
+let g:coq_settings = { 'match.fuzzy_cutoff': 'dog' }
 ```
 
 Lua:
@@ -62,7 +62,7 @@ Lua:
 ```lua
 vim.g.coq_settings = {
     match = {
-        look_ahead = "dog",
+        fuzzy_cutoff = "dog",
     },
 }
 ```
@@ -77,30 +77,28 @@ Will give you the following error message:
 
 ## Specifics
 
-Set `coq_settings.auto_start` to `true | 'shut-up'` to auto start.
+v2 attaches on `setup()` — there is no `auto_start` or `xdg` option. See [v2](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/V2.md).
 
-Set `coq_settings.xdg` to `true` to use `XDG`.
-
-- [:COQhelp keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md)
+- [:COQ help keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md)
 
 Key bindings
 
-- [:COQhelp fuzzy](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/FUZZY.md)
+- [:COQ help fuzzy](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/FUZZY.md)
 
 Fuzzy ranking
 
-- [:COQhelp comp](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/COMPLETION.md)
+- [:COQ help comp](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/COMPLETION.md)
 
 Completion options
 
-- [:COQhelp display](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/DISPLAY.md)
+- [:COQ help display](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/DISPLAY.md)
 
 Appearances
 
-- [:COQhelp sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/SOURCES.md)
+- [:COQ help sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/SOURCES.md)
 
 Source specific
 
-- [:COQhelp misc](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/MISC.md)
+- [:COQ help misc](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/MISC.md)
 
 Misc (including timeouts)

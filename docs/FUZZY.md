@@ -40,16 +40,6 @@ Lexicographical sorting is then applied with secondary metrics such as `presence
 
 These control the matching & scoring algorithms
 
-#### `coq_settings.match.unifying_chars`
-
-These characters count as part of words.
-
-**default:**
-
-```json
-["-", "_"]
-```
-
 #### `coq_settings.match.max_results`
 
 Maximum number of results to return.
@@ -60,31 +50,9 @@ Maximum number of results to return.
 33
 ```
 
-#### `coq_settings.match.proximate_lines`
-
-How many lines to use, for the purpose of proximity bonus.
-
-Neighbouring words in proximity are counted.
-
-**default:**
-
-```json
-16
-```
-
 #### `coq_settings.match.exact_matches`
 
 For word searching, how many exact prefix characters is required.
-
-**default:**
-
-```json
-2
-```
-
-#### `coq_settings.match.look_ahead`
-
-For word searching, how many characters to look ahead, in case of typos.
 
 **default:**
 
@@ -106,26 +74,6 @@ What is the minimum similarity score, for a word to be proposed by the algorithm
 
 ### coq_settings.weights
 
-#### `coq_settings.weights.prefix_matches`
-
-Relative weight adjustment of exact prefix matches.
-
-**default:**
-
-```json
-2.0
-```
-
-#### `coq_settings.weights.edit_distance`
-
-Relative weight adjustment of [Damerau–Levenshtein distance](https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance), normalized and adjusted for look-aheads.
-
-**default:**
-
-```json
-1.5
-```
-
 #### `coq_settings.weights.recency`
 
 Relative weight adjustment of recently inserted items.
@@ -138,7 +86,7 @@ Relative weight adjustment of recently inserted items.
 
 #### `coq_settings.weights.proximity`
 
-Relative weight adjustment of prevalence within the `proximate_lines`
+Relative weight adjustment of prevalence in nearby lines.
 
 **default:**
 

@@ -50,7 +50,7 @@ def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str, filename: str) ->
 
 def _setlines(
     cursor: Cursor,
-    unifying_chars: AbstractSet[str],
+    keywords: AbstractSet[str],
     tokenization_limit: int,
     include_syms: bool,
     buf_id: int,
@@ -80,7 +80,7 @@ def _setlines(
     def m2() -> Iterator[Mapping]:
         for line_num, line, line_id in line_info:
             for word in coalesce(
-                unifying_chars,
+                keywords,
                 include_syms=include_syms,
                 backwards=None,
                 chars=line,
@@ -125,14 +125,8 @@ def _init() -> Connection:
 
 
 class BDB(DB):
-    def __init__(
-        self,
-        tokenization_limit: int,
-        unifying_chars: AbstractSet[str],
-        include_syms: bool,
-    ) -> None:
+    def __init__(self, tokenization_limit: int, include_syms: bool) -> None:
         self._tokenization_limit = tokenization_limit
-        self._unifying_chars = unifying_chars
         self._include_syms = include_syms
         self._conn = _init()
 
@@ -167,6 +161,7 @@ class BDB(DB):
     def set_lines(
         self,
         buf_id: int,
+        keywords: AbstractSet[str],
         filetype: str,
         filename: str,
         lo: int,
@@ -177,7 +172,7 @@ class BDB(DB):
             with self._conn, closing(self._conn.cursor()) as cursor:
                 _setlines(
                     cursor,
-                    unifying_chars=self._unifying_chars,
+                    keywords=keywords,
                     tokenization_limit=self._tokenization_limit,
                     include_syms=self._include_syms,
                     buf_id=buf_id,
@@ -192,6 +187,7 @@ class BDB(DB):
         self,
         opts: MatchOptions,
         filetype: Optional[str],
+        keywords: AbstractSet[str],
         word: str,
         sym: str,
         limit: int,
@@ -202,7 +198,7 @@ class BDB(DB):
                 if update:
                     _setlines(
                         cursor,
-                        unifying_chars=self._unifying_chars,
+                        keywords=keywords,
                         tokenization_limit=self._tokenization_limit,
                         include_syms=self._include_syms,
                         buf_id=update.buf_id,

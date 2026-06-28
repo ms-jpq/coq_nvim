@@ -1,0 +1,52 @@
+---@class worker.Inflight
+---@field reserve fun(cb: fun(message: any), id?: integer): integer, fun()
+---@field resolve fun(id: integer, message: any)
+---@field has fun(id: integer): boolean
+---@field drain fun(message: any)
+
+local M = {}
+
+---@return worker.Inflight
+M.new = function()
+  local mapping = {}
+  local seq = 0
+  ---@diagnostic disable-next-line: missing-fields
+  local parker = {} ---@type worker.Inflight
+
+  parker.reserve = function(cb, id)
+    if id == nil then
+      seq = seq + 1
+      id = seq
+    end
+    assert(mapping[id] == nil, "inflight: id collision " .. tostring(id))
+
+    local m = mapping
+    m[id] = cb
+    return id, function()
+      m[id] = nil
+    end
+  end
+
+  parker.resolve = function(id, message)
+    local cb = mapping[id]
+    if cb then
+      cb(message)
+    end
+  end
+
+  parker.has = function(id)
+    return mapping[id] ~= nil
+  end
+
+  parker.drain = function(message)
+    local acc = mapping
+    mapping = {}
+    for _, cb in pairs(acc) do
+      cb(message)
+    end
+  end
+
+  return parker
+end
+
+return M

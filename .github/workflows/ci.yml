@@ -7,30 +7,23 @@ on:
     - cron: "0 0 * * *" # daily
 
 jobs:
-  mypy:
-    strategy:
-      matrix:
-        python_ver:
-          - "3.8"
-          - "3.9"
-          - "3.10"
-          - "3.11"
-          - "3.12"
-          - "3.13"
-          - "3"
+  linux:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python_ver }}
+      - uses: actions/setup-python@v5
 
       - run: |-
-          sudo -- apt install --yes -- universal-ctags
+          curl --disable --fail --location --no-progress-meter -- 'https://raw.githubusercontent.com/ms-jpq/deb/refs/heads/deb/pubkey.asc' | sudo -- gpg --batch --dearmor --yes --output /etc/apt/trusted.gpg.d/ms-jpq.gpg
+          sudo -- tee -- /etc/apt/sources.list.d/ms-jpq.list <<-'EOF'
+          deb https://raw.githubusercontent.com/ms-jpq/deb/refs/heads/deb/ /
+          EOF
+
+      - run: |-
+          sudo -- apt update
+          sudo -- apt install --yes -- neovim universal-ctags
 
       - run: |-
           pip3 install -- codespell
@@ -44,3 +37,20 @@ jobs:
 
       - run: |-
           make test
+
+  macos:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+
+      - run: |-
+          brew install -- bash make neovim universal-ctags
+
+      - run: |-
+          python3 -m coq deps
+
+      - run: |-
+          gmake test

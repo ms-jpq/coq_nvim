@@ -131,9 +131,7 @@ async def _when_idle(stack: Stack) -> None:
         async def idle() -> None:
             s = state()
             try:
-                ctx = await context(
-                    options=stack.settings.match, state=s, change=None, manual=False
-                )
+                ctx = await context(state=s, change=None, manual=False)
             except NvimError:
                 ctx = None
             await stack.supervisor.notify_idle(ctx)

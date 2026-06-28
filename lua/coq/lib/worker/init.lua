@@ -1,0 +1,365 @@
+local async = require "coq.lib.async"
+local atools = require "coq.lib.atools"
+local cancel = require "coq.lib.async.cancel"
+local closable = require "coq.lib.closable"
+local errs = require "coq.lib.errs"
+local handle = require "coq.lib.async._handle"
+local inflight = require "coq.lib.worker.inflight"
+local lib = require "coq.lib"
+local mpmc = require "coq.lib.channels.mpmc"
+local nursery = require "coq.lib.async._nursery"
+local runtime = require "coq.lib.async._runtime"
+local transport = require "coq.lib.worker.frame_transport"
+local util = require "coq.lib.channels.util"
+
+local Kind = {
+  RESUME = "resume",
+  YIELD = "yield",
+  STOP = "stop",
+}
+
+local DONE = {}
+
+---@class worker.Worker: lib.Closable
+---@field queue fun<T>(fn: (fun(...): T?), ...: any): T
+---@field queue_stream fun<T>(fn: (fun(...): T?), ...: any): (fun(), lib.Iterator<T>)
+
+---@class worker.Module
+---@field main fun<T>(fn: (fun(...): T?), ...: any): T
+---@field main_stream fun<T>(fn: (fun(...): T?), ...: any): (fun(), lib.Iterator<T>)
+---@field run fun(req_fd: integer, rsp_fd: integer)
+---@field spawn fun(): worker.Worker
+local M = {}
+
+---@param fn function
+---@param ... any
+---@return table
+local build_request = function(fn, ...)
+  return {
+    fn_bytecode = string.dump(fn),
+    args = { ... },
+    n_args = select("#", ...),
+  }
+end
+
+---@param id integer?
+---@param status boolean?
+---@param ... any
+---@return table
+local build_response = function(id, status, ...)
+  return {
+    kind = Kind.YIELD,
+    id = id,
+    status = status,
+    n_values = select("#", ...),
+    values = { ... },
+  }
+end
+
+---@param parked worker.Inflight
+---@param write fun(body: table)
+---@param message table
+---@return fun() close
+---@return fun(): table? iter
+local open = function(parked, write, message)
+  local close, iter = closable.iter(function(defer)
+    local chan = mpmc.new(1)
+    local id, release = parked.reserve(chan.push)
+    defer(release)
+    defer(chan.close)
+
+    local terminated = false
+    defer(function()
+      if not terminated then
+        write { kind = Kind.STOP, id = id }
+      end
+    end)
+
+    message.kind, message.id = Kind.RESUME, id
+    write(message)
+
+    for frame in chan.pull do
+      if frame.status ~= nil then
+        terminated = true
+        coroutine.yield(frame)
+        return
+      end
+      coroutine.yield(frame)
+      write { kind = Kind.RESUME, id = id }
+    end
+  end)
+
+  local unwatch = async.current().on_cancel(close)
+  return function()
+    unwatch()
+    close()
+  end, iter
+end
+
+---@param frame { status: boolean?, values: any[], n_values: integer }?
+---@param level integer
+---@return any ...
+local interpret_frame = function(frame, level)
+  if frame == nil then
+    return
+  end
+  if frame.status == false then
+    error(frame.values[1], level + 1)
+  end
+  return unpack(frame.values, 1, frame.n_values)
+end
+
+---@class worker.Requester
+---@field drain fun(message: any)
+---@field request_oneshot fun(message: table): any ...
+---@field request_stream fun(message: table): fun(), fun(): any ...
+---@field resolve fun(frame: table)
+
+---@param write fun(body: table)
+---@return worker.Requester
+local make_requester = function(write)
+  local parked = inflight.new()
+
+  ---@diagnostic disable-next-line: missing-fields
+  local requester = {} ---@type worker.Requester
+
+  requester.drain = parked.drain
+
+  requester.request_oneshot = function(message)
+    local close, iter = open(parked, write, message)
+    local ok, frame = pcall(iter)
+    close()
+    if not ok then
+      error(frame, 0)
+    end
+    async.check_cancellation()
+    return interpret_frame(frame, 3)
+  end
+
+  requester.request_stream = function(message)
+    local close, iter = open(parked, write, message)
+    return close,
+      function()
+        local frame = iter()
+        async.check_cancellation()
+        return interpret_frame(frame, 2)
+      end
+  end
+
+  requester.resolve = function(frame)
+    parked.resolve(frame.id, frame)
+  end
+
+  return requester
+end
+
+local scheduled = vim.is_thread() and lib.noop or atools.scheduled
+
+local protect = vim.is_thread()
+    and function(fn)
+      return function(...)
+        cancel.pcall(fn, ...)
+      end
+    end
+  or errs.with_reporting
+
+---@class worker.Responder
+---@field serve fun(n: async.Nursery, frame: table)
+
+---@param req_handle async.Handle
+---@param chan channels.Mpmc<true>
+---@param frame { fn_bytecode: string, args?: any[], n_args?: integer, id: integer? }
+---@param write fun(body: table)
+M._dispatch = function(req_handle, chan, frame, write)
+  local args, n_args = frame.args or {}, frame.n_args or 0
+
+  local iter = async.wrap(function(...)
+    local fn = assert(load(frame.fn_bytecode))
+    return coroutine.yield(DONE, build_response(frame.id, pcall(fn, ...)))
+  end)
+
+  local resume = function(...)
+    local packed = util.pack(iter(...))
+    local done = packed[1] == DONE
+    return done, done and packed[2] or packed
+  end
+
+  local pump = function()
+    local done, packed = resume(unpack(args, 1, n_args))
+    while not done do
+      write(build_response(frame.id, nil, util.unpack(packed)))
+      local more = not req_handle.cancelled and chan.pull()
+      if not more then
+        return build_response(frame.id, true)
+      end
+      done, packed = resume(true)
+    end
+    return packed
+  end
+
+  local ok, terminal = pcall(pump)
+  local drained, err = pcall(function()
+    for _ in iter do
+      lib.noop()
+    end
+  end)
+  if not drained and not cancel.is(err) then
+    errs.report(err)
+  end
+
+  if not ok and cancel.is(terminal) then
+    ok, terminal = true, build_response(frame.id, true)
+  end
+
+  write(ok and terminal or build_response(frame.id, false, terminal))
+end
+
+---@param write fun(body: table)
+---@return worker.Responder
+local make_responder = function(write)
+  local parked = inflight.new()
+
+  local serve = function(n, frame)
+    if parked.has(frame.id) then
+      n.spawn(protect(function()
+        parked.resolve(frame.id, frame)
+      end))
+      return
+    end
+    if frame.kind ~= Kind.RESUME then
+      return
+    end
+
+    local req_handle = handle.new(async.current())
+    local chan = mpmc.new(1)
+    local _ = req_handle.on_cancel(chan.close)
+
+    local _, release = parked.reserve(function(rsp)
+      if rsp.kind == Kind.STOP then
+        req_handle.cancel()
+      else
+        chan.push(true)
+      end
+    end, frame.id)
+
+    n.spawn(protect(function(defer)
+      defer(req_handle.cancel)
+      defer(release)
+      runtime.bind(coroutine.running(), req_handle)
+      scheduled()
+      M._dispatch(req_handle, chan, frame, write)
+    end))
+  end
+
+  return { serve = serve }
+end
+
+---@class worker.Endpoint
+---@field request_oneshot fun(message: table): any ...
+---@field request_stream fun(message: table): fun(), fun(): any ...
+---@field serve fun(n: async.Nursery, dead_message: string)
+
+---@param duplex worker.Duplex
+---@return worker.Endpoint
+local make_endpoint = function(duplex)
+  local write = transport.writer(duplex.writer)
+  local requester = make_requester(write)
+  local responder = make_responder(write)
+
+  ---@diagnostic disable-next-line: missing-fields
+  local endpoint = {} ---@type worker.Endpoint
+
+  endpoint.request_oneshot = requester.request_oneshot
+  endpoint.request_stream = requester.request_stream
+
+  endpoint.serve = function(n, dead_message)
+    for frame in transport.reader(duplex.reader) do
+      if frame.kind == Kind.YIELD then
+        n.spawn(protect(function()
+          requester.resolve(frame)
+        end))
+      else
+        responder.serve(n, frame)
+      end
+    end
+    requester.drain(build_response(nil, false, dead_message))
+  end
+
+  return endpoint
+end
+
+if vim.is_thread() then
+  ---@param req_fd integer
+  ---@param rsp_fd integer
+  M.run = function(req_fd, rsp_fd)
+    local duplex = transport.open_duplex(req_fd, rsp_fd)
+
+    local endpoint = make_endpoint(duplex)
+
+    M.main = function(fn, ...)
+      return endpoint.request_oneshot(build_request(fn, ...))
+    end
+
+    M.main_stream = function(fn, ...)
+      return endpoint.request_stream(build_request(fn, ...))
+    end
+
+    local main = function()
+      async.scope(function(n, defer)
+        defer(duplex.close)
+        endpoint.serve(n, "host died")
+      end)
+    end
+
+    async.entry(function()
+      pcall(main)
+      vim.uv.stop()
+    end)()
+    vim.uv.run()
+  end
+end
+
+---@return worker.Worker
+M.spawn = function()
+  local duplex, remote = transport.duplex_pair()
+  local state = closable.new(duplex.close)
+
+  local endpoint = make_endpoint(duplex)
+
+  transport.spawn_worker(function(...)
+    require("coq.lib.worker").run(...)
+  end, remote.read_fd, remote.write_fd)
+
+  local n = nursery.new()
+
+  ---@diagnostic disable-next-line: missing-fields
+  local worker = {} ---@type worker.Worker
+
+  worker.queue = function(fn, ...)
+    if state.closed then
+      error("worker closed", 2)
+    end
+    return endpoint.request_oneshot(build_request(fn, ...))
+  end
+
+  worker.queue_stream = function(fn, ...)
+    if state.closed then
+      error("worker closed", 2)
+    end
+    return endpoint.request_stream(build_request(fn, ...))
+  end
+
+  worker.close = function()
+    state.close()
+    n.join()
+  end
+
+  n.spawn(errs.with_reporting(function()
+    endpoint.serve(n, "worker died")
+  end))
+
+  ---@cast worker worker.Worker
+  return worker
+end
+
+return M

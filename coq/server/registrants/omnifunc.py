@@ -41,6 +41,8 @@ def _should_cont(
             return extern.is_dir
         else:
             return False
+    elif len(cur.line_before) == 0 and "\n" in skip_after:
+        return False
     elif any(cur.line_before.endswith(token) for token in skip_after):
         return False
 
@@ -52,7 +54,6 @@ async def comp_func(
 ) -> None:
     with suppress_and_log():
         ctx = await context(
-            options=stack.settings.match,
             state=s,
             change=change,
             manual=manual or s.manual_override,

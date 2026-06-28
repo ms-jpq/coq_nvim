@@ -81,11 +81,17 @@ Install the [Nvim Official LSP integration](https://github.com/neovim/nvim-lspco
 **Requires 2 lines of change to support LSP snippets**
 
 ```lua
-local lsp = require "lspconfig"
 local coq = require "coq" -- add this
 
+-- legacy style
+local lsp = require "lspconfig"
 lsp.<server>.setup(<stuff...>)                              -- before
 lsp.<server>.setup(coq.lsp_ensure_capabilities(<stuff...>)) -- after
+
+-- new style
+vim.lsp.config(<server>, <stuff...>)                              -- before
+vim.lsp.config(<server>, coq.lsp_ensure_capabilities(<stuff...>)) -- after
+vim.lsp.enable(<server>)
 ```
 
 ### Snippets
@@ -93,8 +99,6 @@ lsp.<server>.setup(coq.lsp_ensure_capabilities(<stuff...>)) -- after
 - [**Over 9000** built-in snippets](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/coq%2Bsnippets%2Bv2.json)
 
 - 99% of LSP grammar, 95% of Vim grammar
-
-- [Press key](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md) to jump to next edit region.
 
 ![snippet_norm.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/snip.gif)
 
@@ -176,23 +180,7 @@ apt install universal-ctags    # good
 
 ![tmux.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/tmux.gif)
 
-### Tabnine
-
-- CPU preserving flow control
-
-- Auto download & install & update
-
-- Platform specific `cgroupv2` & `taskpolicy` core pinning / CPU management.
-
-![tabnine.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/tabnine.gif)
-
-_T9 is disabled by default, I might remove it, if they do not improve the CPU usage. [Their own bug tracker](https://github.com/codota/TabNine/issues/43)._
-
-Enable via: `coq_settings.clients.tabnine.enabled=true`
-
 ### [Modular lua sources](https://github.com/ms-jpq/coq.thirdparty) & external third party integrations
-
-- **Even faster than pure lua**! (transparent `sqlite` caching)
 
 - [**Tons of built-ins**](https://github.com/ms-jpq/coq.thirdparty)
 
@@ -226,7 +214,7 @@ Some other built-ins:
 
 ### Statistics
 
-`:COQstats`
+`:COQ stats`
 
 ![statistics.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/stats.gif)
 
@@ -250,119 +238,93 @@ Either set `let g:coq_settings = { 'display.icons.mode': 'none' }` to disable ic
 
 ## Install
 
-**Windows** requires symlinks support in git.
-
-```bash
-git config --global core.symlinks true
-```
-
-Needs python virtual env
-
-```bash
-apt install --yes -- python3-venv
-```
-
-**Minimum version**: python:`3.8.2`, nvim: `0.5`, sqlite: `recentish`
-
 <details>
   <summary>Vim</summary>
 
-  Install the usual way, ie. VimPlug, Vundle, etc
+Install the usual way, ie. VimPlug, Vundle, etc
 
-  ```VimL
-  " main one
-  Plug 'ms-jpq/coq_nvim', {'branch': 'coq'}
-  " 9000+ Snippets
-  Plug 'ms-jpq/coq.artifacts', {'branch': 'artifacts'}
+```vim
+" main one
+Plug 'ms-jpq/coq_nvim', {'branch': 'coq'}
+" 9000+ Snippets
+Plug 'ms-jpq/coq.artifacts', {'branch': 'artifacts'}
 
-  " lua & third party sources -- See https://github.com/ms-jpq/coq.thirdparty
-  " Need to **configure separately**
+" lua & third party sources -- See https://github.com/ms-jpq/coq.thirdparty
+" Need to **configure separately**
 
-  Plug 'ms-jpq/coq.thirdparty', {'branch': '3p'}
-  " - shell repl
-  " - nvim lua api
-  " - scientific calculator
-  " - comment banner
-  " - etc
-  ```
+Plug 'ms-jpq/coq.thirdparty', {'branch': '3p'}
+" - shell repl
+" - nvim lua api
+" - scientific calculator
+" - comment banner
+" - etc
+```
+
 </details>
 
 <details>
   <summary>Neovim</summary>
 
-  ### lazy.nvim
+### lazy.nvim
 
-  ```lua
-  {
-    "neovim/nvim-lspconfig", -- REQUIRED: for native Neovim LSP integration
-    lazy = false, -- REQUIRED: tell lazy.nvim to start this plugin at startup
-    dependencies = {
-      -- main one
-      { "ms-jpq/coq_nvim", branch = "coq" },
-  
-      -- 9000+ Snippets
-      { "ms-jpq/coq.artifacts", branch = "artifacts" },
-  
-      -- lua & third party sources -- See https://github.com/ms-jpq/coq.thirdparty
-      -- Need to **configure separately**
-      { 'ms-jpq/coq.thirdparty', branch = "3p" }
-      -- - shell repl
-      -- - nvim lua api
-      -- - scientific calculator
-      -- - comment banner
-      -- - etc
-    },
-    init = function()
-      vim.g.coq_settings = {
-          auto_start = true, -- if you want to start COQ at startup
-          -- Your COQ settings here
-      }
-    end,
-    config = function()
-      -- Your LSP settings here
-    end,
-  }
-  ```
+```lua
+{
+  "neovim/nvim-lspconfig", -- REQUIRED: for native Neovim LSP integration
+  lazy = false, -- REQUIRED: tell lazy.nvim to start this plugin at startup
+  dependencies = {
+    -- main one
+    { "ms-jpq/coq_nvim", branch = "coq" },
+
+    -- 9000+ Snippets
+    { "ms-jpq/coq.artifacts", branch = "artifacts" },
+
+    -- lua & third party sources -- See https://github.com/ms-jpq/coq.thirdparty
+    -- Need to **configure separately**
+    { 'ms-jpq/coq.thirdparty', branch = "3p" }
+    -- - shell repl
+    -- - nvim lua api
+    -- - scientific calculator
+    -- - comment banner
+    -- - etc
+  },
+  init = function()
+    vim.g.coq_settings = {
+        -- Your COQ settings here
+    }
+  end,
+  config = function()
+    -- Your LSP settings here
+  end,
+}
+```
+
 </details>
 
 ## Documentation
 
-To start `coq`
+- [:COQ help v2](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/V2.md)
 
-```viml
-" the [-s, --shut-up] flag will remove the greeting message
-:COQnow [--shut-up]
-```
+- [:COQ help config](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CONF.md)
 
-🌟 If required, it will ask you to run `:COQdeps`, please run it and do `:COQnow` again.
+- [:COQ help keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md)
 
-There is built-in [help command](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/README.md)
+- [:COQ help snips](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/SNIPS.md)
 
-```viml
-:COQhelp [--web] [topic]
-```
+- [:COQ help fuzzy](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/FUZZY.md)
 
-- [:COQhelp config](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CONF.md)
+- [:COQ help comp](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/COMPLETION.md)
 
-- [:COQhelp keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md)
+- [:COQ help display](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/DISPLAY.md)
 
-- [:COQhelp snips](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/SNIPS.md)
+- [:COQ help sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/SOURCES.md)
 
-- [:COQhelp fuzzy](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/FUZZY.md)
+- [:COQ help misc](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/MISC.md)
 
-- [:COQhelp comp](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/COMPLETION.md)
+- [:COQ help perf](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/PERF.md)
 
-- [:COQhelp display](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/DISPLAY.md)
+- [:COQ help stats](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/STATS.md)
 
-- [:COQhelp sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/SOURCES.md)
-
-- [:COQhelp misc](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/MISC.md)
-
-- [:COQhelp perf](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/PERF.md)
-
-- [:COQhelp stats](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/STATS.md)
-
-- [:COQhelp custom_sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)
+- [:COQ help custom_sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)
 
 ## FAQ
 
@@ -370,100 +332,37 @@ There is built-in [help command](https://github.com/ms-jpq/coq_nvim/tree/coq/doc
 
 Always:
 
-| key         | function                 |
-| ----------- | ------------------------ |
-| `<c-space>` | manual completion        |
-| `<c-h>`     | edit snippet placeholder |
+| key         | function          |
+| ----------- | ----------------- |
+| `<c-space>` | manual completion |
 
 When completion menu is open:
 
-| key           | function                      |
-| ------------- | ----------------------------- |
-| `<c-k>`       | move preview to bigger window |
-| `<esc>`       | exit to normal                |
-| `<backspace>` | backspace                     |
-| `<enter>`     | select completion             |
-| `<tab>`       | next result                   |
-| `<s-tab>`     | prev result                   |
+| key           | function          |
+| ------------- | ----------------- |
+| `<esc>`       | exit to normal    |
+| `<backspace>` | backspace         |
+| `<enter>`     | select completion |
+| `<tab>`       | next result       |
+| `<s-tab>`     | prev result       |
 
-Unbound:
+For snippet placeholder navigation, bind `vim.snippet.jump(±1)` yourself.
 
-| keymap                           | function                                      |
-| -------------------------------- | --------------------------------------------- |
-| `coq_settings.keymap.repeat`     | repeat last edit                              |
-| `coq_settings.keymap.eval_snips` | evulate snippet in document / under selection |
-
-**When hovering over a result, entering any key [a-z] will select it**
-
-This is a vim thing, I have zero control over :(
-
-#### `.` Repeat
-
-Set `coq_settings.keymap.repeat` to a hotkey.
-
-See `:COQhelp keybind` for details
-
-#### Flickering
-
-By default, the old results are cleared on each keystroke, so the popup menu is closed right away.
-
-You can disable this: at the cost of having stale results shown until the new ones come in.
-
-`let g:coq_settings = { 'display.pum.fast_close': v:false }`
-
-This is not the default because some LSP servers are very slow (ie. tailwindcss), leading to stale results being shown for too long.
-
-#### Autostart COQ
-
-`let g:coq_settings = { 'auto_start': v:true }` or `let g:coq_settings = { 'auto_start': 'shut-up' }`
-
-This must be set **BEFORE** `require("coq")`
+**When hovering over a result, entering any key [a-z] will select it.** This is a vim thing.
 
 #### LSP too slow to show up on keystroke.
 
-You have some options, each has its trade off:
+Increase `coq_settings.limits.completion_auto_timeout`. This slows feedback on every keystroke.
 
-1. Increase the `coq_settings.limits.completion_auto_timeout`.
-
-This will slow down feedback on _every keystroke_, as `coq` waits for LSP.
-
-2. Use the manual completion hotkey (default `<c-space>`)
-
-Annoying! And the manual completion also has a timeout `coq_settings.limits.completion_manual_timeout`.
-
-Some LSP servers will still fail to respond within the default `.66` seconds, in that case pressing `<c-space>` multiple times might actually help some LSP servers catch up, depending on their implementation.
+Or use manual completion (`<c-space>`), bounded by `coq_settings.limits.completion_manual_timeout`.
 
 #### LSP sometimes not importing
 
-Increase `coq_settings.clients.lsp.resolve_timeout`
-
-This will however, make applying edits slower.
+Increase `coq_settings.clients.lsp.resolve_timeout`. Applying edits gets slower.
 
 #### Missing Results
 
-On keystroke only a max of `coq_settings.match.max_results` are shown.
-
-Use manual completion hotkey to show all results.
-
-#### Some LSP servers give inconsistent completions
-
-This happens when certain LSP servers give you 1000s of unfiltered results in _alphabetical order_ and you still have to respond in a few dozen milliseconds.
-
-To eliminate `a-z` bias, `coq` does a random sort on the resultset and process and cache as many of them as possible within the performance window.
-
-So if some results are not in the SQLite cache, and have yet to be processed, they will be missing. They might however still show up on later keystrokes.
-
-Use the manual hotkey if you need to see everything.
-
-#### My vim crashed!
-
-**Disable TreeSitter**
-
-Treesitter still needs stability work.
-
-#### I want to use a different python version
-
-`vim.g.python3_host_prog=<absolute path to python>`
+On keystroke only `coq_settings.match.max_results` items are shown. Use the manual completion hotkey to see all.
 
 ## If you like this...
 

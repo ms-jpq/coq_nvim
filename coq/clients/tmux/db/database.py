@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from sqlite3 import Connection, OperationalError
 from typing import AbstractSet, Iterator, Mapping, MutableMapping, Optional
 
-from ....consts import TMUX_DB
+from ....consts import BASIC_KEYWORDS, TMUX_DB
 from ....databases.types import DB
 from ....shared.parse import tokenize
 from ....shared.settings import MatchOptions
@@ -34,12 +34,10 @@ class TMDB(DB):
     def __init__(
         self,
         tokenization_limit: int,
-        unifying_chars: AbstractSet[str],
         include_syms: bool,
     ) -> None:
         self._current: Optional[Pane] = None
         self._tokenization_limit = tokenization_limit
-        self._unifying_chars = unifying_chars
         self._include_syms = include_syms
         self._cache: MutableMapping[str, str] = {}
         self._conn = _init()
@@ -77,7 +75,7 @@ class TMDB(DB):
             for pane, text in not_cached.items():
                 for word in tokenize(
                     self._tokenization_limit,
-                    unifying_chars=self._unifying_chars,
+                    keywords=BASIC_KEYWORDS,
                     include_syms=self._include_syms,
                     text=text,
                 ):

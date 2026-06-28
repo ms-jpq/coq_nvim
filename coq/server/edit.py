@@ -23,7 +23,7 @@ from pynvim_pp.lib import decode, encode
 from pynvim_pp.logging import log
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.rpc_types import NvimError
-from pynvim_pp.types import NoneType
+from pynvim_pp.types import BufNamespace, NoneType
 from pynvim_pp.window import Window
 from std2.collections import defaultlist
 from std2.itertools import intervals
@@ -221,6 +221,7 @@ def _range_edit_trans(
     primary: bool,
     lines: _Lines,
     edit: BaseRangeEdit,
+    editing: bool = False,
 ) -> EditInstruction:
     if (
         primary
@@ -229,7 +230,7 @@ def _range_edit_trans(
         and len(
             tuple(
                 coalesce(
-                    match.unifying_chars,
+                    ctx.keywordset,
                     include_syms=True,
                     backwards=None,
                     chars=edit.new_text,
@@ -249,7 +250,7 @@ def _range_edit_trans(
 
     else:
         (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
-        split_lines = edit.new_text.split(ctx.linefeed)
+        split_lines = deque(edit.new_text.split(ctx.linefeed))
 
         if edit.encoding == UTF16:
             c1 = len(encode(decode(lines.b_lines16[r1][: ec1 * 2], encoding=UTF16)))
@@ -265,13 +266,29 @@ def _range_edit_trans(
         else:
             never(edit.encoding)
 
-        c1 = min(len(lines.b_lines8[r1]), c1)
-        c2 = min(len(lines.b_lines8[r2]), c2)
+        b_r1, b_r2 = lines.b_lines8[r1], lines.b_lines8[r2]
+        pox_x, pos_y = c1, r2
+
+        if primary:
+            c1 = min(len(b_r1), c1)
+            c2 = min(len(b_r2), c2)
+        else:
+            if c1 >= len(b_r1):
+                r1 += 1
+                c1 = 0
+                if split_lines and not split_lines[0]:
+                    split_lines.popleft()
+            if c2 >= len(b_r2):
+                r2 += 1
+                c2 = 0
+                if split_lines and split_lines[-1]:
+                    split_lines.append("")
+
         begin = r1, c1
         end = r2, c2
 
         if primary and adjust_indent:
-            line_before = ctx.line_before[:c1]
+            line_before = ctx.line_before[:pox_x]
             new_lines: Sequence[str] = tuple(
                 indent_adjusted(ctx, line_before=line_before, lines=split_lines)
             )
@@ -288,7 +305,7 @@ def _range_edit_trans(
             (
                 len(encode(lines_before[-1]))
                 if len(lines_before) > 1
-                else len(lines.b_lines8[r2][:c1]) + len(encode(lines_before[0]))
+                else len(lines.b_lines8[pos_y][:pox_x]) + len(encode(lines_before[0]))
             )
             if primary
             else -1
@@ -419,10 +436,28 @@ def _shift(
     return new_insts, m_shift
 
 
-async def apply(buf: Buffer, instructions: Iterable[EditInstruction]) -> _MarkShift:
+async def apply(
+    ns: BufNamespace, buf: Buffer, instructions: Iterable[EditInstruction]
+) -> Tuple[_MarkShift, int]:
     insts, m_shift = _shift(instructions)
+    y_shifted = 0
     for inst in insts:
+        (r1, c1), (r2, c2) = inst.begin, inst.end
+
         try:
+            if inst.primary:
+                marks = await buf.get_extmarks(ns)
+                for mark in marks:
+                    m1, _ = mark.begin
+                    y_shifted = m1 - r1
+                    m2 = r2 + y_shifted
+                    inst = replace(inst, begin=(m1, c1), end=(m2, c2))
+                    break
+            elif y_shifted:
+                inst = replace(
+                    inst, begin=(r1 + y_shifted, c1), end=(r2 + y_shifted, c2)
+                )
+
             await buf.set_text(begin=inst.begin, end=inst.end, text=inst.new_lines)
         except NvimError as e:
             tpl = """
@@ -430,8 +465,6 @@ async def apply(buf: Buffer, instructions: Iterable[EditInstruction]) -> _MarkSh
             ${inst}
             ${ctx}
             """
-
-            (r1, _), (r2, _) = inst.begin, inst.end
             try:
                 ctx = await buf.get_lines(min(r1, r2), max(r1, r2) + 1)
             except NvimError:
@@ -440,7 +473,7 @@ async def apply(buf: Buffer, instructions: Iterable[EditInstruction]) -> _MarkSh
             msg = Template(dedent(tpl)).substitute(e=e, inst=inst, ctx=ctx)
             log.warning("%s", msg)
 
-    return m_shift
+    return m_shift, y_shifted
 
 
 def _shift_marks(shift: _MarkShift, marks: Iterable[Mark]) -> Iterator[Mark]:
@@ -594,12 +627,14 @@ async def parse_secondary(
         return (inst for inst in instructions if not inst.primary)
 
 
-async def _restore(win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, Optional[int]]:
+async def _restore(
+    win: Window, buf: Buffer, pos: NvimPos
+) -> Tuple[BufNamespace, str, Optional[int]]:
     row, _ = pos
     ns = await Nvim.create_namespace(NS)
     marks = await buf.get_extmarks(ns)
     if len(marks) != 2:
-        return "", 0
+        return ns, "", 0
     else:
         m1, m2 = marks
         after, *_ = await buf.get_lines(lo=row, hi=row + 1)
@@ -615,7 +650,7 @@ async def _restore(win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, Optiona
         if inserted:
             await buf.set_text(begin=m1.end, end=m2.begin, text=("",))
 
-        return inserted, movement
+        return ns, inserted, movement
 
 
 async def reset_undolevels() -> None:
@@ -639,8 +674,9 @@ async def edit(
 
         if synthetic:
             inserted, movement = "", None
+            ns = await Nvim.create_namespace(NS)
         else:
-            inserted, movement = await _restore(
+            ns, inserted, movement = await _restore(
                 win=win, buf=buf, pos=state.context.position
             )
 
@@ -651,15 +687,16 @@ async def edit(
         ):
             return None
 
+        if not synthetic:
+            stack.idb.inserted(metric.instance.bytes, sort_by=metric.comp.sort_by)
+
+        m_shift, y_shifted = await apply(ns, buf=buf, instructions=parsed.instructions)
         n_row, n_col = _cursor(
             state.context.position,
             instructions=parsed.instructions,
         )
+        n_row += y_shifted
 
-        if not synthetic:
-            stack.idb.inserted(metric.instance.bytes, sort_by=metric.comp.sort_by)
-
-        m_shift = await apply(buf=buf, instructions=parsed.instructions)
         if inserted:
             try:
                 await buf.set_text(

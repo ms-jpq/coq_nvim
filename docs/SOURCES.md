@@ -12,8 +12,6 @@ Enable source
 true
 ```
 
-except for `tabnine`
-
 ##### `coq_settings.clients.<x>.short_name`
 
 Source name to display in the completion menu.
@@ -70,6 +68,16 @@ null
 
 #### coq_settings.clients.lsp
 
+##### `coq_settings.clients.lsp.ignored_servers`
+
+Which LSP servers to ignore.
+
+**default:**
+
+```json
+[]
+```
+
 ##### `coq_settings.clients.lsp.resolve_timeout`
 
 Time it takes to wait for LSP servers to respond with header import before edit is applied.
@@ -77,7 +85,7 @@ Time it takes to wait for LSP servers to respond with header import before edit 
 **default:**
 
 ```json
-0.06
+0.09
 ```
 
 ---
@@ -118,18 +126,6 @@ Additional snippet load path, if relative, resolves under nvim config dir.
 null
 ```
 
-##### `coq_settings.clients.snippets.warn`
-
-List of things to issue an warning about.
-
-Default is to nag about out of date snippets.
-
-**default:**
-
-```json
-["missing", "outdated"]
-```
-
 ---
 
 #### coq_settings.clients.paths
@@ -148,16 +144,6 @@ For relative paths, what should their potential base path(s) be.
 ["cwd", "file"]
 ```
 
-##### `coq_settings.clients.paths.path_seps`
-
-Which separator chars to use. Empty for default. Must be `/` under unix and `/` or `\` for windows.
-
-**default:**
-
-```json
-[]
-```
-
 ##### `coq_settings.clients.paths.preview_lines`
 
 Try to preview this many lines.
@@ -171,16 +157,6 @@ Try to preview this many lines.
 ---
 
 #### coq_settings.clients.tree_sitter
-
-##### `coq_settings.clients.tree_sitter.slow_threshold`
-
-Send out a warning if treesitter is slower than this
-
-**default:**
-
-```json
-0.1
-```
 
 ##### `coq_settings.clients.tree_sitter.path_sep`
 
@@ -196,16 +172,6 @@ Aesthetics only, path separator.
 
 #### coq_settings.clients.buffers
 
-##### `coq_settings.clients.buffers.match_syms`
-
-Also match symbols in addition to words.
-
-**default:**
-
-```json
-false
-```
-
 ##### `coq_settings.clients.buffers.same_filetype`
 
 Restrict matching to buffers of the same filetype
@@ -219,26 +185,6 @@ false
 ---
 
 #### coq_settings.clients.registers
-
-##### `coq_settings.clients.registers.match_syms`
-
-Also match symbols in addition to words.
-
-**default:**
-
-```json
-false
-```
-
-##### `coq_settings.clients.registers.max_yank_size`
-
-For the yank register: `0`. Ignore contents if size exceeds limit.
-
-**default:**
-
-```json
-8888
-```
 
 ##### `coq_settings.clients.registers.words`
 
@@ -270,16 +216,6 @@ Will only match at beginning of lines.
 
 #### coq_settings.clients.tmux
 
-##### `coq_settings.clients.tmux.match_syms`
-
-Also match symbols in addition to words.
-
-**default:**
-
-```json
-false
-```
-
 ##### `coq_settings.clients.tmux.all_sessions`
 
 Pull words & symbols from not just current session.
@@ -292,16 +228,8 @@ true
 
 ---
 
-#### coq_settings.clients.tabnine
-
-No special conf.
-
-But _Disabled by default_. Need `coq_settings.clients.tabnine=true` to enable.
-
----
-
 #### coq_settings.clients.third_party
 
 No special conf.
 
-See [:COQhelp custom_sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)
+See [:COQ help custom_sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)

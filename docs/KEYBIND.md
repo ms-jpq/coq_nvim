@@ -48,69 +48,7 @@ Manually trigger completions, with a longer timeout.
 "<c-space>"
 ```
 
-#### `coq_settings.keymap.repeat`
-
-Repeat last edit performed by `coq`.
-
-Note: this is not the same as `.` key in Vim. Vim's `.` key is pretty "dumb" as it simply stores and replays keystrokes, while `coq` performs arbitrary edits.
-
-ie. typo correction, some LSP requests, multi-line Tabnine edits, etc
-
-`coq` does not records it's edits in `.` history, because it's not feasible to translate any arbitrary edit into a sequence of `.` keystrokes without substantial edgecases.
-
-ie. `coq` cannot realistically reproduce Vim's "unique" interpertion of unicode grapheme clusters bug for bug.
-
-**default:**
-
-```json
-null
-```
-
-#### `coq_settings.keymap.bigger_preview`
-
-When floating preview window is open, move the preview from floating window to fixed window.
-
-Useful for reading references.
-
-**default:**
-
-```json
-"<c-k>"
-```
-
-#### `coq_settings.keymap.jump_to_mark`
-
-When snippets come with placeholders, jump to edit next placeholder.
-
-Will ask to apply linked edits in a menu, if linked edits are available.
-
-Pressing `<c-c>` to resume to edit as normal.
-
-**default:**
-
-```json
-"<c-h>"
-```
-
-#### `coq_settings.keymap.eval_snips`
-
-Evaluate current visual selection or buffer as user defined snippets.
-
-**default:**
-
-```json
-null
-```
-
-#### coq_settings.keymap.manual_complete_insertion_only
-
-Map the manual keybinding trigger only in `INSERT` mode.
-
-**default**:
-
-```json
-false
-```
+See [v2](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/V2.md) for the keymap options that were changed / removed.
 
 ## Custom keybindings
 

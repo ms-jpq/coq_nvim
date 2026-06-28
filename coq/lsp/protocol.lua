@@ -1,6 +1,6 @@
 return (function()
   local sanitize = function(spec)
-    local tb = {[vim.type_idx] = vim.types.dictionary}
+    local tb = { [vim.type_idx] = vim.types.dictionary }
     for k, v in pairs(spec) do
       if type(k) == "string" and type(v) == "number" then
         tb[k] = v

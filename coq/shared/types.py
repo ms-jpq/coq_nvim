@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path, PurePath
 from typing import (
+    AbstractSet,
     Any,
     Callable,
     Literal,
@@ -64,6 +65,7 @@ class Context:
     buf_id: int
     filetype: str
     filename: str
+    keywordset: AbstractSet[str]
     line_count: int
     linefeed: Literal["\r\n", "\n", "\r"]
     tabstop: int

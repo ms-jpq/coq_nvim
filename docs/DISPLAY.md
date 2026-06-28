@@ -2,30 +2,6 @@
 
 ### coq_settings.display
 
-#### `coq_settings.display.mark_highlight_group`
-
-The highlight group alias for snippet regions that you can navigate around using a hotkey.
-
-**default:**
-
-```json
-"Pmenu"
-```
-
----
-
-#### `coq_settings.display.mark_applied_notify`
-
-When you go the next edit region (e.g : snippet placeholder) you are notified when a mark is applied if this option is enabled.
-
-**default:**
-
-```json
-true
-```
-
----
-
 #### coq_settings.display.ghost_text
 
 The virtual text previewing selected completion
@@ -36,14 +12,6 @@ The virtual text previewing selected completion
 
 ```json
 true
-```
-
-##### `coq_settings.display.ghost_text.context`
-
-Surrounding decoration around ghost text
-
-```json
-[" 〈 ", " 〉"]
 ```
 
 ##### `coq_settings.display.ghost_text.highlight_group`
@@ -58,62 +26,6 @@ Comment
 
 #### coq_settings.display.pum
 
-Vim calls the completion popup menu _`pum`_.
-
-##### `coq_settings.display.pum.fast_close`
-
-The popup menu will be closed on each keystroke, and re-opened when results coming in.
-
-Disabling this will lead to more smooth menu animation, but also the stale results will be shown until the new one comes in.
-
-**default:**
-
-```json
-true
-```
-
-##### `coq_settings.display.pum.y_max_len`
-
-Maximum height of the popup menu.
-
-The min of `(y_max_len, y_ratio)` wins.
-
-**default:**
-
-```json
-16
-```
-
-##### `coq_settings.display.pum.y_ratio`
-
-Maximum height of the popup menu, as a ratio of window height.
-
-**default:**
-
-```json
-0.3
-```
-
-##### `coq_settings.display.pum.x_max_len`
-
-Maximum width of the popup menu.
-
-**default:**
-
-```json
-66
-```
-
-##### `coq_settings.display.pum.x_truncate_len`
-
-Omit `<kind>` for snippets when we are out of space.
-
-**default:**
-
-```json
-12
-```
-
 ##### `coq_settings.display.pum.ellipsis`
 
 Show `...` when we are out of space.
@@ -122,16 +34,6 @@ Show `...` when we are out of space.
 
 ```json
 "…"
-```
-
-##### `coq_settings.display.pum.kind_context`
-
-For item `<kind>` show `[<kind>]`, purely for aesthetics.
-
-**default:**
-
-```json
-[" [", "]"]
 ```
 
 ##### `coq_settings.display.pum.source_context`
@@ -290,17 +192,3 @@ For a (mostly exhaustive) list of `kind` keys: `:lua print(vim.inspect(vim.lsp.p
 For `ctags` do `ctags --list-kinds-full`.
 
 The defaults do not cover `ctags`, as there are too many to find unique icons for.
-
-#### coq_settings.display.statusline
-
-Used for the statusline.
-
-##### `coq_settings.display.statusline.helo`
-
-Displays a greeting in the statusline.
-
-**default:**
-
-```json
-true
-```

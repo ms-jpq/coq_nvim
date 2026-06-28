@@ -14,6 +14,7 @@ from contextlib import suppress
 from itertools import chain, count
 from json import dumps, loads
 from json.decoder import JSONDecodeError
+from os import linesep
 from pathlib import PurePath
 from subprocess import DEVNULL, PIPE
 from typing import Any, AsyncIterator, Iterator, Mapping, Optional, Sequence, cast
@@ -163,7 +164,7 @@ async def _proc(bin: PurePath, cwd: PurePath) -> Optional[Process]:
         return proc
 
 
-async def _readline(stdout: StreamReader) -> bytes:
+async def _readline(stdout: StreamReader) -> bytearray:
     acc = bytearray()
     while True:
         try:
@@ -235,8 +236,19 @@ class Worker(BaseWorker[T9Client, None]):
 
                 if not self._bin:
                     await Nvim.write(LANG("failed T9 download"))
+                    return
                 else:
                     await Nvim.write(LANG("end T9 download"))
+
+            req = {
+                "version": _VERSION,
+                "request": {
+                    "LoginWithCustomToken": {"custom_token": self._options.auth_token}
+                },
+            }
+            json = dumps(req, check_circular=False, ensure_ascii=False)
+            line = await self._comm(cwd=vars_dir, json=json)
+            await Nvim.write(f"T9: {line}")
 
     async def _clean(self) -> None:
         if proc := self._proc:
@@ -273,7 +285,9 @@ class Worker(BaseWorker[T9Client, None]):
         else:
             return await shield(cont())
 
-    async def _work(self, context: Context, timeout: float) -> AsyncIterator[Completion]:
+    async def _work(
+        self, context: Context, timeout: float
+    ) -> AsyncIterator[Completion]:
         limit = (
             BIGGEST_INT
             if context.manual
@@ -301,6 +315,12 @@ class Worker(BaseWorker[T9Client, None]):
                         if isinstance(resp, Mapping):
                             self._t9_locked = resp.get("is_locked", False)
 
+                        rsp = cast(Response, resp)
+                        if DEBUG and isinstance(
+                            msg := rsp.get("user_message"), Sequence
+                        ):
+                            await Nvim.write(linesep.join(msg))
+
                         pc = await protocol()
                         for comp in _decode(
                             pc,
@@ -308,6 +328,6 @@ class Worker(BaseWorker[T9Client, None]):
                             ellipsis=self._supervisor.display.pum.ellipsis,
                             syntax=context.filetype,
                             id=id,
-                            reply=cast(Response, resp),
+                            reply=rsp,
                         ):
                             yield comp

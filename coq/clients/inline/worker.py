@@ -6,7 +6,7 @@ from std2 import anext
 from std2.aitertools import to_async
 from std2.itertools import batched
 
-from ...consts import CACHE_CHUNK
+from ...consts import BASIC_KEYWORDS, CACHE_CHUNK
 from ...lsp.requests.completion import comp_lsp_inline
 from ...lsp.types import LSPcomp
 from ...shared.executor import AsyncExecutor
@@ -65,12 +65,16 @@ class Worker(BaseWorker[LSPInlineClient, None]):
                         async for comps in self._request(context):
                             for chunked in batched(comps.items, n=CACHE_CHUNK):
                                 self._cache.set_cache(
-                                    {comps.client: chunked}, skip_db=True
+                                    BASIC_KEYWORDS,
+                                    items={comps.client: chunked},
+                                    skip_db=True,
                                 )
 
             await self._with_interrupt(cont())
 
-    async def _work(self, context: Context, timeout: float) -> AsyncIterator[Completion]:
+    async def _work(
+        self, context: Context, timeout: float
+    ) -> AsyncIterator[Completion]:
         async with self._work_lock, self._working:
             try:
                 _, _, cached = self._cache.apply_cache(

@@ -17,8 +17,9 @@ clients:
     always_on_top: null
     always_wait: false
     enabled: true
+    ignored_servers: []
     max_pulls: 188
-    resolve_timeout: 0.06
+    resolve_timeout: 0.09
     short_name: "LS"
     weight_adjust: 0.75
 
@@ -26,6 +27,7 @@ clients:
     always_on_top: []
     always_wait: false
     enabled: true
+    ignored_servers: []
     live_pulling: false
     max_pulls: null
     resolve_timeout: 0.06
@@ -246,9 +248,6 @@ match:
   fuzzy_cutoff: 0.6
   look_ahead: 2
   max_results: 33
-  unifying_chars:
-    - "_"
-    - "-"
 
 weights:
   edit_distance: 1.5

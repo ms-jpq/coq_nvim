@@ -89,7 +89,7 @@ class Display:
 
 @dataclass(frozen=True)
 class MatchOptions:
-    unifying_chars: AbstractSet[str]
+    # unifying_chars: AbstractSet[str]
     max_results: int
     look_ahead: int
     exact_matches: int
@@ -107,7 +107,7 @@ class Weights:
 @dataclass(frozen=True)
 class CompleteOptions:
     always: bool
-    sticky_manual : bool
+    sticky_manual: bool
     smart: bool
     replace_prefix_threshold: int
     replace_suffix_threshold: int
@@ -186,7 +186,8 @@ class TSClient(BaseClient, _AlwaysTop):
 
 
 @dataclass(frozen=True)
-class T9Client(BaseClient, _AlwaysTop): ...
+class T9Client(BaseClient, _AlwaysTop):
+    auth_token: Optional[str] = None
 
 
 class SnippetWarnings(Enum):
@@ -203,6 +204,7 @@ class SnippetClient(BaseClient, _AlwaysTop):
 @dataclass(frozen=True)
 class LSPClient(BaseClient, _AlwaysTops):
     resolve_timeout: float
+    ignored_servers: AbstractSet[str]
 
 
 @dataclass(frozen=True)
@@ -294,7 +296,6 @@ class Settings:
 
 
 EMPTY_MATCH = MatchOptions(
-    unifying_chars=set(),
     max_results=0,
     look_ahead=0,
     exact_matches=0,
