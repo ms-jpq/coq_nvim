@@ -1,6 +1,5 @@
 local atools = require "coq.lib.atools"
 local buffers = require "coq.lib.buffers"
-local txt = require "coq.lib.text"
 
 local M = {}
 
@@ -45,7 +44,7 @@ M.query = function(buf)
       if kind ~= "comment" and not node:missing() and not node:has_error() then
         local text = vim.treesitter.get_node_text(node, buf)
 
-        if type(text) == "string" and text ~= "" and not txt.is_multiline(text) then
+        if type(text) == "string" and text ~= "" and not string.find(text, "%s") then
           local r_lo, _, r_hi, _ = node:range()
           local parent = node:parent()
           local grandparent = parent and parent:parent() or nil
