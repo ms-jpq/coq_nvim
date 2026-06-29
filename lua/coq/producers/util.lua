@@ -114,17 +114,20 @@ M.item = function(settings, source, spec)
   }
 end
 
----@generic T : fun() index.Hit<any>
+---@generic T : fun()
 ---@param settings config.Settings
 ---@param ctx ctx.full
 ---@param iter T
+---@param keep_exact? boolean
 ---@return T
-M.shape = function(settings, ctx, iter)
-  local shaped = vim
-    .iter(iter)
-    :filter(function(hit)
+M.shape = function(settings, ctx, iter, keep_exact)
+  local shaped = vim.iter(iter)
+  if not keep_exact then
+    shaped = shaped:filter(function(hit)
       return hit.item.word ~= ctx.match_before
     end)
+  end
+  shaped = shaped
     :unique(function(hit)
       return hit.item.word
     end)

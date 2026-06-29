@@ -133,7 +133,7 @@ M.matcher = util.batched(function(settings, ctx)
     end
   end) --[[@as fun(): index.Hit<snippets.Item>?]]
 
-  for hit in util.shape(settings, ctx, raw) do
+  for hit in util.shape(settings, ctx, raw, true) do
     local item = util.item(settings, SOURCE, {
       word = hit.item.word,
       abbr = hit.item.label ~= "" and hit.item.label or hit.item.word,
@@ -144,7 +144,7 @@ M.matcher = util.batched(function(settings, ctx)
       lsp = {
         item = {
           label = hit.item.label ~= "" and hit.item.label or hit.item.word,
-          insertTextFormat = vim.lsp.protocol.InsertTextFormat.Snippet,
+          insertTextFormat = 2,
           insertText = hit.item.body,
         },
       },
