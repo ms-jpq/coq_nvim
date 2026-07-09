@@ -352,9 +352,9 @@ For snippet placeholder navigation, bind `vim.snippet.jump(±1)` yourself.
 
 #### LSP too slow to show up on keystroke.
 
-Increase `coq_settings.limits.completion_auto_timeout`. This slows feedback on every keystroke.
+Increase `vim.o.autocompletetimeout`. This slows feedback on every keystroke.
 
-Or use manual completion (`<c-space>`), bounded by `coq_settings.limits.completion_manual_timeout`.
+Or use manual completion (`<c-space>`), bounded by `vim.o.completetimeout`.
 
 #### LSP sometimes not importing
 

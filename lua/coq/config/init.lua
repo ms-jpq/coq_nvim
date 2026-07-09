@@ -58,8 +58,6 @@ local defaults = require "coq.config.defaults"
 
 ---@class config.Limits
 ---@field idle_timeout number
----@field completion_auto_timeout number
----@field completion_manual_timeout number
 
 ---@class config.BaseClient
 ---@field enabled boolean

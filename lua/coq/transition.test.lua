@@ -141,6 +141,16 @@ T.describe({ "transition.audit_findings" }, function(test)
     T.eq(find { completion = { smart = false } }, { { kind = "option", path = "completion.smart" } })
   end)
 
+  test({ "a removed completion timeout is flagged with the vim option hint" }, function()
+    T.eq(find { limits = { completion_auto_timeout = 0.166 } }, {
+      {
+        kind = "option",
+        path = "limits.completion_auto_timeout",
+        hint = "use `vim.o.autocompletetimeout` — neovim's built-in auto-completion timeout (ms).",
+      },
+    })
+  end)
+
   test({ "removed client with non-table value is still flagged" }, function()
     T.eq(find { clients = { lsp_inline = false } }, {
       { kind = "client", path = "lsp_inline", hint = "use neovim 0.12's built-in `vim.lsp.inline_completion`." },

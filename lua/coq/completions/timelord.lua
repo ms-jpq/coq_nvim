@@ -36,6 +36,10 @@ M.new = function()
   end
 
   lord.guard_stream_1 = function(key, recommended_ms, iter)
+    if recommended_ms <= 0 then
+      return iter
+    end
+
     local effective_ms = math.max(recommended_ms, math.floor(p95(rings[key].items()) * FACTOR))
 
     ---@type integer?
@@ -65,12 +69,11 @@ M.wrap = function(lord, producer)
     source = producer.source,
     idle = producer.idle,
     search = function(settings, ctx)
-      local timeout = ctx.manual and settings.limits.completion_manual_timeout
-        or settings.limits.completion_auto_timeout
+      local timeout_ms = ctx.manual and vim.o.completetimeout or vim.o.autocompletetimeout
       local key = producer.source .. ":" .. ctx.filetype
 
       local close, iter = producer.search(settings, ctx)
-      local timed = lord.guard_stream_1(key, math.floor(timeout * 1000), iter)
+      local timed = lord.guard_stream_1(key, timeout_ms, iter)
       return close, timed
     end,
   }

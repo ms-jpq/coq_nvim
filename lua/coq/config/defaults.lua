@@ -195,8 +195,6 @@ local M = {
   },
 
   limits = {
-    completion_auto_timeout = 0.166,
-    completion_manual_timeout = 1.966,
     idle_timeout = 1.88,
   },
 

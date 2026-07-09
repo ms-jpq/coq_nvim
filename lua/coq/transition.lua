@@ -58,6 +58,14 @@ local REMOVED_OPTIONS = {
   { "limits.tokenization_limit" },
   { "limits.download_retries" },
   { "limits.download_timeout" },
+  {
+    "limits.completion_auto_timeout",
+    "use `vim.o.autocompletetimeout` — neovim's built-in auto-completion timeout (ms).",
+  },
+  {
+    "limits.completion_manual_timeout",
+    "use `vim.o.completetimeout` — neovim's built-in manual-completion timeout (ms).",
+  },
   { "display.statusline" },
   {
     "display.mark_highlight_group",
