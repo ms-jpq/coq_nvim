@@ -10,6 +10,7 @@ local LSP = { client_id = 7, item = { label = "fido" } }
 ---@return boolean ok
 local resolve_with_client = function(client)
   local get_client_by_id = vim.lsp.get_client_by_id
+  ---@diagnostic disable-next-line: duplicate-set-field
   vim.lsp.get_client_by_id = function()
     return client
   end
@@ -17,20 +18,24 @@ local resolve_with_client = function(client)
   local ok = pcall(function()
     T.eq(util.resolve(CTX, LSP), nil)
   end)
+  ---@diagnostic disable-next-line: duplicate-set-field
   vim.lsp.get_client_by_id = get_client_by_id
   return ok
 end
 
 T.describe({ "lsp.util.resolve" }, function(test)
   test({ "missing client is unresolvable" }, function()
+    ---@diagnostic disable-next-line: missing-fields
     T.eq(resolve_with_client(nil), true)
   end)
 
   test({ "missing server capabilities are unresolvable" }, function()
+    ---@diagnostic disable-next-line: missing-fields
     T.eq(resolve_with_client {} --[[@as vim.lsp.Client]], true)
   end)
 
   test({ "missing completion provider is unresolvable" }, function()
+    ---@diagnostic disable-next-line: missing-fields
     T.eq(resolve_with_client { server_capabilities = {} } --[[@as vim.lsp.Client]], true)
   end)
 end)
