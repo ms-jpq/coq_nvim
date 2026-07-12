@@ -276,9 +276,13 @@ M.bind = function(n, settings, ev)
         return
       end
       local line = unpack(vim.api.nvim_buf_get_lines(buf, row, row + 1, true))
+      local count = vim.api.nvim_buf_line_count(buf)
 
       clear_ns(buf)
       for mark in M._extmarks(settings.display.ghost_text, s, line, col) do
+        if mark.row >= count then
+          break
+        end
         nvim_buf_set_extmark(buf, NS, mark.row, mark.col, mark.opts)
       end
     end,
