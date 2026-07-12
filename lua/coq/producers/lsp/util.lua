@@ -115,7 +115,7 @@ M.snippet = function(item)
   if item.insertTextFormat ~= vim.lsp.protocol.InsertTextFormat.Snippet then
     return nil
   end
-  return item.insertText or (item.textEdit and item.textEdit.newText) or nil
+  return (item.textEdit and item.textEdit.newText) or item.insertText or nil
 end
 
 ---@param item completions.Item

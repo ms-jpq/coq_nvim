@@ -17,6 +17,15 @@ local txt = require "coq.lib.text"
 
 local M = {}
 
+---@type table<string, string>
+local FT_MAP = {
+  ["c++"] = "cpp",
+  ["c#"] = "cs",
+  ["objectivec"] = "objc",
+  ["objectivec++"] = "objcpp",
+  ["restructuredtext"] = "rst",
+}
+
 ---@param pattern string
 ---@return string
 M._unescape = function(pattern)
@@ -53,12 +62,14 @@ M.parse = function(jsonl)
         local obj = json.decode(line)
 
         if type(obj) == "table" and obj._type == "tag" and obj.name and obj.path then
+          local ft = string.lower(obj.language or "")
+
           coroutine.yield {
             word = obj.name,
             filename = obj.path,
             line = obj.line or 0,
             kind = obj.kind or "",
-            filetype = string.lower(obj.language or ""),
+            filetype = FT_MAP[ft] or ft,
             scope = obj.scope,
             scopeKind = obj.scopeKind,
             typeref = obj.typeref,

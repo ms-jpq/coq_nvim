@@ -131,7 +131,7 @@ local query_1 = function(client, ctx, td_params)
     defer(chan.close)
 
     -- https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#partialResults
-    local group = vim.api.nvim_create_augroup("coq.lsp.progress." .. client.name, { clear = true })
+    local group = vim.api.nvim_create_augroup("coq.lsp.progress." .. tostring(client.id), { clear = true })
     local autocmd_id = vim.api.nvim_create_autocmd("LspProgress", {
       group = group,
       callback = function(args)
