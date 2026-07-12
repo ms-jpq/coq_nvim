@@ -38,7 +38,6 @@ M.bind = function(n, settings, resolver, pum)
 
       n.spawn(errs.with_reporting(function()
         atools.scheduled()
-        show.close()
         show.promote(buf)
       end))
 

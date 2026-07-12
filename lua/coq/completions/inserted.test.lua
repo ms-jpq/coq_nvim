@@ -536,6 +536,13 @@ T.describe({ "inserted span :: |before| |word| |after|" }, function(test)
     T.eq(scenario("vim.schedule(", "function ()", ")", { snippet = "function ($1)\n\t$0\nend" }), "vim.schedule()")
   end)
 
+  test({ "multiline snippet trigger does not crash original-column detection" }, function()
+    local ok = pcall(function()
+      scenario("", "fido\nspot", "", { snippet = "fido\n\t$0" })
+    end)
+    T.eq(ok, true)
+  end)
+
   test({ "snippet with LSP range covers only typed prefix: PUM-region end is translated" }, function()
     -- `vim.schedule(fun|)` — user typed "fun", LSP item is "fun()" expanding to
     -- "function ()..." with a textEdit range covering the original 3-char "fun"

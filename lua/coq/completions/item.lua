@@ -2,6 +2,7 @@ local lsp_util = require "coq.producers.lsp.util"
 
 ---@class completions.ItemLspMeta
 ---@field client_id? integer
+---@field client_name? string
 ---@field item? lsp.CompletionItem
 ---@field position_encoding? string
 

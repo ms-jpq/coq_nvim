@@ -42,8 +42,8 @@ M.resolve = function(ctx, lsp)
     return nil
   end
 
-  local client = vim.lsp.get_client_by_id(lsp.client_id)
-  if not client or not (client.server_capabilities.completionProvider or {}).resolveProvider then
+  local client = vim.lsp.get_client_by_id(lsp.client_id) or {}
+  if not ((client.server_capabilities or {}).completionProvider or {}).resolveProvider then
     return nil
   end
 

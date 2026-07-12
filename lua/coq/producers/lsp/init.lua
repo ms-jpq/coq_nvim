@@ -50,6 +50,7 @@ M.new = function()
                   always_on_top = pinned[entry.client_name] == true,
                   lsp = {
                     client_id = entry.client_id,
+                    client_name = entry.client_name,
                     item = item,
                     position_encoding = entry.offset_encoding,
                   },

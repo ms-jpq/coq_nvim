@@ -94,7 +94,7 @@ local edit_ctx = function(preview, ctx, i, range)
 
   local snippet = lsp_util.snippet(i.meta.lsp and i.meta.lsp.item)
   local inserted = preview and "" or ((snippet and i.abbr) or i.word or "")
-  local first_nl = txt.is_multiline(inserted)
+  local first_nl = string.find(inserted, "[\r\n]")
   local first_line_len = first_nl and (first_nl - 1) or #inserted
   local original_col = math.max(0, col - first_line_len)
 

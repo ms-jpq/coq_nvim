@@ -61,7 +61,7 @@ local new = function(n, timelord, fetch)
     end
 
     if timeout_ms and timeout_ms > 0 then
-      return timelord.guard("resolve:" .. (meta.lsp and meta.lsp.server_name or ""), timeout_ms, f.await)
+      return timelord.guard("resolve:" .. (meta.lsp and meta.lsp.client_name or ""), timeout_ms, f.await)
     end
     return f.await()
   end
