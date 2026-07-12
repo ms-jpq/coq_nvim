@@ -46,7 +46,8 @@ end
 M.complete = function(settings, arglead, cmdline)
   local parts = vim.split(cmdline, "%s+")
   local candidates = (#parts <= 2 and M.SUBCMDS)
-    or ((parts[2] == "on" or parts[2] == "off") and known_sources(settings))
+    or (#parts == 3 and not vim.endswith(cmdline, " ") and M.SUBCMDS)
+    or ((parts[3] == "on" or parts[3] == "off") and known_sources(settings))
     or {}
   return vim
     .iter(candidates)
