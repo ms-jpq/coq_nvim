@@ -28,6 +28,15 @@ local M = {}
 ---@field end_line string
 ---@field span? completions.Span
 
+local undojoin = function()
+  vim.cmd.undojoin { mods = { emsg_silent = true } }
+end
+
+local apply_text_edits = function(...)
+  undojoin()
+  vim.lsp.util.apply_text_edits(...)
+end
+
 ---@param settings config.Settings
 ---@param ctx ctx.full
 ---@param resolver completions.Resolver
@@ -257,19 +266,20 @@ M._apply_edits = function(ctx, i, main, additional_edits)
   local enc = lsp_util.encoding(i)
   local edit = M._main_edit(ctx, i, main)
   local all_edits = vim.list_extend({ edit }, additional_edits)
-  vim.lsp.util.apply_text_edits(all_edits, ctx.buf, enc)
+  apply_text_edits(all_edits, ctx.buf, enc)
 end
 
 ---@param ctx ctx.full
 ---@param body string
 M._apply_snippet = function(ctx, body)
+  undojoin()
   local ok, err = pcall(vim.snippet.expand, body)
   if ok then
     return
   end
 
   local row, col = unpack(vim.api.nvim_win_get_cursor(ctx.win))
-  vim.lsp.util.apply_text_edits({
+  apply_text_edits({
     {
       range = {
         start = { line = row - 1, character = col },
