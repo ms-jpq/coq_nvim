@@ -216,7 +216,6 @@ M._extmarks = function(ghost, s, line, cursor_col)
     end
 
     local lines = vim.list_extend({ head }, rest)
-    local pos = s.replaces_rows and "overlay" or "inline"
     local row_overlays = s.replaces_rows and math.min(#lines, s.replaces_rows) or 1
 
     local virt_lines = vim
@@ -234,7 +233,7 @@ M._extmarks = function(ghost, s, line, cursor_col)
         opts = {
           -- ephemeral = true,
           virt_text = line_k ~= "" and { { line_k, ghost.highlight_group } } or {},
-          virt_text_pos = k == 1 and pos or "overlay",
+          virt_text_pos = "overlay",
           hl_mode = "replace",
           virt_lines = k == row_overlays and #virt_lines > 0 and virt_lines or nil,
         },
