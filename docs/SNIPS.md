@@ -1,6 +1,8 @@
 # Snippets
 
-- Coq uses the standard `vim.snippet.jump(±1)` for snippet navigation.
+- Coq expands snippets through Neovim's native [`vim.snippet.expand()`](<https://neovim.io/doc/user/lua/#vim.snippet.expand()>).
+
+- Please see the docs on how to use the standard `vim.snippet.jump(±1)` for snippet navigation.
 
 ## Pre-compiled snippets
 
@@ -32,6 +34,7 @@ snippet rubocopde
   $CLIPBOARD
   # rubocop:enable Style::MultilineBlockChain
 ```
+
 ![LSP_variable_snippet.gif](https://github.com/rajaravivarma-r/coq_nvim/assets/1841235/378ce9ca-7e8a-418d-8a38-d3f156630ef1)
 
 ### Document format
