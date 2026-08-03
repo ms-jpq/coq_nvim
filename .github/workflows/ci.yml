@@ -38,6 +38,14 @@ jobs:
       - run: |-
           make test
 
+      - run: |-
+          sudo -- apt install --yes -- luarocks
+          luarocks make --tree .rocks ./*.rockspec
+          eval -- "$(luarocks path --tree .rocks)"
+          ROCK_DIR="$(luarocks show --tree .rocks --rock-dir coq_nvim scm-0)"
+          export ROCK_DIR
+          ./ci/rocks.lua
+
   macos:
     runs-on: macos-latest
 
