@@ -38,16 +38,6 @@ local clear_ns = function(buf)
   vim.api.nvim_buf_clear_namespace(buf, NS, 0, -1)
 end
 
----@param buf integer
-M.clear = function(buf)
-  if not vim.api.nvim_buf_is_valid(buf) then
-    return
-  end
-
-  vim.b[buf][B_KEY] = nil
-  clear_ns(buf)
-end
-
 ---@param i completions.Item
 ---@return integer? rows
 local function replaces_rows(i)
@@ -115,6 +105,49 @@ local invalidate = vim.api.nvim__redraw
     vim.api.nvim_buf_del_extmark(buf, NS, id)
   end
 
+---@param s ghost.State
+---@return integer lo
+---@return integer hi
+local bounds = function(s)
+  local row = unpack(s.anchor)
+  return row, row + math.max(#s.insert_text, s.replaces_rows or 1)
+end
+
+---@param buf integer
+---@param next ghost.State?
+local replace = function(buf, next)
+  if not vim.api.nvim_buf_is_valid(buf) then
+    return
+  end
+
+  local old = state_of(buf)
+  vim.b[buf][B_KEY] = next
+
+  if next == nil then
+    clear_ns(buf)
+  end
+
+  if old == nil and next == nil then
+    return
+  end
+
+  local lo, hi
+  if old ~= nil then
+    lo, hi = bounds(old)
+  end
+  if next ~= nil then
+    local next_lo, next_hi = bounds(next)
+    lo = lo and math.min(lo, next_lo) or next_lo
+    hi = hi and math.max(hi, next_hi) or next_hi
+  end
+  invalidate(buf, lo, hi)
+end
+
+---@param buf integer
+M.clear = function(buf)
+  replace(buf, nil)
+end
+
 ---@param ctx ctx.full
 ---@param i? completions.Item
 M.show = function(ctx, i)
@@ -147,13 +180,11 @@ M.show = function(ctx, i)
   lines = M._expand_tabs(vim.bo[ctx.buf].tabstop, anchor_vcol, lines)
 
   ---@type ghost.State
-  vim.b[ctx.buf][B_KEY] = {
+  replace(ctx.buf, {
     anchor = { span.start_row, span.start_col },
     insert_text = lines,
     replaces_rows = replaces_rows(i),
-  }
-
-  invalidate(ctx.buf, span.start_row, span.start_row + #lines)
+  })
 end
 
 ---@param typed string
@@ -231,7 +262,6 @@ M._extmarks = function(ghost, s, line, cursor_col)
         row = anchor_row + k - 1,
         col = k == 1 and cursor_col or 0,
         opts = {
-          -- ephemeral = true,
           virt_text = line_k ~= "" and { { line_k, ghost.highlight_group } } or {},
           virt_text_pos = "overlay",
           hl_mode = "replace",
@@ -244,6 +274,22 @@ end
 
 local nvim_buf_set_extmark = errs.with_reporting(vim.api.nvim_buf_set_extmark)
 
+---@param buf integer
+---@param ghost config.GhostText
+---@param s ghost.State
+---@param line string
+---@param cursor_col integer
+local render = function(buf, ghost, s, line, cursor_col)
+  clear_ns(buf)
+  local count = vim.api.nvim_buf_line_count(buf)
+  for mark in M._extmarks(ghost, s, line, cursor_col) do
+    if mark.row >= count then
+      break
+    end
+    nvim_buf_set_extmark(buf, NS, mark.row, mark.col, mark.opts)
+  end
+end
+
 ---@param n async.Nursery
 ---@param settings config.Settings
 ---@param ev completions.Events
@@ -251,9 +297,6 @@ M.bind = function(n, settings, ev)
   vim.api.nvim_set_decoration_provider(NS, {
     on_win = function(_, _, buf)
       return state_of(buf) ~= nil
-    end,
-    on_buf = function(_, buf)
-      clear_ns(buf)
     end,
     on_line = function(_, win, buf, row)
       local s = state_of(buf)
@@ -275,15 +318,7 @@ M.bind = function(n, settings, ev)
         return
       end
       local line = unpack(vim.api.nvim_buf_get_lines(buf, row, row + 1, true))
-      local count = vim.api.nvim_buf_line_count(buf)
-
-      clear_ns(buf)
-      for mark in M._extmarks(settings.display.ghost_text, s, line, col) do
-        if mark.row >= count then
-          break
-        end
-        nvim_buf_set_extmark(buf, NS, mark.row, mark.col, mark.opts)
-      end
+      render(buf, settings.display.ghost_text, s, line, col)
     end,
   })
 

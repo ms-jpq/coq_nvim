@@ -67,8 +67,8 @@ local item_of = function(word)
   } --[[@as completions.Item]]
 end
 
--- The production renderer is a decoration provider — its extmarks are
--- ephemeral and only emitted mid-redraw from the current cursor position.
+-- The production renderer is a decoration provider — it recreates its
+-- persistent extmarks from the current cursor position on every redraw.
 -- Tests recompute by feeding `_extmarks` the cursor col captured at show time.
 -- nvim normalizes some keys (eol + virt_text_win_col → "win_col"), so for
 -- tests that care about the normalized form we round-trip through a
