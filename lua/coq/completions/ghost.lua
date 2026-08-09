@@ -329,15 +329,20 @@ M.bind = function(n, settings, ev)
 
   ---@diagnostic disable-next-line: undefined-field
   events.subscribe_latest(n, ev.completion, function(pum_ev)
-    atools.scheduled()
-
-    if pum_ev.kind == "done" or pum_ev.kind == "clear" then
-      M.clear(vim.api.nvim_get_current_buf())
+    ---@diagnostic disable-next-line: undefined-field
+    local done = pum_ev.kind == "done" or pum_ev.kind == "clear"
+    if not done and pum_ev.kind ~= "changed" then
       return
     end
 
-    ---@diagnostic disable-next-line: undefined-field
-    if pum_ev.kind ~= "changed" then
+    local buf = vim.api.nvim_get_current_buf()
+    local s = done and state_of(buf) or nil
+    atools.scheduled()
+
+    if done then
+      if s == state_of(buf) then
+        M.clear(buf)
+      end
       return
     end
 

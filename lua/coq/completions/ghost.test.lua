@@ -121,6 +121,27 @@ T.describe({ "ghost.show" }, function(test)
     T.eq(mark_text(buf, ctx), nil)
   end)
 
+  test({ "deletion: extends the current completion tail" }, function()
+    local buf, before = mk_ctx({ "functio" }, 1, 7)
+    ghost.show(before, item_of "function")
+    T.eq(mark_text(buf, before)[1], "n")
+
+    vim.api.nvim_buf_set_lines(buf, 0, 1, true, { "functi" })
+    local after = TH.ctx_of {
+      buf = buf,
+      pos = { 1, 6, 6, 6 },
+      line = "functi",
+      iskeyword = DEFAULT_ISKEYWORD,
+    }
+    ghost.show(after, item_of "function")
+    T.eq(mark_text(buf, after)[1], "on")
+
+    vim.api.nvim_buf_set_lines(buf, 0, 1, true, { "" })
+    after.pos, after.line = { 1, 0, 0, 0 }, ""
+    ghost.show(after, item_of "function")
+    T.eq(mark_text(buf, after)[1], "function")
+  end)
+
   test({ "cursor left of anchor: bail rather than paint at cursor" }, function()
     -- show with anchor at col 4; query _extmarks at col 1 (cursor moved back).
     local buf, ctx = mk_ctx({ "./ft" }, 1, 4)
