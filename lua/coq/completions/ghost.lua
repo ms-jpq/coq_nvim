@@ -335,14 +335,10 @@ M.bind = function(n, settings, ev)
       return
     end
 
-    local buf = vim.api.nvim_get_current_buf()
-    local s = done and state_of(buf) or nil
     atools.scheduled()
 
     if done then
-      if s == state_of(buf) then
-        M.clear(buf)
-      end
+      M.clear(vim.api.nvim_get_current_buf())
       return
     end
 
