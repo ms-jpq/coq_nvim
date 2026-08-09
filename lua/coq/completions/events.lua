@@ -5,6 +5,7 @@ local lib = require "coq.lib"
 
 ---@class completions.PumChangedEvent : vim.v.event
 ---@field kind "changed"
+---@field buf integer
 ---@field completed_item vim.v.completed_item
 ---@field row integer
 ---@field col integer
@@ -14,10 +15,12 @@ local lib = require "coq.lib"
 
 ---@class completions.PumDoneEvent
 ---@field kind "done"
+---@field buf integer
 ---@field completed_item vim.v.completed_item
 
 ---@class completions.PumClearEvent
 ---@field kind "clear"
+---@field buf integer
 
 ---@alias completions.PumEvent completions.PumChangedEvent | completions.PumDoneEvent | completions.PumClearEvent
 
@@ -135,8 +138,8 @@ M.new = function()
 
     vim.api.nvim_create_autocmd({ "CompleteChanged" }, {
       group = lib.group,
-      callback = function()
-        local ev = vim.tbl_extend("force", { kind = "changed" }, vim.v.event) --[[@as completions.PumChangedEvent]]
+      callback = function(args)
+        local ev = vim.tbl_extend("force", { kind = "changed", buf = args.buf }, vim.v.event) --[[@as completions.PumChangedEvent]]
         events.completion.replace(ev)
       end,
     })
@@ -145,9 +148,9 @@ M.new = function()
   do
     vim.api.nvim_create_autocmd({ "CompleteDone" }, {
       group = lib.group,
-      callback = function()
+      callback = function(args)
         local completed_item = vim.tbl_extend("force", {}, vim.v.completed_item)
-        events.completion.replace { kind = "done", completed_item = completed_item }
+        events.completion.replace { kind = "done", buf = args.buf, completed_item = completed_item }
       end,
     })
   end
@@ -158,7 +161,7 @@ M.new = function()
     vim.api.nvim_create_autocmd({ "InsertLeave" }, {
       group = lib.group,
       callback = function(args)
-        events.completion.replace { kind = "clear" }
+        events.completion.replace { kind = "clear", buf = args.buf }
         events.leave.replace(args.buf)
       end,
     })

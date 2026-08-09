@@ -294,6 +294,8 @@ end
 ---@param settings config.Settings
 ---@param ev completions.Events
 M.bind = function(n, settings, ev)
+  local generation = 0
+
   vim.api.nvim_set_decoration_provider(NS, {
     on_win = function(_, _, buf)
       return state_of(buf) ~= nil
@@ -335,23 +337,31 @@ M.bind = function(n, settings, ev)
       return
     end
 
-    atools.scheduled()
+    generation = generation + 1
+    local ticket = generation
+    vim.schedule(function()
+      if ticket ~= generation or not vim.api.nvim_buf_is_valid(pum_ev.buf) then
+        return
+      end
+      if done then
+        M.clear(pum_ev.buf)
+        return
+      end
+      if pum_ev.buf ~= vim.api.nvim_get_current_buf() then
+        return
+      end
 
-    if done then
-      M.clear(vim.api.nvim_get_current_buf())
-      return
-    end
+      local ci = pum_ev.completed_item
+      if type(ci) ~= "table" then
+        return
+      end
 
-    local ci = pum_ev.completed_item
-    if type(ci) ~= "table" then
-      return
-    end
-
-    if type(ci.user_data) == "table" and ci.user_data.word then
-      M.show(context.full(), ci.user_data --[[@as completions.Item]])
-    elseif ci.word and ci.word ~= "" then
-      M.clear(vim.api.nvim_get_current_buf())
-    end
+      if type(ci.user_data) == "table" and ci.user_data.word then
+        M.show(context.full(), ci.user_data --[[@as completions.Item]])
+      elseif ci.word and ci.word ~= "" then
+        M.clear(pum_ev.buf)
+      end
+    end)
   end)
 end
 
