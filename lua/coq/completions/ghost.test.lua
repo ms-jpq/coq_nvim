@@ -115,6 +115,16 @@ T.describe({ "ghost.show" }, function(test)
     T.eq(entry[1], "plugin")
   end)
 
+  test({ "adds a visual trailing space unless the tail already has one" }, function()
+    local buf, ctx = mk_ctx({ "./ft" }, 1, 4)
+    ghost.show(ctx, item_of "ftplugin")
+    T.eq(extmark_opts(ghost_cfg, buf, ctx.pos[2]).virt_text, { { "plugin", "Comment" }, { " ", "Comment" } })
+
+    local spaced_buf, spaced_ctx = mk_ctx({ "./ft" }, 1, 4)
+    ghost.show(spaced_ctx, item_of "ftplugin ")
+    T.eq(extmark_opts(ghost_cfg, spaced_buf, spaced_ctx.pos[2]).virt_text, { { "plugin ", "Comment" } })
+  end)
+
   test({ "typed-prefix: nothing to render when typed matches the whole word" }, function()
     local buf, ctx = mk_ctx({ "ftplugin" }, 1, 8)
     ghost.show(ctx, item_of "ftplugin")

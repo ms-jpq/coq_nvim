@@ -228,6 +228,21 @@ M._remaining = function(typed, candidate)
   return head, rest
 end
 
+---@param line string
+---@param highlight string
+---@return any[]
+local virtual_text = function(line, highlight)
+  if line == "" then
+    return {}
+  end
+
+  local text = { { line, highlight } }
+  if string.sub(line, -1) ~= " " then
+    table.insert(text, { " ", highlight })
+  end
+  return text
+end
+
 ---@param ghost config.GhostText
 ---@param s ghost.State
 ---@param line string
@@ -262,7 +277,7 @@ M._extmarks = function(ghost, s, line, cursor_col)
         row = anchor_row + k - 1,
         col = k == 1 and cursor_col or 0,
         opts = {
-          virt_text = line_k ~= "" and { { line_k, ghost.highlight_group } } or {},
+          virt_text = virtual_text(line_k, ghost.highlight_group),
           virt_text_pos = "overlay",
           hl_mode = "replace",
           virt_lines = k == row_overlays and #virt_lines > 0 and virt_lines or nil,
