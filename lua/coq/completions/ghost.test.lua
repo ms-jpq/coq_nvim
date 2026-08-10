@@ -118,7 +118,7 @@ T.describe({ "ghost.show" }, function(test)
   test({ "adds a visual trailing space unless the tail already has one" }, function()
     local buf, ctx = mk_ctx({ "./ft" }, 1, 4)
     ghost.show(ctx, item_of "ftplugin")
-    T.eq(extmark_opts(ghost_cfg, buf, ctx.pos[2]).virt_text, { { "plugin", "Comment" }, { " ", "Comment" } })
+    T.eq(extmark_opts(ghost_cfg, buf, ctx.pos[2]).virt_text, { { "plugin ", "Comment" } })
 
     local spaced_buf, spaced_ctx = mk_ctx({ "./ft" }, 1, 4)
     ghost.show(spaced_ctx, item_of "ftplugin ")
