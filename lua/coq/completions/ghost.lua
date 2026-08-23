@@ -18,6 +18,7 @@ local M = {}
 ---@field anchor [integer, integer]
 ---@field insert_text string[]
 ---@field replaces_rows integer?
+---@field inline boolean
 
 ---@class ghost.Mark
 ---@field row integer
@@ -167,14 +168,10 @@ M.show = function(ctx, i)
     return M.clear(ctx.buf)
   end
 
-  local row = unpack(ctx.pos)
-  local anchor_line = ctx.line
-  if span.start_row ~= row - 1 then
-    if span.start_row < 0 or span.start_row >= vim.api.nvim_buf_line_count(ctx.buf) then
-      return M.clear(ctx.buf)
-    end
-    anchor_line = vim.api.nvim_buf_get_lines(ctx.buf, span.start_row, span.start_row + 1, true)[1] or ""
+  if span.start_row < 0 or span.start_row >= vim.api.nvim_buf_line_count(ctx.buf) then
+    return M.clear(ctx.buf)
   end
+  local anchor_line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, span.start_row, span.start_row + 1, true)) or ""
 
   local anchor_vcol = vim.fn.strdisplaywidth(string.sub(anchor_line, 1, span.start_col))
   lines = M._expand_tabs(vim.bo[ctx.buf].tabstop, anchor_vcol, lines)
@@ -184,6 +181,7 @@ M.show = function(ctx, i)
     anchor = { span.start_row, span.start_col },
     insert_text = lines,
     replaces_rows = replaces_rows(i),
+    inline = span.start_row == e_ctx.cursor_row and span.end_row == e_ctx.cursor_row and span.end_col == e_ctx.col,
   })
 end
 
@@ -228,15 +226,6 @@ M._remaining = function(typed, candidate)
   return head, rest
 end
 
----@param line string
----@return string
-local padded = function(line)
-  if line ~= "" and string.sub(line, -1) ~= " " then
-    return line .. " "
-  end
-  return line
-end
-
 ---@param ghost config.GhostText
 ---@param s ghost.State
 ---@param line string
@@ -271,8 +260,13 @@ M._extmarks = function(ghost, s, line, cursor_col)
         row = anchor_row + k - 1,
         col = k == 1 and cursor_col or 0,
         opts = {
-          virt_text = line_k ~= "" and { { padded(line_k), ghost.highlight_group } } or {},
-          virt_text_pos = "overlay",
+          virt_text = line_k ~= "" and {
+            {
+              line_k,
+              ghost.highlight_group,
+            },
+          } or {},
+          virt_text_pos = k == 1 and s.inline and "inline" or "overlay",
           hl_mode = "replace",
           virt_lines = k == row_overlays and #virt_lines > 0 and virt_lines or nil,
         },
