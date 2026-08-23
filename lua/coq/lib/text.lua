@@ -1,6 +1,14 @@
 local M = {}
 
 local CR, LF = 13, 10
+local BYTE_A, BYTE_a, BYTE_z = string.byte "A", string.byte "a", string.byte "z"
+
+---@param typed integer
+---@param candidate integer
+---@return boolean
+M.smart_eq = function(typed, candidate)
+  return typed == candidate or (typed >= BYTE_a and typed <= BYTE_z and candidate == typed - (BYTE_a - BYTE_A))
+end
 
 ---@param trim boolean
 ---@param x any

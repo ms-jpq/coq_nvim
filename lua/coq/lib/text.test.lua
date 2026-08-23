@@ -9,6 +9,18 @@ local drain = function(iter)
   return out
 end
 
+T.describe({ "text.smart_eq" }, function(test)
+  test({ "lowercase typed bytes match either ASCII case" }, function()
+    T.eq(txt.smart_eq(string.byte "a", string.byte "a"), true)
+    T.eq(txt.smart_eq(string.byte "a", string.byte "A"), true)
+  end)
+
+  test({ "uppercase typed bytes are exact" }, function()
+    T.eq(txt.smart_eq(string.byte "A", string.byte "A"), true)
+    T.eq(txt.smart_eq(string.byte "A", string.byte "a"), false)
+  end)
+end)
+
 T.describe({ "text.splitlines" }, function(test)
   test({ "yields a single line for a separator-free string" }, function()
     T.eq(drain(txt.splitlines "labrador"), { "labrador" })

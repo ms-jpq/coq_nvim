@@ -1,5 +1,6 @@
 local set = require "coq.lib.set"
 local tokens = require "coq.lib.index.tokens"
+local txt = require "coq.lib.text"
 
 -- Tiered fuzzy match: byte-exact → smart-case prefix → camelCase initialism
 -- → Smith-Waterman. See .exp/README.md for tournament and rationale.
@@ -49,25 +50,12 @@ local is_digit = function(b)
   return b >= BYTE_0 and b <= BYTE_9
 end
 
-local to_lower = function(b)
-  return is_upper(b) and b + (BYTE_a - BYTE_A) or b
-end
-
--- Per-character smart-case predicate. The driver of the case rule:
--- lowercase needle accepts any case; uppercase needle requires exact case.
-local smart_eq = function(nb, hb)
-  if is_upper(nb) then
-    return nb == hb
-  end
-  return to_lower(nb) == to_lower(hb)
-end
-
 local smart_starts_with = function(hay, ned)
   if #ned > #hay then
     return false
   end
   for i = 1, #ned do
-    if not smart_eq(string.byte(ned, i), string.byte(hay, i)) then
+    if not txt.smart_eq(string.byte(ned, i), string.byte(hay, i)) then
       return false
     end
   end
@@ -186,7 +174,7 @@ local is_subsequence = function(probe)
   local needle, haystack, n, m = probe.needle, probe.haystack, probe.n, probe.m
   local i = 1
   for j = 1, m do
-    if smart_eq(string.byte(needle, i), string.byte(haystack, j)) then
+    if txt.smart_eq(string.byte(needle, i), string.byte(haystack, j)) then
       i = i + 1
       if i > n then
         return true
@@ -237,7 +225,7 @@ local dp_score = function(probe, hclass)
       local s1 = 0
       local consec = 0
 
-      if smart_eq(string.byte(needle, i), string.byte(haystack, j)) then
+      if txt.smart_eq(string.byte(needle, i), string.byte(haystack, j)) then
         local prev_class = (j == 1) and CLASS_WHITE or hclass[j - 1]
         local b = bonus_for(prev_class, hclass[j])
         if i == 1 then
@@ -392,7 +380,7 @@ local try_camel = function(probe)
   local mismatches = 0
   for i = 1, n do
     local nb, hb = string.byte(needle, i), string.byte(inits, i)
-    if not smart_eq(nb, hb) then
+    if not txt.smart_eq(nb, hb) then
       return nil
     end
     if nb ~= hb then
