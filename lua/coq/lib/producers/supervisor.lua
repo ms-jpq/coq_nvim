@@ -11,9 +11,14 @@ M.new = function(producers)
   ---@type async.Handle?
   local idle_handle = nil
   local searching = false
+  local state = closable.new(function()
+    for _, producer in pairs(producers) do
+      producer.close()
+    end
+  end)
 
   ---@diagnostic disable-next-line: missing-fields
-  local sup = {} ---@type producers.Producer
+  local sup = { close = state.close } ---@type producers.Producer
 
   sup.idle = function(settings, ctx)
     if searching then

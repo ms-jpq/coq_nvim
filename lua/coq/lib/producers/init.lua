@@ -3,6 +3,7 @@ local worker = require "coq.lib.worker"
 
 ---@class producers.Producer<C>
 ---@field source string
+---@field close fun()
 ---@field idle fun(settings: config.Settings, ctx: C)
 ---@field search fun(settings: config.Settings, ctx: C): fun(), lib.Iterator<completions.Item[]>
 
@@ -24,6 +25,7 @@ M.threaded = function(spec)
 
   return {
     source = spec.source,
+    close = w.close,
     idle = function(settings, idle_ctx)
       w.queue(spec.idle, settings, idle_ctx)
     end,

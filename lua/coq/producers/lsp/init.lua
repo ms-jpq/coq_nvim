@@ -14,6 +14,7 @@ local M = {}
 M.new = function()
   return {
     source = SOURCE,
+    close = lib.noop,
     idle = lib.noop,
     search = function(settings, ctx)
       return closable.iter(function(defer)

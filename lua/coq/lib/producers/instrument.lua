@@ -9,6 +9,7 @@ local M = {}
 M.wrap = function(statsd, producer)
   return {
     source = producer.source,
+    close = producer.close,
     idle = producer.idle,
     search = function(settings, ctx)
       local rec = statsd.record(producer.source)

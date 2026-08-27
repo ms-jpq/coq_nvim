@@ -74,6 +74,32 @@ T.describe({ "future cancel" }, function(test)
 
     T.eq(ok, true)
   end)
+
+  test({ "cancel removes the future subscription" }, function()
+    local f = async.future()
+    local live = {}
+    local once_ready = f.once_ready
+    f.once_ready = function(cb)
+      live[cb] = true
+      local unready = once_ready(cb)
+      return function()
+        live[cb] = nil
+        unready()
+      end
+    end
+
+    local h = handle.new()
+    local n = nursery.new()
+    local _ = h.on_cancel(n.cancel)
+    n.spawn(function()
+      pcall(f.await)
+    end)
+    async.sleep(0)
+    T.eq(next(live) ~= nil, true)
+    h.cancel()
+    n.join()
+    T.eq(next(live), nil)
+  end)
 end)
 
 T.describe({ "sleep cancel" }, function(test)

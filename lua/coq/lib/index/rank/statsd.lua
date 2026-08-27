@@ -1,6 +1,7 @@
 local buffers = require "coq.lib.buffers"
 local default_dict = require "coq.lib.default_dict"
 local itertools = require "coq.lib.itertools"
+local lru = require "coq.lib.lru"
 local tokens = require "coq.lib.index.tokens"
 
 ---@class index.Prepared
@@ -43,6 +44,8 @@ M.ALWAYS_TOP = 1e9
 M.WEIGHT_SCALE = 100
 
 local SAMPLE_CAP = 200
+
+M.RECENCY_CAP = 888
 
 ---@param prepared index.Prepared
 ---@param item completions.Item
@@ -135,16 +138,16 @@ M.new = function(settings)
   ---@type lib.DefaultDict<string, statsd.Bucket>
   local buckets = default_dict.new(new_bucket)
 
-  ---@type lib.DefaultDict<string, integer>
-  local recency = default_dict.new(function()
-    return 0
-  end)
+  ---@type lib.LRU
+  local recency = lru.new(M.RECENCY_CAP)
 
   ---@diagnostic disable-next-line: missing-fields
   local statsd = {} ---@type index.Statsd
 
   statsd.inserted = function(item)
-    recency[item.meta.filter] = recency[item.meta.filter] + 1
+    local filter = item.meta.filter
+    recency[filter] = (recency[filter] or 0) + 1
+
     buckets[item.meta.source].inserted = buckets[item.meta.source].inserted + 1
   end
 

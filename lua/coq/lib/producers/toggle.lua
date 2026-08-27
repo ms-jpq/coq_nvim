@@ -24,6 +24,7 @@ M.wrap = function(producer)
   local source = producer.source
   return {
     source = source,
+    close = producer.close,
     idle = function(settings, ctx)
       if not M.is_enabled(source) then
         return

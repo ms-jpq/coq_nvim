@@ -20,6 +20,7 @@ local SETTINGS = config.merged()
 local producer = function(spec)
   return {
     source = "mock",
+    close = lib.noop,
     idle = function(_, ctx)
       if spec.idle then
         spec.idle(ctx)
@@ -77,6 +78,20 @@ local drain = function(close, iter)
 end
 
 T.describe({ "supervisor" }, function(test)
+  test({ "closes each closable producer once" }, function()
+    local closed = 0
+    local p = producer {}
+    p.close = function()
+      closed = closed + 1
+    end
+    local sup = supervisor.new { p }
+
+    sup.close()
+    sup.close()
+
+    T.eq(closed, 1)
+  end)
+
   test({ "merges rows from all producers" }, function()
     local n = detached()
     local sup = supervisor.new { yields("lil", "spot"), yields "fido" }

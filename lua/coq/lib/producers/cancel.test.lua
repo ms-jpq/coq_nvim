@@ -13,6 +13,7 @@ local SETTINGS = config.merged()
 local regular = function(spec)
   return {
     source = "mock",
+    close = lib.noop,
     idle = lib.noop,
     search = function(settings, ctx)
       local iter = async.wrap(function()
@@ -32,9 +33,10 @@ local cancel_tests = function(name, factory)
       local h = handle.new()
       local matcher_completed = false
       local n = nursery.new()
+      local db = nil
       local _ = h.on_cancel(n.cancel)
       n.spawn(function()
-        local db = factory {
+        db = factory {
           source = "mock",
           idle = lib.noop,
           matcher = function(_, ctx)
@@ -51,6 +53,9 @@ local cancel_tests = function(name, factory)
         h.cancel()
       end)
       n.join()
+      if db and db.close then
+        db.close()
+      end
       T.eq(matcher_completed, false)
     end)
   end)

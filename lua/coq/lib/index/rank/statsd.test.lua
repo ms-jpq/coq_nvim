@@ -109,6 +109,26 @@ T.describe({ "rank.statsd.inserted" }, function(test)
     T.eq(s.summary().BF.inserted, 2)
     T.eq(s.summary().LS.inserted, 1)
   end)
+
+  test({ "recency evicts the least recently used filter" }, function()
+    local s = fresh()
+    s.inserted(fido { filter = "old" })
+
+    for i = 1, statsd.RECENCY_CAP do
+      s.inserted(fido { filter = "new_" .. i })
+    end
+
+    local recency = s.prepare({
+      iskeyword = DEFAULT_ISKEYWORD,
+      keyword_before = "",
+      buf = 0,
+      linesep = "\n",
+    } --[[@as ctx.full]]).recency
+
+    T.eq(recency.old, nil)
+    T.eq(recency.new_1, 1)
+    T.eq(recency["new_" .. statsd.RECENCY_CAP], 1)
+  end)
 end)
 
 T.describe({ "rank.statsd.record" }, function(test)
