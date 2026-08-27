@@ -93,9 +93,10 @@ end
 
 ---@param fn fun(...: any)
 ---@param ... any
+---@return uv.luv_thread_t?, string?
 M.spawn_worker = function(fn, ...)
   local dumped = string.dump(fn)
-  vim.uv.new_thread({}, function(d, ...)
+  return vim.uv.new_thread({}, function(d, ...)
     load(d)(...)
   end, dumped, ...)
 end

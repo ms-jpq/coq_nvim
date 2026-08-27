@@ -322,15 +322,29 @@ end
 ---@return worker.Worker
 M.spawn = function()
   local duplex, remote = transport.duplex_pair()
-  local state = closable.new(duplex.close)
-
   local endpoint = make_endpoint(duplex)
+  local n = nursery.new()
 
-  transport.spawn_worker(function(...)
+  local ok, thread, err = pcall(transport.spawn_worker, function(...)
     require("coq.lib.worker").run(...)
   end, remote.read_fd, remote.write_fd)
+  if not ok or not thread then
+    duplex.reader:close()
+    duplex.writer:close()
+    error(err or thread, 0)
+  end
 
-  local n = nursery.new()
+  local state = closable.new(function()
+    lib.scope(function(defer)
+      defer(function()
+        local ok, err = thread:join()
+        assert(ok or err == "ESRCH: no such process", err)
+      end)
+
+      duplex.close()
+      n.join()
+    end)
+  end)
 
   ---@diagnostic disable-next-line: missing-fields
   local worker = {} ---@type worker.Worker
