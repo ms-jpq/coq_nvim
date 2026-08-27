@@ -10,6 +10,7 @@ local M = {}
 
 ---@param parent? async.Handle
 ---@return async.Handle
+---@return fun() unwatch_parent
 M.new = function(parent)
   ---@diagnostic disable-next-line: missing-fields
   local handle = {} ---@type async.Handle
@@ -53,7 +54,7 @@ M.new = function(parent)
     unwatch = parent.on_cancel(handle.cancel)
   end
 
-  return handle
+  return handle, unwatch
 end
 
 return M

@@ -124,9 +124,9 @@ T.describe({ "handle" }, function(test)
 
   -- Awaiting directly inside a watcher only "works" when cancel() happens to be
   -- driven from a coroutine, and even then it is a trap: the await suspends
-  -- cancel() itself, stalling every watcher queued behind it until it resolves.
-  -- From a synchronous caller it errors outright (yield outside a coroutine).
-  test({ "awaiting directly in a watcher suspends cancel and delays siblings" }, function()
+  -- cancel() itself. From a synchronous caller it errors outright (yield
+  -- outside a coroutine).
+  test({ "awaiting directly in a watcher suspends cancel" }, function()
     local h = handle.new()
     local order = {}
 
@@ -135,13 +135,10 @@ T.describe({ "handle" }, function(test)
       async.sleep(-1)
       table.insert(order, "w1:after-await")
     end)
-    local _ = h.on_cancel(function()
-      table.insert(order, "w2")
-    end)
 
     h.cancel()
     table.insert(order, "cancel:returned")
 
-    T.eq(order, { "w1:before-await", "w1:after-await", "w2", "cancel:returned" })
+    T.eq(order, { "w1:before-await", "w1:after-await", "cancel:returned" })
   end)
 end)

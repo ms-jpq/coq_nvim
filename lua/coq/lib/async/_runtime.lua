@@ -47,7 +47,7 @@ end
 
 ---@class async.Future<T>
 ---@field resolve fun(...: T)
----@field once_ready fun(cb: fun(...: T))
+---@field once_ready fun(cb: fun(...: T)): fun()
 ---@field await fun(opts?: async.AwaitOpts): T ...
 
 ---@generic T
@@ -66,16 +66,28 @@ M.future = function()
 
     local snapshot = cbs
     cbs = {}
-    for _, c in ipairs(snapshot) do
-      c(unpack(vals))
+    for _, sub in ipairs(snapshot) do
+      sub.cb(unpack(vals))
     end
   end
 
+  ---@nodiscard
   f.once_ready = function(c)
     if vals ~= nil then
       c(unpack(vals))
-    else
-      table.insert(cbs, c)
+      return lib.noop
+    end
+
+    local sub = { cb = c }
+    table.insert(cbs, sub)
+
+    return function()
+      for i, s in ipairs(cbs) do
+        if s == sub then
+          table.remove(cbs, i)
+          return
+        end
+      end
     end
   end
 
@@ -142,12 +154,13 @@ end
 M._detach = function(h, fn, ...)
   local bounce, co = trampoline(false, fn, function(bounce, eff)
     local resumed = false
-    local unwatch = lib.noop
+    local unready, unwatch = lib.noop, lib.noop
     local resume = function(...)
       if resumed then
         return
       end
       resumed = true
+      unready()
       unwatch()
       local ok, err = pcall(bounce, ...)
       if not ok and not cancel.is(err) then
@@ -155,7 +168,7 @@ M._detach = function(h, fn, ...)
       end
     end
 
-    eff.f.once_ready(resume)
+    unready = eff.f.once_ready(resume)
     if not resumed and eff.h then
       unwatch = eff.h.on_cancel(resume)
     end

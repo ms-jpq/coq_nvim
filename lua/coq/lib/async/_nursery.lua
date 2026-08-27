@@ -47,7 +47,7 @@ M.new = function()
 
   nursery.spawn = function(fn)
     assert(not state.closed, "spawn: nursery is closed")
-    local child = handle.new(h)
+    local child, unwatch = handle.new(h)
     active = active + 1
 
     runtime._detach(child, function()
@@ -56,6 +56,7 @@ M.new = function()
         return fn(defer)
       end)
       active = active - 1
+      unwatch()
 
       if not ok and not cancel.is(err) then
         table.insert(errors, err)

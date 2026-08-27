@@ -8,33 +8,17 @@ local runtime = require "coq.lib.async._runtime"
 
 T.describe({ "nursery" }, function(test)
   test({ "completed child detaches from its parent" }, function()
-    local new = handle.new
     local done = async.future()
     local n = nursery.new()
-    local live = {}
-
-    handle.new = function(parent)
-      local on_cancel = parent.on_cancel
-      parent.on_cancel = function(watcher)
-        live[watcher] = true
-        local unwatch = on_cancel(watcher)
-        return function()
-          live[watcher] = nil
-          unwatch()
-        end
-      end
-      return new(parent)
-    end
-
-    n.spawn(function()
+    local child = n.spawn(function()
       done.resolve()
     end)
-    handle.new = new
     done.await()
     async.sleep(0)
 
-    T.eq(next(live), nil)
+    T.eq(child.cancelled, false)
     n.cancel()
+    T.eq(child.cancelled, false)
     n.join()
   end)
 

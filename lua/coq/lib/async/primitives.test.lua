@@ -6,6 +6,27 @@ local nursery = require "coq.lib.async._nursery"
 local runtime = require "coq.lib.async._runtime"
 
 T.describe({ "future cancel" }, function(test)
+  test({ "unready removes one subscription without disturbing callback order" }, function()
+    local f = async.future()
+    local order = {}
+    local unready_lil = f.once_ready(function()
+      table.insert(order, "lil")
+    end)
+    local unready_spot = f.once_ready(function()
+      table.insert(order, "spot")
+    end)
+    local unready_fido = f.once_ready(function()
+      table.insert(order, "fido")
+    end)
+
+    unready_spot()
+    f.resolve()
+    unready_lil()
+    unready_fido()
+
+    T.eq(order, { "lil", "fido" })
+  end)
+
   test({ "await throws cancel when ambient handle already cancelled" }, function()
     local h = handle.new()
     local n = nursery.new()

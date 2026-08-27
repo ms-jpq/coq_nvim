@@ -118,6 +118,7 @@ T.describe({ "rank.statsd.inserted" }, function(test)
       s.inserted(fido { filter = "new_" .. i })
     end
 
+    ---@diagnostic disable-next-line: missing-fields
     local recency = s.prepare({
       iskeyword = DEFAULT_ISKEYWORD,
       keyword_before = "",
