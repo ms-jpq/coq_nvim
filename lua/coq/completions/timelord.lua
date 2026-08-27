@@ -67,6 +67,7 @@ end
 M.wrap = function(lord, producer)
   return {
     source = producer.source,
+    close = producer.close,
     idle = producer.idle,
     search = function(settings, ctx)
       local timeout_ms = ctx.manual and vim.o.completetimeout or vim.o.autocompletetimeout

@@ -92,10 +92,9 @@ local tracker_of = util.once(function(settings)
           local prev_name = entry.prev and entry.prev.filename
           local curr_name = entry.curr and entry.curr.filename
 
-          if entry.deleted and prev_name then
+          if prev_name and (entry.deleted or prev_name ~= curr_name) then
             index_of(settings).prune { filename = prev_name }
-          elseif prev_name and prev_name ~= curr_name then
-            index_of(settings).prune { filename = prev_name }
+            store.prune(prev_name)
           end
 
           if curr_name then

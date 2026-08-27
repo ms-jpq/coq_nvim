@@ -99,7 +99,7 @@ M.setup = function(opts)
   started = true
 
   async.entry(function()
-    async.scope(function(n)
+    async.scope(function(n, defer)
       atools.scheduled()
 
       vim.api.nvim_create_autocmd("VimLeavePre", {
@@ -122,6 +122,7 @@ M.setup = function(opts)
         end)
         :totable()
       local sup = supervisor.new(ps)
+      defer(sup.close)
 
       local events = events_m.new()
       local resolver = resolver_m.new(n, lord)
