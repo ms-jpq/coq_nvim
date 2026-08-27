@@ -1,6 +1,8 @@
 -- https://github.com/luvit/luv/blob/master/docs/docs.md
 
 local async = require "coq.lib.async"
+local closable = require "coq.lib.closable"
+local lib = require "coq.lib"
 local proto = require "coq.lib.worker.wire_proto"
 
 ---@class worker.Duplex: lib.Closable
@@ -24,10 +26,23 @@ M.open_duplex = function(read_fd, write_fd)
   duplex.reader:open(read_fd)
   duplex.writer:open(write_fd)
 
-  duplex.close = function()
+  local closed = async.future()
+  local state = closable.new(function()
+    if duplex.writer:is_closing() then
+      closed.resolve()
+      return
+    end
     duplex.writer:shutdown(function()
-      duplex.writer:close()
+      if not duplex.writer:is_closing() then
+        duplex.writer:close()
+      end
+      closed.resolve()
     end)
+  end)
+
+  duplex.close = function()
+    state.close()
+    closed.await { cancel = false }
   end
 
   return duplex
@@ -44,16 +59,34 @@ M.duplex_pair = function()
   return duplex, remote
 end
 
----@type fun(pipe: uv.uv_pipe_t): string?, string?
-local read_once = async.awaitify(function(pipe, cb)
-  pipe:read_start(function(err, bytes)
-    pipe:read_stop()
-    if err or not bytes then
-      pipe:close()
+---@param pipe uv.uv_pipe_t
+---@return string?, string?
+local read_once = function(pipe)
+  return lib.scope(function(defer)
+    local fut = async.future()
+    local result = nil
+
+    defer(function()
+      local err, bytes = unpack(result or {}, 1, 2)
+      if not pipe:is_closing() then
+        pipe:read_stop()
+        if result == nil or err or bytes == nil then
+          pipe:close()
+        end
+      end
+    end)
+
+    pipe:read_start(function(err, bytes)
+      result = { err, bytes }
+      fut.resolve()
+    end)
+    fut.await()
+
+    if result then
+      return unpack(result, 1, 2)
     end
-    cb(err, bytes)
   end)
-end)
+end
 
 ---@param pipe uv.uv_pipe_t
 ---@return fun(): table?
