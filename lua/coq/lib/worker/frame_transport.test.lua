@@ -19,6 +19,18 @@ local close_reader = function(duplex)
   end
 end
 
+---@param target uv.uv_handle_t
+---@return boolean
+local live = function(target)
+  local found = false
+  vim.uv.walk(function(handle)
+    if handle == target then
+      found = true
+    end
+  end)
+  return found
+end
+
 ---@param fn fun(left: worker.Duplex, right: worker.Duplex)
 local with_pair = function(fn)
   return lib.scope(function(defer)
@@ -86,6 +98,7 @@ T.describe({ "worker.frame_transport" }, function(test)
       left.close()
 
       assert(left.writer:is_closing())
+      assert(not live(left.writer))
     end)
   end)
 end)

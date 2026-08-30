@@ -34,9 +34,10 @@ M.open_duplex = function(read_fd, write_fd)
     end
     duplex.writer:shutdown(function()
       if not duplex.writer:is_closing() then
-        duplex.writer:close()
+        duplex.writer:close(closed.resolve)
+      else
+        closed.resolve()
       end
-      closed.resolve()
     end)
   end)
 
