@@ -313,7 +313,6 @@ if vim.is_thread() then
 
     async.entry(function()
       pcall(main)
-      vim.uv.stop()
     end)()
     vim.uv.run()
   end
@@ -323,7 +322,7 @@ end
 M.spawn = function()
   local duplex, remote = transport.duplex_pair()
   local endpoint = make_endpoint(duplex)
-  local n = nursery.new()
+  local n = nursery.new(runtime.ROOT)
 
   local ok, thread, err = pcall(transport.spawn_worker, function(...)
     require("coq.lib.worker").run(...)

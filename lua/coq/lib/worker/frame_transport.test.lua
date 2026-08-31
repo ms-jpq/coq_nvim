@@ -31,6 +31,17 @@ local live = function(target)
   return found
 end
 
+---@param target any
+---@return boolean
+local retained = function(target)
+  for _, value in pairs(debug.getregistry()) do
+    if rawequal(value, target) then
+      return true
+    end
+  end
+  return false
+end
+
 ---@param fn fun(left: worker.Duplex, right: worker.Duplex)
 local with_pair = function(fn)
   return lib.scope(function(defer)
@@ -100,5 +111,27 @@ T.describe({ "worker.frame_transport" }, function(test)
       assert(left.writer:is_closing())
       assert(not live(left.writer))
     end)
+  end)
+
+  test({ "join_worker waits for luv thread cleanup" }, function()
+    local owner = lib.weak({}, "v")
+    local thread
+    do
+      local co = coroutine.create(function()
+        owner[1] = coroutine.running()
+        thread = assert(transport.spawn_worker(lib.noop))
+      end)
+      assert(coroutine.resume(co))
+    end
+    collectgarbage "collect"
+    assert(owner[1] ~= nil)
+    assert(retained(thread._handle))
+
+    transport.join_worker(thread)
+
+    assert(not retained(thread._handle))
+    assert(not vim.in_fast_event())
+    collectgarbage "collect"
+    assert(owner[1] == nil)
   end)
 end)

@@ -12,9 +12,11 @@ M.new = function(producers)
   local idle_handle = nil
   local searching = false
   local state = closable.new(function()
-    for _, producer in pairs(producers) do
-      producer.close()
-    end
+    lib.scope(function(defer)
+      for _, producer in pairs(producers) do
+        defer(producer.close)
+      end
+    end)
   end)
 
   ---@diagnostic disable-next-line: missing-fields

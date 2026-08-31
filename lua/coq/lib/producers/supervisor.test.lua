@@ -92,6 +92,26 @@ T.describe({ "supervisor" }, function(test)
     T.eq(closed, 1)
   end)
 
+  test({ "closes every producer after one close fails" }, function()
+    local closed = {}
+    local lil, spot, fido = producer {}, producer {}, producer {}
+    lil.close = function()
+      table.insert(closed, "lil")
+      error "too good"
+    end
+    spot.close = function()
+      table.insert(closed, "spot")
+    end
+    fido.close = function()
+      table.insert(closed, "fido")
+    end
+
+    local ok = pcall(supervisor.new({ lil, spot, fido }).close)
+
+    T.eq(ok, false)
+    T.eq(closed, { "lil", "spot", "fido" })
+  end)
+
   test({ "merges rows from all producers" }, function()
     local n = detached()
     local sup = supervisor.new { yields("lil", "spot"), yields "fido" }

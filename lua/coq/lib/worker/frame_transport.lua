@@ -72,7 +72,9 @@ local read_once = function(pipe)
       if not pipe:is_closing() then
         pipe:read_stop()
         if result == nil or err or bytes == nil then
-          pipe:close()
+          local f = async.future()
+          pipe:close(f.resolve)
+          f.await { cancel = false }
         end
       end
     end)

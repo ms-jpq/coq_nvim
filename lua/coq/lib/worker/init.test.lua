@@ -372,7 +372,6 @@ T.describe({ "worker" }, function(test)
     local async = require "coq.lib.async"
     local handle = require "coq.lib.async._handle"
     local nursery = require "coq.lib.async._nursery"
-    local runtime = require "coq.lib.async._runtime"
     local h = handle.new()
     local w = worker.spawn()
     w.queue(function()
@@ -382,13 +381,16 @@ T.describe({ "worker" }, function(test)
     local n = nursery.new()
     local _ = h.on_cancel(n.cancel)
     n.spawn(function()
-      local _, iter = w.queue_stream(function()
-        local cont = coroutine.yield "lil"
-        if not cont then
-          _G.got_stop.resolve()
-        end
+      lib.scope(function(defer)
+        local close, iter = w.queue_stream(function()
+          local cont = coroutine.yield "lil"
+          if not cont then
+            _G.got_stop.resolve()
+          end
+        end)
+        defer(close)
+        iter()
       end)
-      iter()
     end)
     async.sleep(0)
     h.cancel()
@@ -416,10 +418,13 @@ T.describe({ "worker" }, function(test)
     local n = nursery.new()
     local _ = h.on_cancel(n.cancel)
     n.spawn(function()
-      local _close, _iter = w.queue_stream(function()
-        _G.ran = true
-        while coroutine.yield "tick" do
-        end
+      lib.scope(function(defer)
+        local close, _ = w.queue_stream(function()
+          _G.ran = true
+          while coroutine.yield "tick" do
+          end
+        end)
+        defer(close)
       end)
     end)
     async.sleep(0)
@@ -437,9 +442,10 @@ T.describe({ "worker" }, function(test)
   test({ "ambient cancel propagates through worker.main" }, function()
     local async = require "coq.lib.async"
     local handle = require "coq.lib.async._handle"
-    local runtime = require "coq.lib.async._runtime"
     local h = handle.new()
     local w = worker.spawn()
+    local started = async.future()
+    _G.coq_worker_main_started = started
     w.queue(function()
       _G.got_cancel = require("coq.lib.async").future()
     end)
@@ -448,22 +454,25 @@ T.describe({ "worker" }, function(test)
     local n = nursery.new()
     local _ = h.on_cancel(n.cancel)
     n.spawn(function()
-      local close, iter = w.queue_stream(function()
-        local cancel = require "coq.lib.async.cancel"
-        local ok, err = pcall(function()
-          require("coq.lib.worker").main(function()
-            require("coq.lib.async").sleep(10000)
-            return "should not reach"
+      lib.scope(function(defer)
+        local close, iter = w.queue_stream(function()
+          local cancel = require "coq.lib.async.cancel"
+          local ok, err = pcall(function()
+            require("coq.lib.worker").main(function()
+              _G.coq_worker_main_started.resolve()
+              require("coq.lib.async").sleep(10000)
+              return "should not reach"
+            end)
           end)
+          if not ok and cancel.is(err) then
+            _G.got_cancel.resolve()
+          end
         end)
-        if not ok and cancel.is(err) then
-          _G.got_cancel.resolve()
-        end
+        defer(close)
+        iter()
       end)
-      local _ = runtime.current().on_cancel(close)
-      iter()
     end)
-    async.sleep(0)
+    started.await()
     h.cancel()
     n.join()
 
@@ -472,6 +481,7 @@ T.describe({ "worker" }, function(test)
       return true
     end)
     w.close()
+    _G.coq_worker_main_started = nil
 
     T.eq(ok, true)
   end)
