@@ -7,6 +7,24 @@ local nursery = require "coq.lib.async._nursery"
 local runtime = require "coq.lib.async._runtime"
 
 T.describe({ "nursery" }, function(test)
+  test({ "parent cancellation propagates to a nested nursery" }, function()
+    local ready = async.future()
+    local cancelled = async.future()
+    local outer = nursery.new()
+
+    outer.spawn(function()
+      local inner = nursery.new()
+      local _ = inner.on_cancel(cancelled.resolve)
+      ready.resolve()
+      cancelled.await { cancel = false }
+    end)
+
+    ready.await()
+    outer.cancel()
+    cancelled.await { cancel = false }
+    outer.join()
+  end)
+
   test({ "completed child detaches from its parent" }, function()
     local done = async.future()
     local n = nursery.new()

@@ -129,12 +129,30 @@ end
 
 ---@param fn fun(...: any)
 ---@param ... any
----@return uv.luv_thread_t?, string?
+---@return lib.Closable? thread, string? err
 M.spawn_worker = function(fn, ...)
   local dumped = string.dump(fn)
-  return vim.uv.new_thread({}, function(d, ...)
-    load(d)(...)
-  end, dumped, ...)
+  local args, n_args = { ... }, select("#", ...)
+  local spawned = async.future()
+
+  vim.schedule(function()
+    assert(coroutine.running() == nil)
+    local ok, handle, err = pcall(vim.uv.new_thread, {}, function(d, ...)
+      load(d)(...)
+    end, dumped, unpack(args, 1, n_args))
+    spawned.resolve(ok and handle or nil, ok and err or handle)
+  end)
+
+  local handle, err = spawned.await { cancel = false }
+  if not handle then
+    return nil, err
+  end
+
+  local thread = closable.new(function()
+    local ok, join_err = handle:join()
+    assert(ok or join_err == "ESRCH: no such process", join_err)
+  end)
+  return thread, nil
 end
 
 return M

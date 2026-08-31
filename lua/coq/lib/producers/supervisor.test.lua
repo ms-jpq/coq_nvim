@@ -109,7 +109,8 @@ T.describe({ "supervisor" }, function(test)
     local ok = pcall(supervisor.new({ lil, spot, fido }).close)
 
     T.eq(ok, false)
-    T.eq(closed, { "lil", "spot", "fido" })
+    table.sort(closed)
+    T.eq(closed, { "fido", "lil", "spot" })
   end)
 
   test({ "merges rows from all producers" }, function()

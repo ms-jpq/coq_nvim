@@ -13,14 +13,13 @@ local runtime = require "coq.lib.async._runtime"
 
 local M = {}
 
----@param parent? async.Handle
 ---@return async.Nursery
-M.new = function(parent)
+M.new = function()
   local errors = {}
   local active = 0
   local waiters = {}
 
-  local h = handle.new(parent or runtime.current())
+  local h = handle.new(runtime.current())
 
   local state = closable.new(h.cancel)
 

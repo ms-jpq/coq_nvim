@@ -64,7 +64,13 @@ end
 local open = function(parked, write, message)
   local close, iter = closable.iter(function(defer)
     local chan = mpmc.new(1)
-    local id, release = parked.reserve(chan.push)
+    local confirmed = async.future()
+    local id, release = parked.reserve(function(frame)
+      if frame.status ~= nil then
+        confirmed.resolve()
+      end
+      chan.push(frame)
+    end)
     defer(release)
     defer(chan.close)
 
@@ -72,6 +78,7 @@ local open = function(parked, write, message)
     defer(function()
       if not terminated then
         write { kind = Kind.STOP, id = id }
+        confirmed.await { cancel = false }
       end
     end)
 
@@ -89,11 +96,7 @@ local open = function(parked, write, message)
     end
   end)
 
-  local unwatch = async.current().on_cancel(close)
-  return function()
-    unwatch()
-    close()
-  end, iter
+  return close, iter
 end
 
 ---@param frame { status: boolean?, values: any[], n_values: integer }?
@@ -322,7 +325,6 @@ end
 M.spawn = function()
   local duplex, remote = transport.duplex_pair()
   local endpoint = make_endpoint(duplex)
-  local n = nursery.new(runtime.ROOT)
 
   local ok, thread, err = pcall(transport.spawn_worker, function(...)
     require("coq.lib.worker").run(...)
@@ -333,15 +335,14 @@ M.spawn = function()
     error(err or thread, 0)
   end
 
+  local stopped = async.future()
+
   local state = closable.new(function()
     lib.scope(function(defer)
-      defer(function()
-        local ok, err = thread:join()
-        assert(ok or err == "ESRCH: no such process", err)
-      end)
+      defer(thread.close)
 
       duplex.close()
-      n.join()
+      stopped.await { cancel = false }
     end)
   end)
 
@@ -364,12 +365,19 @@ M.spawn = function()
 
   worker.close = function()
     state.close()
-    n.join()
   end
 
-  n.spawn(errs.with_reporting(function()
-    endpoint.serve(n, "worker died")
-  end))
+  runtime._detach(
+    runtime.ROOT,
+    errs.with_reporting(function()
+      lib.scope(function(defer)
+        defer(stopped.resolve)
+        async.scope(function(n)
+          endpoint.serve(n, "worker died")
+        end)
+      end)
+    end)
+  )
 
   ---@cast worker worker.Worker
   return worker
