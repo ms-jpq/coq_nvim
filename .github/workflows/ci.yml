@@ -24,7 +24,7 @@ jobs:
 
       - run: |-
           sudo -- apt update
-          sudo -- apt install --yes -- gdb neovim universal-ctags
+          sudo -- apt install --yes -- neovim universal-ctags
 
       - run: |-
           pip3 install -- codespell
@@ -37,7 +37,7 @@ jobs:
           python3 -m coq deps
 
       - run: |-
-          gdb --batch --quiet --return-child-result --ex run --ex 'thread apply all backtrace full' --args /usr/bin/nvim -l test.lua
+          make test
 
       - run: |-
           sudo -- apt install --yes -- luarocks

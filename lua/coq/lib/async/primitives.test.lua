@@ -192,7 +192,6 @@ T.describe({ "sleep cancel" }, function(test)
 
     T.eq(next(live), nil)
   end)
-
 end)
 
 T.describe({ "defer async" }, function(test)
