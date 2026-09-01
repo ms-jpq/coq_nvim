@@ -204,7 +204,11 @@ M.sleep = function(milliseconds)
     defer(function()
       if not watcher:is_closing() then
         watcher:stop()
-        watcher:close()
+        ---@type thread?
+        local owner = coroutine.running()
+        watcher:close(function()
+          owner = nil
+        end)
       end
     end)
 

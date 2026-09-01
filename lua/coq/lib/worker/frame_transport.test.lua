@@ -15,7 +15,9 @@ end
 local close_reader = function(duplex)
   if not duplex.reader:is_closing() then
     duplex.reader:read_stop()
-    duplex.reader:close()
+    local closed = async.future()
+    duplex.reader:close(closed.resolve)
+    closed.await { cancel = false }
   end
 end
 
