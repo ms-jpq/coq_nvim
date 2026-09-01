@@ -37,13 +37,7 @@ jobs:
           python3 -m coq deps
 
       - run: |-
-          sudo -- sysctl --write kernel.core_pattern=core
-          ulimit --core-size unlimited
-          if make test; then
-            exit 0
-          fi
-          gdb --batch --quiet --ex 'thread apply all backtrace full' -- /usr/bin/nvim core
-          exit 1
+          gdb --batch --quiet --return-child-result --ex run --ex 'thread apply all backtrace full' --args /usr/bin/nvim -l test.lua
 
       - run: |-
           sudo -- apt install --yes -- luarocks
