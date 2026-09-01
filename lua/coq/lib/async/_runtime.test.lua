@@ -1,8 +1,5 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
-local handle = require "coq.lib.async._handle"
-local lib = require "coq.lib"
-local runtime = require "coq.lib.async._runtime"
 
 ---@class runtime.test.Capture
 ---@field msg string
@@ -47,26 +44,6 @@ T.describe({ "async" }, function(test)
     local a, b, c = pack()
 
     T.eq({ a, b, c }, { "lil", "spot", "fido" })
-  end)
-
-  test({ "awaitify retains a cancelled owner until its callback" }, function()
-    local owner = lib.weak({}, "v")
-    local callback
-    local h = handle.new()
-    runtime._detach(h, function()
-      owner[1] = coroutine.running()
-      pcall(async.awaitify(function(cb)
-        callback = cb
-      end))
-    end)
-
-    h.cancel()
-    collectgarbage "collect"
-    assert(owner[1] ~= nil)
-
-    callback()
-    collectgarbage "collect"
-    assert(owner[1] == nil)
   end)
 
   test({ "entry defers execution" }, function()

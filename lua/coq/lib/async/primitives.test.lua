@@ -193,17 +193,6 @@ T.describe({ "sleep cancel" }, function(test)
     T.eq(next(live), nil)
   end)
 
-  test({ "cancelled sleepers survive collection until native close" }, function()
-    for _ = 1, 50 do
-      local h = handle.new()
-      runtime._detach(h, function()
-        pcall(async.sleep, 60 * 1000)
-      end)
-      h.cancel()
-      collectgarbage "collect"
-      async.sleep(0)
-    end
-  end)
 end)
 
 T.describe({ "defer async" }, function(test)
