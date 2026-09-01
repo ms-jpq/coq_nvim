@@ -129,7 +129,8 @@ end
 
 ---@param fn fun(...: any)
 ---@param ... any
----@return lib.Closable? thread, string? err
+---@return boolean spawned
+---@return string? err
 M.spawn_worker = function(fn, ...)
   local dumped = string.dump(fn)
   local args, n_args = { ... }, select("#", ...)
@@ -144,15 +145,7 @@ M.spawn_worker = function(fn, ...)
   end)
 
   local handle, err = spawned.await { cancel = false }
-  if not handle then
-    return nil, err
-  end
-
-  local thread = closable.new(function()
-    local ok, join_err = handle:join()
-    assert(ok or join_err == "ESRCH: no such process", join_err)
-  end)
-  return thread, nil
+  return handle ~= nil, err
 end
 
 return M

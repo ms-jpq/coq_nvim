@@ -326,24 +326,20 @@ M.spawn = function()
   local duplex, remote = transport.duplex_pair()
   local endpoint = make_endpoint(duplex)
 
-  local ok, thread, err = pcall(transport.spawn_worker, function(...)
+  local ok, spawned, err = pcall(transport.spawn_worker, function(...)
     require("coq.lib.worker").run(...)
   end, remote.read_fd, remote.write_fd)
-  if not ok or not thread then
+  if not ok or not spawned then
     duplex.reader:close()
     duplex.writer:close()
-    error(err or thread, 0)
+    error(err or spawned, 0)
   end
 
   local stopped = async.future()
 
   local state = closable.new(function()
-    lib.scope(function(defer)
-      defer(thread.close)
-
-      duplex.close()
-      stopped.await { cancel = false }
-    end)
+    duplex.close()
+    stopped.await { cancel = false }
   end)
 
   ---@diagnostic disable-next-line: missing-fields

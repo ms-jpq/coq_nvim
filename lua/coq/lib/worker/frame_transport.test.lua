@@ -103,22 +103,4 @@ T.describe({ "worker.frame_transport" }, function(test)
       assert(not live(left.writer))
     end)
   end)
-
-  test({ "worker outlives its spawning coroutine" }, function()
-    local thread
-    do
-      local spawned = async.future()
-      local n = nursery.new()
-      n.spawn(function()
-        spawned.resolve(assert(transport.spawn_worker(lib.noop)))
-      end)
-
-      thread = spawned.await()
-      n.join()
-    end
-    collectgarbage "collect"
-
-    thread.close()
-    thread.close()
-  end)
 end)
