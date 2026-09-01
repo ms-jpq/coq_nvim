@@ -326,13 +326,13 @@ M.spawn = function()
   local duplex, remote = transport.duplex_pair()
   local endpoint = make_endpoint(duplex)
 
-  local ok, spawned, err = pcall(transport.spawn_worker, function(...)
+  local ok, err = pcall(transport.spawn_worker, function(...)
     require("coq.lib.worker").run(...)
   end, remote.read_fd, remote.write_fd)
-  if not ok or not spawned then
+  if not ok then
     duplex.reader:close()
     duplex.writer:close()
-    error(err or spawned, 0)
+    error(err, 0)
   end
 
   local stopped = async.future()

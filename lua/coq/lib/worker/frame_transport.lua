@@ -129,8 +129,6 @@ end
 
 ---@param fn fun(...: any)
 ---@param ... any
----@return boolean spawned
----@return string? err
 M.spawn_worker = function(fn, ...)
   local dumped = string.dump(fn)
   local args, n_args = { ... }, select("#", ...)
@@ -145,7 +143,9 @@ M.spawn_worker = function(fn, ...)
   end)
 
   local handle, err = spawned.await { cancel = false }
-  return handle ~= nil, err
+  if not handle then
+    error(err, 0)
+  end
 end
 
 return M
