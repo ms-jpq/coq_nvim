@@ -148,7 +148,13 @@ end
 M.awaitify = function(fn, opts)
   return function(...)
     local f = runtime.future()
-    local argv = vim.list_extend({ ... }, { f.resolve })
+    ---@type thread?
+    local owner = coroutine.running()
+    local resolve = function(...)
+      f.resolve(...)
+      owner = nil
+    end
+    local argv = vim.list_extend({ ... }, { resolve })
 
     fn(unpack(argv))
     return f.await(opts)
