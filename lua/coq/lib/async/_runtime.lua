@@ -4,6 +4,7 @@ local handle = require "coq.lib.async._handle"
 local lib = require "coq.lib"
 
 local M = {}
+local MAIN = not vim.is_thread()
 
 ---@type async.Handle
 M.ROOT = handle.new()
@@ -155,6 +156,12 @@ M._detach = function(h, fn, ...)
   local bounce, co = trampoline(false, fn, function(bounce, eff)
     local resumed = false
     local unready, unwatch = lib.noop, lib.noop
+    local advance = function(...)
+      local ok, err = pcall(bounce, ...)
+      if not ok and not cancel.is(err) then
+        errs.report(err)
+      end
+    end
     local resume = function(...)
       if resumed then
         return
@@ -162,9 +169,14 @@ M._detach = function(h, fn, ...)
       resumed = true
       unready()
       unwatch()
-      local ok, err = pcall(bounce, ...)
-      if not ok and not cancel.is(err) then
-        errs.report(err)
+
+      if MAIN and vim.in_fast_event() then
+        local argv, argc = { ... }, select("#", ...)
+        vim.schedule(function()
+          advance(unpack(argv, 1, argc))
+        end)
+      else
+        advance(...)
       end
     end
 

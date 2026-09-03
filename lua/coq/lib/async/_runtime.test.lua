@@ -46,6 +46,23 @@ T.describe({ "async" }, function(test)
     T.eq({ a, b, c }, { "lil", "spot", "fido" })
   end)
 
+  test({ "native callbacks resume awaiters outside fast events" }, function()
+    local ready = async.future()
+    local callback_fast
+    local idle = assert(vim.uv.new_idle())
+    idle:start(function()
+      idle:stop()
+      idle:close()
+      callback_fast = vim.in_fast_event()
+      ready.resolve()
+    end)
+
+    ready.await()
+
+    T.eq(callback_fast, true)
+    T.eq(vim.in_fast_event(), false)
+  end)
+
   test({ "entry defers execution" }, function()
     local done = async.future()
     local ran = false
