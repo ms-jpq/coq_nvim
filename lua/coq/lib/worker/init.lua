@@ -7,7 +7,6 @@ local handle = require "coq.lib.async._handle"
 local inflight = require "coq.lib.worker.inflight"
 local lib = require "coq.lib"
 local mpmc = require "coq.lib.channels.mpmc"
-local nursery = require "coq.lib.async._nursery"
 local runtime = require "coq.lib.async._runtime"
 local transport = require "coq.lib.worker.frame_transport"
 local util = require "coq.lib.channels.util"
@@ -276,15 +275,18 @@ local make_endpoint = function(duplex)
   endpoint.request_stream = requester.request_stream
 
   endpoint.serve = function(n, dead_message)
-    for frame in transport.reader(duplex.reader) do
-      if frame.kind == Kind.YIELD then
-        n.spawn(protect(function()
-          requester.resolve(frame)
-        end))
-      else
-        responder.serve(n, frame)
+    lib.scope(function(defer)
+      defer(duplex.close)
+      for frame in transport.reader(duplex.reader) do
+        if frame.kind == Kind.YIELD then
+          n.spawn(protect(function()
+            requester.resolve(frame)
+          end))
+        else
+          responder.serve(n, frame)
+        end
       end
-    end
+    end)
     requester.drain(build_response(nil, false, dead_message))
   end
 

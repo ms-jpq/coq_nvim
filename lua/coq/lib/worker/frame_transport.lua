@@ -116,6 +116,9 @@ end
 ---@return fun(body: table)
 M.writer = function(pipe)
   return function(body)
+    if pipe:is_closing() then
+      error("worker transport closed", 0)
+    end
     local f = async.future()
     pipe:write(proto.encode(body), function(err)
       f.resolve(err)
