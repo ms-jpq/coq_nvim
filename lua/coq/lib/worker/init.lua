@@ -26,6 +26,7 @@ local DONE = {}
 ---@class worker.Module
 ---@field main fun<T>(fn: (fun(...): T?), ...: any): T
 ---@field main_stream fun<T>(fn: (fun(...): T?), ...: any): (fun(), lib.Iterator<T>)
+---@field _make_endpoint fun(duplex: worker.Duplex): worker.Endpoint
 ---@field run fun(req_fd: integer, rsp_fd: integer)
 ---@field spawn fun(): worker.Worker
 local M = {}
@@ -56,7 +57,7 @@ local build_response = function(id, status, ...)
 end
 
 ---@param parked worker.Inflight
----@param write fun(body: table)
+---@param write fun(body: table): boolean
 ---@param message table
 ---@return fun() close
 ---@return fun(): table? iter
@@ -76,13 +77,16 @@ local open = function(parked, write, message)
     local terminated = false
     defer(function()
       if not terminated then
-        write { kind = Kind.STOP, id = id }
-        confirmed.await { cancel = false }
+        if write { kind = Kind.STOP, id = id } then
+          confirmed.await { cancel = false }
+        end
       end
     end)
 
     message.kind, message.id = Kind.RESUME, id
-    write(message)
+    if not write(message) then
+      return
+    end
 
     for frame in chan.pull do
       if frame.status ~= nil then
@@ -91,7 +95,9 @@ local open = function(parked, write, message)
         return
       end
       coroutine.yield(frame)
-      write { kind = Kind.RESUME, id = id }
+      if not write { kind = Kind.RESUME, id = id } then
+        return
+      end
     end
   end)
 
@@ -189,7 +195,9 @@ M._dispatch = function(req_handle, chan, frame, write)
   local pump = function()
     local done, packed = resume(unpack(args, 1, n_args))
     while not done do
-      write(build_response(frame.id, nil, util.unpack(packed)))
+      if not write(build_response(frame.id, nil, util.unpack(packed))) then
+        return
+      end
       local more = not req_handle.cancelled and chan.pull()
       if not more then
         return build_response(frame.id, true)
@@ -213,7 +221,7 @@ M._dispatch = function(req_handle, chan, frame, write)
     ok, terminal = true, build_response(frame.id, true)
   end
 
-  write(ok and terminal or build_response(frame.id, false, terminal))
+  local _ = write(ok and terminal or build_response(frame.id, false, terminal))
 end
 
 ---@param write fun(body: table)
@@ -259,7 +267,7 @@ end
 ---@class worker.Endpoint
 ---@field request_oneshot fun(message: table): any ...
 ---@field request_stream fun(message: table): fun(), fun(): any ...
----@field serve fun(n: async.Nursery, dead_message: string)
+---@field serve fun(dead_message: string)
 
 ---@param duplex worker.Duplex
 ---@return worker.Endpoint
@@ -274,20 +282,23 @@ local make_endpoint = function(duplex)
   endpoint.request_oneshot = requester.request_oneshot
   endpoint.request_stream = requester.request_stream
 
-  endpoint.serve = function(n, dead_message)
-    lib.scope(function(defer)
-      defer(duplex.close)
-      for frame in transport.reader(duplex.reader) do
-        if frame.kind == Kind.YIELD then
-          n.spawn(protect(function()
-            requester.resolve(frame)
-          end))
-        else
-          responder.serve(n, frame)
+  endpoint.serve = function(dead_message)
+    async.scope(function(n)
+      lib.scope(function(defer)
+        defer(duplex.close)
+        defer(n.cancel)
+        for frame in transport.reader(duplex.reader) do
+          if frame.kind == Kind.YIELD then
+            n.spawn(protect(function()
+              requester.resolve(frame)
+            end))
+          else
+            responder.serve(n, frame)
+          end
         end
-      end
+      end)
+      requester.drain(build_response(nil, false, dead_message))
     end)
-    requester.drain(build_response(nil, false, dead_message))
   end
 
   return endpoint
@@ -310,10 +321,7 @@ if vim.is_thread() then
     end
 
     local main = function()
-      async.scope(function(n, defer)
-        defer(duplex.close)
-        endpoint.serve(n, "host died")
-      end)
+      endpoint.serve "host died"
     end
 
     async.entry(function()
@@ -345,7 +353,7 @@ M.spawn = function()
   end)
 
   ---@diagnostic disable-next-line: missing-fields
-  local worker = {} ---@type worker.Worker
+  local worker = { close = state.close } ---@type worker.Worker
 
   worker.queue = function(fn, ...)
     if state.closed then
@@ -361,18 +369,12 @@ M.spawn = function()
     return endpoint.request_stream(build_request(fn, ...))
   end
 
-  worker.close = function()
-    state.close()
-  end
-
   runtime._detach(
     runtime.ROOT,
     errs.with_reporting(function()
       lib.scope(function(defer)
         defer(stopped.resolve)
-        async.scope(function(n)
-          endpoint.serve(n, "worker died")
-        end)
+        endpoint.serve "worker died"
       end)
     end)
   )
@@ -380,5 +382,7 @@ M.spawn = function()
   ---@cast worker worker.Worker
   return worker
 end
+
+M._make_endpoint = make_endpoint
 
 return M

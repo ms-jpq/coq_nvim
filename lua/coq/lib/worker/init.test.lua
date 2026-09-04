@@ -1,6 +1,7 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local lib = require "coq.lib"
+local proto = require "coq.lib.worker.wire_proto"
 local worker = require "coq.lib.worker"
 
 T.describe({ "worker" }, function(test)
@@ -259,6 +260,71 @@ T.describe({ "worker" }, function(test)
 
     T.eq(ok, false)
     assert(err and err:find "worker closed", "expected worker closed, got: " .. tostring(err))
+  end)
+
+  test({ "EOF suppresses terminal responder writes" }, function()
+    lib.scope(function(defer)
+      defer(function()
+        _G.coq_endpoint_started = nil
+      end)
+
+      local started = async.future()
+      _G.coq_endpoint_started = started
+      local request = {
+        kind = "resume",
+        id = 1,
+        fn_bytecode = string.dump(function()
+          local async = require "coq.lib.async"
+          _G.coq_endpoint_started.resolve()
+          async.sleep(60 * 1000)
+        end),
+        args = {},
+        n_args = 0,
+      }
+      local writes = {}
+      local closed = false
+      local reads = 0
+      local writer_closing = false
+      local duplex = {
+        reader = {
+          is_closing = function()
+            return false
+          end,
+          read_start = function(_, callback)
+            reads = reads + 1
+            if reads == 1 then
+              callback(nil, proto.encode(request))
+            else
+              started.await { cancel = false }
+              callback(nil, nil)
+            end
+          end,
+          read_stop = function() end,
+          close = function(_, callback)
+            callback()
+          end,
+        },
+        writer = {
+          is_closing = function()
+            return writer_closing
+          end,
+          write = function(_, encoded, callback)
+            writes[#writes + 1] = encoded
+            callback(nil)
+            return true
+          end,
+        },
+        close = function()
+          writer_closing = true
+          closed = true
+        end,
+      }
+
+      worker._make_endpoint(duplex).serve "peer died"
+
+      T.eq(writes, {})
+      assert(closed, "expected duplex to close")
+    end)
   end)
 
   test({ "queue_stream can call back to main mid-stream" }, function()

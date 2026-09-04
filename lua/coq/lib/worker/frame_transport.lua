@@ -112,12 +112,13 @@ M.reader = function(pipe)
   end)
 end
 
+---@nodiscard
 ---@param pipe uv.uv_pipe_t
----@return fun(body: table)
+---@return fun(body: table): boolean
 M.writer = function(pipe)
   return function(body)
     if pipe:is_closing() then
-      error("worker transport closed", 0)
+      return false
     end
     local f = async.future()
     pipe:write(proto.encode(body), function(err)
@@ -127,6 +128,7 @@ M.writer = function(pipe)
     if err then
       error(err, 0)
     end
+    return true
   end
 end
 

@@ -104,16 +104,28 @@ T.describe({ "worker.frame_transport" }, function(test)
     end)
   end)
 
-  test({ "writer raises after duplex close" }, function()
+  test({ "writer reports failure after duplex close" }, function()
     with_pair(function(left)
       local write = transport.writer(left.writer)
       write { id = 1, name = "lil" }
       left.close()
 
-      local ok, err = pcall(write, { id = 2, name = "spot" })
-      T.eq(ok, false)
-      ---@cast err string
-      assert(err:find "worker transport closed", err)
+      T.eq(write { id = 2, name = "spot" }, false)
     end)
+  end)
+
+  test({ "writer raises native write errors" }, function()
+    local write = transport.writer {
+      is_closing = function()
+        return false
+      end,
+      write = function(_, _, callback)
+        callback "EPIPE"
+      end,
+    }
+
+    local ok, err = pcall(write, { id = 1, name = "lil" })
+    T.eq(ok, false)
+    assert(tostring(err):find "EPIPE", tostring(err))
   end)
 end)
