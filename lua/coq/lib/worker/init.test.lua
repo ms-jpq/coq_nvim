@@ -1,7 +1,6 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local lib = require "coq.lib"
-local proto = require "coq.lib.worker.wire_proto"
 local worker = require "coq.lib.worker"
 
 T.describe({ "worker" }, function(test)
@@ -262,7 +261,12 @@ T.describe({ "worker" }, function(test)
     assert(err and err:find "worker closed", "expected worker closed, got: " .. tostring(err))
   end)
 
-  test({ "EOF suppresses terminal responder writes" }, function()
+  local eof = function()
+    local T = require "coq.lib.test"
+    local async = require "coq.lib.async"
+    local lib = require "coq.lib"
+    local proto = require "coq.lib.worker.wire_proto"
+    local worker = require "coq.lib.worker"
     lib.scope(function(defer)
       defer(function()
         _G.coq_endpoint_started = nil
@@ -315,6 +319,13 @@ T.describe({ "worker" }, function(test)
           end,
         },
         close = function()
+          local finished = async.future()
+          local timer = assert(vim.uv.new_timer())
+          timer:start(10, 0, function()
+            timer:close()
+            finished.resolve()
+          end)
+          finished.await { cancel = false }
           writer_closing = true
           closed = true
         end,
@@ -324,6 +335,16 @@ T.describe({ "worker" }, function(test)
 
       T.eq(writes, {})
       assert(closed, "expected duplex to close")
+    end)
+  end
+
+  test({ "EOF suppresses terminal responder writes" }, eof)
+
+  test({ "EOF suppresses terminal responder writes in a worker thread" }, function()
+    local w = worker.spawn()
+    lib.scope(function(defer)
+      defer(w.close)
+      w.queue(eof)
     end)
   end)
 

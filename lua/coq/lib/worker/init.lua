@@ -272,7 +272,11 @@ end
 ---@param duplex worker.Duplex
 ---@return worker.Endpoint
 local make_endpoint = function(duplex)
-  local write = transport.writer(duplex.writer)
+  local connected = true
+  local send = transport.writer(duplex.writer)
+  local write = function(body)
+    return connected and send(body)
+  end
   local requester = make_requester(write)
   local responder = make_responder(write)
 
@@ -287,6 +291,9 @@ local make_endpoint = function(duplex)
       lib.scope(function(defer)
         defer(duplex.close)
         defer(n.cancel)
+        defer(function()
+          connected = false
+        end)
         for frame in transport.reader(duplex.reader) do
           if frame.kind == Kind.YIELD then
             n.spawn(protect(function()
@@ -333,18 +340,10 @@ end
 
 ---@return worker.Worker
 M.spawn = function()
-  local duplex, remote = transport.duplex_pair()
-  local endpoint = make_endpoint(duplex)
-
-  local ok, err = pcall(transport.spawn_worker, function(...)
+  local duplex = transport.spawn_worker(function(...)
     require("coq.lib.worker").run(...)
-  end, remote.read_fd, remote.write_fd)
-  if not ok then
-    duplex.reader:close()
-    duplex.writer:close()
-    error(err, 0)
-  end
-
+  end)
+  local endpoint = make_endpoint(duplex)
   local stopped = async.future()
 
   local state = closable.new(function()

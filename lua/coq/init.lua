@@ -118,11 +118,12 @@ M.setup = function(opts)
       local ps = vim
         .iter(producers(settings.clients))
         :map(function(prod)
+          defer(prod.close)
           return timelord_m.wrap(lord, toggle.wrap(instrument.wrap(statsd, prod)))
         end)
         :totable()
       local sup = supervisor.new(ps)
-      -- defer(sup.close)
+      defer(sup.close)
 
       local events = events_m.new()
       local resolver = resolver_m.new(n, lord)
