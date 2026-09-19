@@ -3,6 +3,63 @@ local async = require "coq.lib.async"
 local closable = require "coq.lib.closable"
 local lib = require "coq.lib"
 
+T.describe({ "closable.seq" }, function(test)
+  for _, case in ipairs {
+    { name = "reverse", ord = -1, expected = { 3, 2, 1 } },
+    { name = "forward", ord = 1, expected = { 1, 2, 3 } },
+  } do
+    test({ case.name .. " order closes once, including reentrant close" }, function()
+      local state = closable.seq(case.ord)
+      local calls = {}
+      for i = 1, 3 do
+        state.add(function()
+          assert(state.closed)
+          state.close()
+          table.insert(calls, i)
+        end)
+      end
+      state.close()
+      state.close()
+      T.eq(calls, case.expected)
+    end)
+
+    test({ case.name .. " order runs remaining cleanup after errors" }, function()
+      local state = closable.seq(case.ord)
+      local calls = {}
+      for i = 1, 3 do
+        state.add(function()
+          table.insert(calls, i)
+          if i == 2 then
+            error "cleanup failed"
+          end
+        end)
+      end
+      local ok, err = pcall(state.close)
+      assert(not ok and tostring(err):find("cleanup failed", 1, true))
+      state.close()
+      T.eq(calls, case.expected)
+    end)
+  end
+
+  test({ "empty sequence closes and rejects later registrations" }, function()
+    local state = closable.seq(-1)
+    state.close()
+    state.close()
+    local ok, err = pcall(state.add, lib.noop)
+    assert(not ok and tostring(err):find("cleanup sequence is closed", 1, true))
+  end)
+
+  test({ "rejects invalid order" }, function()
+    local ok = pcall(closable.seq, 0)
+    T.eq(ok, false)
+  end)
+
+  test({ "rejects missing order" }, function()
+    local ok = pcall(closable.seq)
+    T.eq(ok, false)
+  end)
+end)
+
 T.describe({ "closable.iter unwind order" }, function(test)
   test({ "defers run LIFO on natural body exit, matching lib.scope" }, function()
     local closable_order = {}

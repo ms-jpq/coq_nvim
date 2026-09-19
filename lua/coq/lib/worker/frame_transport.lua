@@ -142,47 +142,74 @@ M.writer = function(pipe)
   end
 end
 
+---@param read_fd integer
+---@param write_fd integer
+---@param release_fd integer
+---@param finished uv.uv_async_t
+---@param code string
+local run_worker = function(read_fd, write_fd, release_fd, finished, code)
+  local ok, err = pcall(function()
+    assert(loadstring(code))(read_fd, write_fd)
+  end)
+
+  finished:send()
+  assert(vim.uv.fs_read(release_fd, 1, -1) == "")
+  assert(vim.uv.fs_close(release_fd))
+  if not ok then
+    error(err, 0)
+  end
+end
+
 ---@param fn fun(read_fd: integer, write_fd: integer)
 ---@return worker.Duplex
 M.spawn_worker = function(fn)
+  local code = string.dump(fn)
   local duplex, remote = M.duplex_pair()
   local spawned = async.future()
-  local stopped = false
-  local thread
+
+  local joiner = closable.seq(1)
 
   local cleanup = vim.api.nvim_create_autocmd("VimLeavePre", {
     group = lib.group,
-    once = true,
     callback = function()
-      stopped = true
       abort(duplex)
-      if not thread then
-        return
-      end
-      for _, value in pairs(debug.getregistry()) do
-        if rawequal(value, thread) then
-          assert(thread:join())
-          return
-        end
-      end
+      joiner.close()
     end,
   })
+  joiner.add(function()
+    vim.api.nvim_del_autocmd(cleanup)
+  end)
+
+  local start = function()
+    assert(coroutine.running() == nil)
+    if joiner.closed then
+      error(cancel.new(), 0)
+    end
+    local thread
+    local release = assert(vim.uv.pipe({}, {}))
+    joiner.add(function()
+      assert(vim.uv.fs_close(release.write))
+      if thread then
+        assert(thread:join())
+      else
+        assert(vim.uv.fs_close(release.read))
+      end
+    end)
+
+    local finished = assert(vim.uv.new_async(vim.schedule_wrap(joiner.close)))
+    joiner.add(function()
+      finished:close()
+    end)
+    thread = assert(vim.uv.new_thread({}, run_worker, remote.read_fd, remote.write_fd, release.read, finished, code))
+  end
 
   vim.schedule(function()
-    spawned.resolve(pcall(function()
-      assert(coroutine.running() == nil)
-      if stopped then
-        error(cancel.new(), 0)
-      end
-      thread = assert(vim.uv.new_thread({}, fn, remote.read_fd, remote.write_fd))
-    end))
+    spawned.resolve(pcall(start))
   end)
 
   local ok, err = spawned.await { cancel = false }
   if not ok then
-    if not stopped then
-      vim.api.nvim_del_autocmd(cleanup)
-    end
+    joiner.close()
     abort(duplex)
     vim.uv.fs_close(remote.read_fd)
     vim.uv.fs_close(remote.write_fd)
