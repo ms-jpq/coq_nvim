@@ -90,6 +90,7 @@ local read_once = function(pipe)
     end)
 
     pipe:read_start(function(err, bytes)
+      pipe:read_stop()
       result = { err, bytes }
       fut.resolve()
     end)

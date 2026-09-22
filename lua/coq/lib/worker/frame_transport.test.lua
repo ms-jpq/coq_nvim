@@ -47,6 +47,56 @@ local with_pair = function(fn)
 end
 
 T.describe({ "worker.frame_transport" }, function(test)
+  for _, case in ipairs {
+    { name = "fragmented frame", chunks = { { data = '{"id":1' }, { data = ',"name":"lil"}\n' } } },
+    { name = "complete frames", chunks = { { data = '{"id":1,"name":"lil"}\n' }, { data = '{"id":2}\n' } } },
+    { name = "frame followed by EOF", chunks = { { data = '{"id":1,"name":"lil"}\n' }, {} } },
+  } do
+    test({ "preserves " .. case.name .. " across callbacks before coroutine resumption" }, function()
+      lib.scope(function(defer)
+        local timer = assert(vim.uv.new_timer())
+        defer(function()
+          timer:stop()
+          timer:close()
+        end)
+        local active, closed, next_chunk = false, false, 1
+        local pipe = {
+          is_closing = function()
+            return closed
+          end,
+          read_stop = function()
+            active = false
+          end,
+          close = function(_, callback)
+            closed = true
+            callback()
+          end,
+          read_start = function(_, callback)
+            active = true
+            timer:start(0, 0, function()
+              assert(vim.in_fast_event())
+              if next_chunk > #case.chunks then
+                callback(nil, nil)
+              end
+              while active and next_chunk <= #case.chunks do
+                local chunk = case.chunks[next_chunk]
+                next_chunk = next_chunk + 1
+                callback(nil, chunk.data)
+              end
+            end)
+          end,
+        }
+        local read = transport.reader(pipe)
+        T.eq(read(), { id = 1, name = "lil" })
+        if case.name == "complete frames" then
+          T.eq(read(), { id = 2 })
+        end
+        T.eq(read(), nil)
+        assert(closed)
+      end)
+    end)
+  end
+
   test({ "transports consecutive frames without closing the reader" }, function()
     with_pair(function(left, right)
       local write = transport.writer(left.writer)
@@ -59,6 +109,28 @@ T.describe({ "worker.frame_transport" }, function(test)
       write { id = 2, name = "spot" }
       T.eq(read(), { id = 2, name = "spot" })
       assert(not right.reader:is_closing())
+    end)
+  end)
+
+  test({ "transports frames spanning multiple native read callbacks" }, function()
+    with_pair(function(left, right)
+      local write = transport.writer(left.writer)
+      local read = transport.reader(right.reader)
+      local payload = string.rep("lil,spot\n", 32768)
+      async.all {
+        function()
+          for id = 1, 3 do
+            write { id = id, payload = payload }
+          end
+          return nil
+        end,
+        function()
+          for id = 1, 3 do
+            T.eq(read(), { id = id, payload = payload })
+          end
+          return nil
+        end,
+      }
     end)
   end)
 
