@@ -12,31 +12,13 @@ local SOURCE = "paths"
 
 local M = {}
 
----@param resolution string[]
----@param ctx ctx.full
----@return lib.Iterator<string>
-local collect_bases = function(resolution, ctx)
-  return coroutine.wrap(function()
-    for _, r in pairs(resolution) do
-      if r == "cwd" then
-        coroutine.yield(ctx.cwd)
-      elseif r == "file" and ctx.filename ~= "" then
-        coroutine.yield(vim.fs.dirname(ctx.filename))
-      end
-    end
-  end)
-end
-
----@param cwd string
 ---@param bases string[]
 ---@param cand paths.parse.Candidate
 ---@return lib.Iterator<string>
-local cand_dirs = function(cwd, bases, cand)
+local cand_dirs = function(bases, cand)
   return coroutine.wrap(function()
-    if cand.anchor == parse.ANCHOR.abs then
+    if cand.anchor == lib_path.ANCHOR.absolute then
       coroutine.yield(cand.resolved_directory)
-    elseif cand.anchor == parse.ANCHOR.cwd then
-      coroutine.yield(vim.fs.joinpath(cwd, cand.resolved_directory))
     else
       for _, base in pairs(bases) do
         coroutine.yield(vim.fs.joinpath(base, cand.resolved_directory))
@@ -114,7 +96,7 @@ end
 ---@return lib.Iterator<paths.Match> iter
 local matches = function(settings, ctx)
   return closable.iter(function(defer)
-    local bases = vim.iter(collect_bases(settings.clients.paths.resolution, ctx)):totable()
+    local bases = vim.iter(lib_path.bases(settings.clients.paths.resolution, ctx)):totable()
     local ignores = wildignore.compile(ctx.wildignore)
 
     for cand in
@@ -125,7 +107,7 @@ local matches = function(settings, ctx)
       })
     do
       local iters = {}
-      for dir in cand_dirs(ctx.cwd, bases, cand) do
+      for dir in cand_dirs(bases, cand) do
         if atools.fs.is_dir(dir) then
           table.insert(iters, scan_dir(ignores, dir, cand))
         end

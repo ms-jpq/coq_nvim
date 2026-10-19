@@ -111,24 +111,36 @@ M.is_dir = function(path)
 end
 
 ---@param dir string
+---@param scandir fun(dir: string): fun(), fun(): string?, string?
 ---@return fun() close
 ---@return fun(): string?, string? iter
-M.walk = function(dir)
+M._walk = function(dir, scandir)
   return closable.iter(function(defer)
-    local function recurse(d)
-      local close, entries = M.scandir(d)
-      defer(close)
+    local close, entries = scandir(dir)
+    defer(close)
 
-      for name, kind in entries do
-        local path = vim.fs.joinpath(d, name)
-        if kind == "directory" then
-          recurse(path)
-        else
-          coroutine.yield(path, kind)
-        end
+    local walks = {}
+    for name, kind in entries do
+      local filename = vim.fs.joinpath(dir, name)
+      if kind == "directory" then
+        local stop, files = M._walk(filename, scandir)
+        defer(stop)
+        local wrapped = async.wrap(function()
+          for full, entry_kind in files do
+            coroutine.yield { full, entry_kind }
+          end
+        end)
+        table.insert(walks, wrapped)
+      else
+        coroutine.yield(filename, kind)
       end
     end
-    recurse(dir)
+
+    local stop, files = async.merge(walks)
+    defer(stop)
+    for _, entry in files do
+      coroutine.yield(unpack(entry))
+    end
   end)
 end
 
@@ -159,6 +171,13 @@ M.scandir = function(path)
       end
     end
   end)
+end
+
+---@param dir string
+---@return fun() close
+---@return fun(): string?, string? iter
+M.walk = function(dir)
+  return M._walk(dir, M.scandir)
 end
 
 ---@param path string

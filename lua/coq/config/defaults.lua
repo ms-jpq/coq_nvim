@@ -10,6 +10,16 @@ local M = {
       weight_adjust = 0,
     },
 
+    fullpaths = {
+      always_on_top = true,
+      enabled = true,
+      preview_lines = 6,
+      resolution = { "cwd", "file" },
+      short_name = "FP",
+      symbol = "@",
+      weight_adjust = 0,
+    },
+
     lsp = {
       always_on_top = nil,
       enabled = true,

@@ -1,6 +1,79 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
+local lib = require "coq.lib"
+
+T.describe({ "atools.fs.walk" }, function(test)
+  for _, stop_early in pairs { false, true } do
+    test({ "concurrent descendants and cleanup", tostring(stop_early) }, function()
+      local ready = async.future()
+      local opened, closed, leaves = 0, 0, 0
+      local scan = function(directory)
+        opened = opened + 1
+        local close = function()
+          closed = closed + 1
+        end
+        local iter = async.wrap(function()
+          if directory == "/dogs" then
+            coroutine.yield("lil", "directory")
+            coroutine.yield("wang", "directory")
+          elseif directory == "/dogs/lil" then
+            coroutine.yield("kennel", "directory")
+          else
+            leaves = leaves + 1
+            if leaves == 2 then
+              ready.resolve()
+            end
+            ready.await()
+            coroutine.yield("toy", "file")
+            if stop_early then
+              async.sleep(60000)
+            end
+          end
+        end)
+        return close, iter
+      end
+      local found = {}
+      lib.scope(function(defer)
+        local close, files = atools.fs._walk("/dogs", scan)
+        defer(close)
+        for filename, kind in files do
+          T.eq(kind, "file")
+          table.insert(found, filename)
+          if stop_early then
+            break
+          end
+        end
+      end)
+      T.eq(opened, 4)
+      T.eq(closed, opened)
+      if not stop_early then
+        table.sort(found)
+        T.eq(found, { "/dogs/lil/kennel/toy", "/dogs/wang/toy" })
+      end
+    end)
+  end
+
+  test({ "scan failures propagate and close resources" }, function()
+    local closed = false
+    local ok, err = pcall(function()
+      lib.scope(function(defer)
+        local close, files = atools.fs._walk("/dogs", function()
+          return function()
+            closed = true
+          end, function()
+            error "broken kennel"
+          end
+        end)
+        defer(close)
+        files()
+      end)
+    end)
+    T.eq(ok, false)
+    assert(tostring(err):find("broken kennel", 1, true))
+    T.eq(closed, true)
+  end)
+end)
 
 T.describe({ "atools.fs._drainable" }, function(test)
   local fs = atools.fs

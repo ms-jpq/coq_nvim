@@ -191,44 +191,36 @@ T.describe({ "paths.matcher" }, function(test)
     T.eq(words_of(items), { "fido/", "spot.txt" })
   end)
 
-  test({ "@<path>/ resolves against cwd, not the file's dir" }, function()
-    -- claude-style: `@lua/init.lua` should always anchor to cwd even when the
-    -- file-base resolution is enabled and would otherwise compete.
+  test({ "bare @ produces no path completions" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
     local fake_file = "/elsewhere/current.lua"
 
     local settings = settings_with { clients = { paths = { resolution = { "cwd", "file" } } } }
     local ctx = ctx_of { cwd = dir, filename = fake_file, line_before = "@", line = "@" }
-    -- need a sep for the head pattern to fire
-    ctx.line_before = "@/"
-    ctx.line = "@/"
 
     local items = run_matcher(settings, ctx)
-    T.eq(words_of(items), { "spot.txt" })
+    T.eq(words_of(items), {})
   end)
 
-  test({ "@<path>/ literal_directory keeps the @ in the textEdit" }, function()
+  test({ "ordinary paths may contain @ in directory names" }, function()
     local dir = tmpdir()
-    vim.fn.mkdir(dir .. "/lua")
-    touch(dir .. "/lua/spot.txt")
+    vim.fn.mkdir(dir .. "/@dogs")
+    touch(dir .. "/@dogs/spot.txt")
+    local line = dir .. "/@dogs/"
 
     local settings = settings_with()
     local ctx = ctx_of {
       cwd = dir,
-      pos = { 1, 5 },
-      line_before = "@lua/",
-      line = "@lua/",
-      utf16_col = 5,
+      pos = { 1, #line },
+      line_before = line,
+      line = line,
+      utf16_col = #line,
     }
 
     local items = run_matcher(settings, ctx)
-    T.eq(#items, 1)
-    local edit = items[1].meta.lsp.item.textEdit
-    T.eq(edit.range.start.character, 0)
-    -- range.end covers the post-PUM cursor: pre-PUM col 5 + #word 8 - #kw 0 = 13.
-    T.eq(edit.range["end"].character, 13)
-    T.eq(edit.newText, "@lua/spot.txt")
+    T.eq(words_of(items), { "spot.txt" })
+    T.eq(items[1].meta.lsp.item.textEdit.newText, line .. "spot.txt")
   end)
 
   test({ "$VAR expands when set" }, function()

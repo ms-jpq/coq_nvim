@@ -3,9 +3,9 @@ local M = {}
 ---@param glob string
 ---@return string
 M.glob_to_lua = function(glob)
-  local escaped = string.gsub(glob, "[%%%(%)%.%[%]%+%-%^%$]", "%%%0")
-  escaped = string.gsub(escaped, "%*", ".*")
-  escaped = string.gsub(escaped, "%?", ".")
+  local escaped = vim.pesc(glob)
+  escaped = string.gsub(escaped, "%%%*", ".*")
+  escaped = string.gsub(escaped, "%%%?", ".")
   return "^" .. escaped .. "$"
 end
 

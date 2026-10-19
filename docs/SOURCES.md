@@ -128,6 +128,44 @@ null
 
 ---
 
+#### coq_settings.clients.fullpaths
+
+##### `coq_settings.clients.paths.resolution`
+
+For relative paths, what should their potential base path(s) be.
+
+- `cwd`: current working directory
+
+- `file`: the current file's parent directory
+
+**default:**
+
+```json
+["cwd", "file"]
+```
+
+##### `coq_settings.clients.fullpaths.preview_lines`
+
+Try to preview this many lines.
+
+**default:**
+
+```json
+6
+```
+
+##### `coq_settings.clients.fullpaths.symbol`
+
+Literal prefix that triggers full-path completion and is preserved on insertion.
+
+**default:**
+
+```json
+"@"
+```
+
+---
+
 #### coq_settings.clients.paths
 
 ##### `coq_settings.clients.paths.resolution`

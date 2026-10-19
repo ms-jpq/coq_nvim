@@ -3,6 +3,18 @@ local set = require "coq.lib.set"
 
 local M = {}
 
+---@alias path.Anchor "absolute" | "relative"
+M.ANCHOR = {
+  absolute = "absolute",
+  relative = "relative",
+}
+
+---@alias path.Resolution "cwd" | "file"
+M.RESOLUTION = {
+  cwd = "cwd",
+  file = "file",
+}
+
 M.HOME = vim.uv.os_homedir() or ""
 
 ---@param is_windows boolean
@@ -52,6 +64,30 @@ M.split_at_last_sep = function(seps, p)
     end
   end
   return "", p
+end
+
+---@param is_windows boolean
+---@param token string
+---@return string
+M.local_sep = function(is_windows, token)
+  local separators, fallback = M.seps(is_windows)
+  local directory = M.split_at_last_sep(separators, token)
+  return directory ~= "" and string.sub(directory, -1) or fallback
+end
+
+---@param resolution path.Resolution[]
+---@param ctx ctx.full
+---@return lib.Iterator<string>
+M.bases = function(resolution, ctx)
+  return coroutine.wrap(function()
+    for _, base in ipairs(resolution) do
+      if base == M.RESOLUTION.cwd then
+        coroutine.yield(ctx.cwd)
+      elseif base == M.RESOLUTION.file and ctx.filename ~= "" then
+        coroutine.yield(vim.fs.dirname(ctx.filename))
+      end
+    end
+  end)
 end
 
 return M

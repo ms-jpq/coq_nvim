@@ -2,12 +2,6 @@ local path = require "coq.lib.path"
 
 local M = {}
 
-M.ANCHOR = {
-  abs = "abs",
-  cwd = "cwd",
-  both = "both",
-}
-
 ---@param is_windows boolean
 ---@param separators lib.Set<string>
 ---@return lib.Iterator<string>
@@ -26,7 +20,6 @@ M._patterns = function(is_windows, separators)
       coroutine.yield "%$[%w_]+"
       coroutine.yield "%${[%w_]+}"
 
-      coroutine.yield "@[%w%.%-_+]*"
       coroutine.yield ""
     end)
   end
@@ -37,8 +30,6 @@ M._patterns = function(is_windows, separators)
         coroutine.yield("()" .. pattern .. sep)
       end
     end
-
-    coroutine.yield "()%f[@%w_]@[%w%.%-_+]*$"
   end)
 end
 
@@ -82,9 +73,6 @@ M._expand_head = function(is_windows, home, env, token, separators)
       return home .. rest
     end
   end
-  if c_1 == "@" then
-    return string.sub(token, 2)
-  end
   return M._expand_env(is_windows, env, token)
 end
 
@@ -117,14 +105,12 @@ M._find_starts = function(is_windows, separators, line_before)
   end)
 end
 
----@alias paths.parse.Anchor "abs" | "cwd" | "both"
-
 ---@class paths.parse.Candidate
 ---@field resolved_directory string
 ---@field literal_directory  string
 ---@field local_sep          string
 ---@field partial            string
----@field anchor             paths.parse.Anchor
+---@field anchor             path.Anchor
 ---@field start              integer
 
 ---@class paths.parse.Opts
@@ -136,25 +122,21 @@ end
 ---@param opts paths.parse.Opts
 ---@return lib.Iterator<paths.parse.Candidate>
 M.candidates = function(line_before, opts)
-  local separators, sep_fallback = path.seps(opts.is_windows)
+  local separators = path.seps(opts.is_windows)
 
   return coroutine.wrap(function()
     for pos, token in M._find_starts(opts.is_windows, separators, line_before) do
       local expanded = M._expand_head(opts.is_windows, opts.home, opts.env, token, separators)
       local resolved, partial = path.split_at_last_sep(separators, expanded)
-      local is_at = string.sub(token, 1, 1) == "@"
 
-      if resolved ~= "" or is_at then
+      if resolved ~= "" then
         local literal = string.sub(token, 1, #token - #partial)
-        local c_n = string.sub(literal, -1)
-        local anchor = (is_at and M.ANCHOR.cwd)
-          or (path.is_absolute(opts.is_windows, resolved) and M.ANCHOR.abs)
-          or M.ANCHOR.both
+        local anchor = (path.is_absolute(opts.is_windows, resolved) and path.ANCHOR.absolute) or path.ANCHOR.relative
 
         coroutine.yield {
           resolved_directory = resolved,
           literal_directory = literal,
-          local_sep = separators[c_n] and c_n or sep_fallback,
+          local_sep = path.local_sep(opts.is_windows, literal),
           partial = partial,
           anchor = anchor,
           start = pos - 1,

@@ -1,6 +1,22 @@
 local T = require "coq.lib.test"
 local config = require "coq.config"
 
+T.describe({ "path client configuration" }, function(test)
+  test({ "fullpaths has independent path options plus its symbol" }, function()
+    local settings = config.merged()
+    local paths, fullpaths = settings.clients.paths, settings.clients.fullpaths
+    T.eq(fullpaths.resolution, paths.resolution)
+    T.eq(fullpaths.preview_lines, paths.preview_lines)
+    T.eq(fullpaths.symbol, "@")
+    fullpaths.resolution[1] = "file"
+    T.eq(paths.resolution, { "cwd", "file" })
+    local custom = config.merged { clients = { fullpaths = { preview_lines = 2, resolution = { "file" } } } }
+    T.eq(custom.clients.fullpaths.preview_lines, 2)
+    T.eq(custom.clients.paths.preview_lines, 6)
+    T.eq(custom.clients.fullpaths.resolution, { "file" })
+  end)
+end)
+
 T.describe({ "config.normalize" }, function(test)
   test({ "nil input round-trips" }, function()
     T.eq(config.normalize(nil), nil)

@@ -1,5 +1,6 @@
 local atools = require "coq.lib.atools"
 local float = require "coq.lib.float"
+local fullpaths = require "coq.producers.fullpaths"
 local lib = require "coq.lib"
 local lsp_util = require "coq.producers.lsp.util"
 local paths_preview = require "coq.producers.paths.preview"
@@ -195,7 +196,7 @@ local resolve_doc = function(ctx, settings, resolver, item)
   if meta.path then
     return vim
       .iter(paths_preview.lines({
-        max_lines = settings.clients.paths.preview_lines,
+        max_lines = (meta.source == fullpaths.source and settings.clients.fullpaths or settings.clients.paths).preview_lines,
         ellipsis = settings.display.pum.ellipsis,
       }, lib.getcwd(), meta.path))
       :totable(),

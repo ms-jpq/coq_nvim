@@ -1,5 +1,7 @@
 local T = require "coq.lib.test"
+local lib = require "coq.lib"
 local wildignore = require "coq.producers.paths.wildignore"
+local worker = require "coq.lib.worker"
 
 T.describe({ "wildignore.glob_to_lua" }, function(test)
   test({ "* matches any sequence" }, function()
@@ -17,6 +19,20 @@ T.describe({ "wildignore.glob_to_lua" }, function(test)
   test({ "anchors both ends" }, function()
     local p = wildignore.glob_to_lua "fido"
     T.eq(p, "^fido$")
+  end)
+
+  test({ "escapes literals and expands wildcards inside a worker" }, function()
+    lib.scope(function(defer)
+      local w = worker.spawn()
+      defer(w.close)
+      local pattern = w.queue(function()
+        assert(vim.is_thread())
+        return require("coq.producers.paths.wildignore").glob_to_lua "dogs%[lil]*?.txt"
+      end)
+      T.eq(pattern, "^dogs%%%[lil%].*.%.txt$")
+      assert(string.match("dogs%[lil]walk.txt", pattern))
+      T.eq(string.match("dogs[lil]walk.txt", pattern), nil)
+    end)
   end)
 end)
 

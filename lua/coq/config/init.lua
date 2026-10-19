@@ -75,9 +75,12 @@ local defaults = require "coq.config.defaults"
 ---@field resolve_timeout number
 ---@field ignored_servers string[]
 
+---@class config.FullPathsClient: config.PathsClient
+---@field symbol string
+
 ---@class config.PathsClient: config.BaseClient
 ---@field always_on_top boolean
----@field resolution string[]
+---@field resolution path.Resolution[]
 ---@field preview_lines integer
 
 ---@class config.RegistersClient: config.BaseClient
@@ -110,6 +113,7 @@ local defaults = require "coq.config.defaults"
 
 ---@class config.Clients
 ---@field buffers config.BuffersClient
+---@field fullpaths config.FullPathsClient
 ---@field lsp config.LSPClient
 ---@field paths config.PathsClient
 ---@field registers config.RegistersClient

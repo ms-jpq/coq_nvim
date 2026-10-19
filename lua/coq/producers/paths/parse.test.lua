@@ -68,8 +68,8 @@ T.describe({ "paths.parse.expand_head" }, function(test)
     T.eq(i._expand_head(WIN, [[C:\Users\dogs]], ENV, [[~\Documents]], SW), [[C:\Users\dogs\Documents]])
   end)
 
-  test({ "@<path> strips the @ — cwd anchoring happens at cand_dirs" }, function()
-    T.eq(i._expand_head(UNIX, HOME, ENV, "@lua/coq", SU), "lua/coq")
+  test({ "@ is not expanded" }, function()
+    T.eq(i._expand_head(UNIX, HOME, ENV, "@lua/coq", SU), "@lua/coq")
   end)
 end)
 
@@ -182,7 +182,7 @@ T.describe({ "paths.parse.candidates" }, function(test)
     T.eq(cs[1].start, 0)
     T.eq(cs[1].dir, "/home/dogs/")
     T.eq(cs[1].partial, "Doc")
-    T.eq(cs[1].anchor, parse.ANCHOR.abs)
+    T.eq(cs[1].anchor, path.ANCHOR.absolute)
   end)
 
   test({ "$VAR/golden expands" }, function()
@@ -228,55 +228,20 @@ T.describe({ "paths.parse.candidates" }, function(test)
     end
   end)
 
-  test({ "@<path>/ — cwd-anchored, literal keeps the @" }, function()
-    local cs = strip(parse.candidates("@lua/", opts))
-    T.eq(cs[1].start, 0)
-    T.eq(cs[1].dir, "lua/")
-    T.eq(cs[1].partial, "")
-    T.eq(cs[1].anchor, parse.ANCHOR.cwd)
-  end)
-
-  test({ "@lua/coq/in — literal_directory keeps the @" }, function()
-    local cand = nil
-    for c in parse.candidates("@lua/coq/in", opts) do
-      cand = c
-      break
-    end
-    assert(cand, "expected a candidate")
-    T.eq(cand.literal_directory, "@lua/coq/")
-    T.eq(cand.partial, "in")
-    T.eq(cand.anchor, parse.ANCHOR.cwd)
-  end)
-
-  test({ "bare @ at BOL — frontier fires (Lua treats BOL as \\0)" }, function()
-    local cs = strip(parse.candidates("@", opts))
-    T.eq(#cs, 1)
-    T.eq(cs[1].start, 0)
-    T.eq(cs[1].dir, "")
-    T.eq(cs[1].partial, "")
-    T.eq(cs[1].anchor, parse.ANCHOR.cwd)
-  end)
-
-  test({ "bare @<partial> at BOL fires with partial captured" }, function()
-    local cs = strip(parse.candidates("@ftplugin", opts))
-    T.eq(#cs, 1)
-    T.eq(cs[1].start, 0)
-    T.eq(cs[1].dir, "")
-    T.eq(cs[1].partial, "ftplugin")
-    T.eq(cs[1].anchor, parse.ANCHOR.cwd)
-  end)
-
-  test({ "bare @<partial> after whitespace fires; before BOL@ at pos 0" }, function()
-    -- "  @foo" — fires at the @ (pos 2 in 0-indexed terms = start=2)
-    local cs = strip(parse.candidates("  @foo", opts))
-    local hit = nil
-    for _, c in pairs(cs) do
-      if c.anchor == parse.ANCHOR.cwd and c.partial == "foo" then
-        hit = c
+  for _, line in pairs { "@", "@dogs", "  @dogs" } do
+    test({ "ignores @ reference", line }, function()
+      for _, is_windows in pairs { UNIX, WIN } do
+        T.eq(strip(parse.candidates(line, { is_windows = is_windows, env = ENV, home = HOME })), {})
       end
-    end
-    assert(hit, "expected a cwd-anchored candidate with partial=foo")
-    T.eq(hit.start, 2)
+    end)
+  end
+
+  test({ "@ leaves ordinary slash parsing intact" }, function()
+    T.eq(strip(parse.candidates("@dogs/li", opts)), {
+      { start = 5, dir = "/", partial = "li", anchor = path.ANCHOR.absolute },
+    })
+    local cs = strip(parse.candidates("/dogs/@kennel/li", opts))
+    T.eq(cs[1], { start = 0, dir = "/dogs/@kennel/", partial = "li", anchor = path.ANCHOR.absolute })
   end)
 
   test({ "mid-word @ (name@domain) — no bare-@ candidate" }, function()
@@ -289,20 +254,6 @@ T.describe({ "paths.parse.candidates" }, function(test)
     -- underscore is treated as a word boundary inhibitor (same as %w)
     local cs = strip(parse.candidates("_@foo", opts))
     T.eq(#cs, 0)
-  end)
-
-  test({ "bare @<partial> — local_sep is the OS default, NOT @" }, function()
-    -- regression: literal ends with "@", so naively using sub(literal, -1) gave
-    -- local_sep="@", which the matcher would append to dir match names
-    -- ("ftdetect@" instead of "ftdetect/").
-    local cand = nil
-    for c in parse.candidates("@ft", opts) do
-      cand = c
-      break
-    end
-    assert(cand, "expected a candidate")
-    T.eq(cand.literal_directory, "@")
-    T.eq(cand.local_sep, "/")
   end)
 
   test({ "on windows, backslash path yields a candidate" }, function()

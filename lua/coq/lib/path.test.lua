@@ -4,6 +4,24 @@ local path = require "coq.lib.path"
 local UNIX, WIN = false, true
 local SU, SW = path.seps(UNIX), path.seps(WIN)
 
+T.describe({ "path.local_sep" }, function(test)
+  for _, case in pairs {
+    { UNIX, "dogs", "/" },
+    { UNIX, [[dogs\lil]], "/" },
+    { WIN, "dogs", [[\]] },
+    { WIN, "dogs/lil", "/" },
+    { WIN, [[dogs\lil]], [[\]] },
+    { WIN, [[dogs/kennel\lil]], [[\]] },
+  } do
+    local is_windows, token, expected = unpack(case)
+    ---@cast is_windows boolean
+    ---@cast token string
+    test({ tostring(is_windows), token }, function()
+      T.eq(path.local_sep(is_windows, token), expected)
+    end)
+  end
+end)
+
 T.describe({ "path.is_absolute" }, function(test)
   test({ "/ is absolute" }, function()
     T.eq(path.is_absolute(UNIX, "/var/dogs"), true)

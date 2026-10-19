@@ -14,6 +14,7 @@ local instrument = require "coq.lib.producers.instrument"
 local lib = require "coq.lib"
 local nvim_options = require "coq.nvim_options"
 local p_buffers = require "coq.producers.buffers"
+local p_fullpaths = require "coq.producers.fullpaths"
 local p_lsp = require "coq.producers.lsp"
 local p_paths = require "coq.producers.paths"
 local p_registers = require "coq.producers.registers"
@@ -65,6 +66,10 @@ local producers = function(clients)
 
     if clients.paths.enabled then
       coroutine.yield(p_paths.new())
+    end
+
+    if clients.fullpaths.enabled then
+      coroutine.yield(p_fullpaths.new())
     end
 
     if clients.tree_sitter.enabled then
