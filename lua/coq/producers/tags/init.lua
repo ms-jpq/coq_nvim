@@ -11,8 +11,6 @@ local run = require "coq.producers.tags.run"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
-local SOURCE = "tags"
-
 local index_of = util.once(index_m.new)
 
 ---@type fun(idle_ctx: idle.Ctx): fs_cache.Store<ctags.Tag[]>
@@ -29,7 +27,9 @@ local cache_of = util.once(function(idle_ctx)
   }
 end)
 
-local M = {}
+local M = {
+  source = "tags",
+}
 
 ---@class ctags.Meta
 ---@field mtime integer
@@ -160,7 +160,7 @@ M.matcher = util.batched(function(settings, ctx)
   local raw = index_of(settings).search { filetype = ctx.filetype, match_before = ctx.match_before }
 
   for hit in util.shape(settings, ctx, raw) do
-    local item = util.item(settings, SOURCE, {
+    local item = util.item(settings, M.source, {
       word = hit.item.word,
       kind = "Text",
       filter = hit.item.word,
@@ -173,6 +173,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
-M.new = util.threaded_module(SOURCE)
+M.new = util.threaded_module(M.source)
 
 return M

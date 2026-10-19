@@ -17,11 +17,11 @@ local worker = require "coq.lib.worker"
 ---@field filename string
 ---@field iskeyword string
 
-local SOURCE = "buffers"
-
 local index_of = util.once(index_m.new)
 
-local M = {}
+local M = {
+  source = "buffers",
+}
 
 ---@param max_bytes integer
 ---@param buf integer
@@ -124,7 +124,7 @@ M.matcher = util.batched(function(settings, ctx)
   }
 
   for hit in util.shape(settings, ctx, raw) do
-    local item = util.item(settings, SOURCE, {
+    local item = util.item(settings, M.source, {
       word = hit.item.word,
       kind = "Text",
       filter = hit.item.word,
@@ -137,6 +137,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
-M.new = util.threaded_module(SOURCE)
+M.new = util.threaded_module(M.source)
 
 return M

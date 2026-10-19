@@ -12,8 +12,6 @@ local util = require "coq.producers.util"
 
 local EXTENDS_DEPTH = 9
 
-local SOURCE = "snippets"
-
 local index_of = util.once(index_m.new)
 
 ---@class snippets.Cached
@@ -72,7 +70,9 @@ local fetch_ft = function(settings, idle_ctx, target)
   end)
 end
 
-local M = {}
+local M = {
+  source = "snippets",
+}
 
 ---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
@@ -134,7 +134,7 @@ M.matcher = util.batched(function(settings, ctx)
   end) --[[@as fun(): index.Hit<snippets.Item>?]]
 
   for hit in util.shape(settings, ctx, raw, true) do
-    local item = util.item(settings, SOURCE, {
+    local item = util.item(settings, M.source, {
       word = hit.item.word,
       abbr = hit.item.label ~= "" and hit.item.label or hit.item.word,
       kind = "Snippet",
@@ -156,6 +156,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
-M.new = util.threaded_module(SOURCE)
+M.new = util.threaded_module(M.source)
 
 return M

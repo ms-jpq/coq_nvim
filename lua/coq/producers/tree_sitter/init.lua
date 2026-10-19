@@ -13,11 +13,11 @@ local worker = require "coq.lib.worker"
 ---@field filetype string
 ---@field filename string
 
-local SOURCE = "tree_sitter"
-
 local index_of = util.once(index_m.new)
 
-local M = {}
+local M = {
+  source = "tree_sitter",
+}
 
 ---@param buf integer
 ---@param previous? treesitter.Meta
@@ -162,7 +162,7 @@ M.matcher = util.batched(function(settings, ctx)
 
   for hit in util.shape(settings, ctx, raw) do
     local lines = vim.iter(doc_iter(settings.clients.tree_sitter, ctx, hit.item)):totable()
-    local item = util.item(settings, SOURCE, {
+    local item = util.item(settings, M.source, {
       word = hit.item.word,
       kind = capture_to_icon(hit.item.kind),
       filter = hit.item.word,
@@ -176,6 +176,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
-M.new = util.threaded_module(SOURCE)
+M.new = util.threaded_module(M.source)
 
 return M

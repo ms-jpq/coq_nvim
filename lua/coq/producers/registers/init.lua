@@ -7,11 +7,11 @@ local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
-local SOURCE = "registers"
-
 local index_of = util.once(index_m.new)
 
-local M = {}
+local M = {
+  source = "registers",
+}
 
 ---@param name string
 ---@return string?
@@ -132,7 +132,7 @@ M.matcher = util.batched(function(settings, ctx)
       .. settings.clients.registers.register_scope
       .. hit.item.register
 
-    local item = util.item(settings, SOURCE, {
+    local item = util.item(settings, M.source, {
       word = hit.item.word,
       kind = "Text",
       filter = hit.item.word,
@@ -145,6 +145,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
-M.new = util.threaded_module(SOURCE)
+M.new = util.threaded_module(M.source)
 
 return M

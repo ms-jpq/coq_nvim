@@ -8,9 +8,9 @@ local parse = require "coq.producers.paths.parse"
 local util = require "coq.producers.util"
 local wildignore = require "coq.producers.paths.wildignore"
 
-local SOURCE = "paths"
-
-local M = {}
+local M = {
+  source = "paths",
+}
 
 ---@param bases string[]
 ---@param cand paths.parse.Candidate
@@ -145,7 +145,7 @@ M.matcher = util.batched(function(settings, ctx)
       local word = m.name .. (dir_q and m.cand.local_sep or "")
       local end_col = col + #word - #ctx.keyword_before
 
-      local item = util.item(settings, SOURCE, {
+      local item = util.item(settings, M.source, {
         word = word,
         kind = dir_q and "Folder" or "File",
         filter = m.name,
@@ -174,6 +174,6 @@ end)
 
 M.idle = lib.noop
 
-M.new = util.threaded_module(SOURCE)
+M.new = util.threaded_module(M.source)
 
 return M

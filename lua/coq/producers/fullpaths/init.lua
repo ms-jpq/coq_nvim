@@ -29,10 +29,10 @@ local scan_root = function(root, ignores, cand)
       for i, full, kind in vim.iter(files):enumerate() do
         local relative = vim.fs.relpath(root, full)
         if kind == "file" and relative and not wildignore.is_ignored(ignores, vim.fs.basename(full), full) then
-          relative = string.gsub(relative, "/", cand.local_sep)
-          local score = cand.partial == "" and 0 or match.score(cand.partial, relative)
+          local rel = string.gsub(relative, "/", cand.local_sep)
+          local score = cand.partial == "" and 0 or match.score(cand.partial, rel)
           if cand.partial == "" or score > 0 then
-            coroutine.yield { full = full, relative = relative, fuzzy = score }
+            coroutine.yield { full = full, relative = rel, fuzzy = score }
           end
         end
         if i % util.BATCH == 0 then

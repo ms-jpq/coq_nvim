@@ -7,7 +7,9 @@ local lib = require "coq.lib"
 local match = require "coq.lib.index.rank.match"
 local util = require "coq.producers.util"
 
-local SOURCE = "third_party"
+local M = {
+  source = "third_party",
+}
 
 ---@class third_party.Source
 ---@field name string
@@ -53,7 +55,7 @@ local item_of = function(settings, ctx, raw, encoding)
   local is_snippet = raw.insertTextFormat == vim.lsp.protocol.InsertTextFormat.Snippet
   local filter = raw.filterText or label
   local kind = vim.lsp.protocol.CompletionItemKind[raw.kind] or ""
-  return util.item(settings, SOURCE, {
+  return util.item(settings, M.source, {
     word = is_snippet and label or insert_text,
     abbr = label,
     kind = kind,
@@ -97,12 +99,10 @@ local query_1 = function(settings, ctx, entry, arg)
   end)
 end
 
-local M = {}
-
 ---@return producers.Producer<ctx.full>
 M.new = function()
   return {
-    source = SOURCE,
+    source = M.source,
     close = lib.noop,
     idle = lib.noop,
     search = function(settings, ctx)

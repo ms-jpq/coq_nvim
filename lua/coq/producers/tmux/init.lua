@@ -7,8 +7,6 @@ local tokens = require "coq.lib.index.tokens"
 local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
 
-local SOURCE = "tmux"
-
 local TMUX_PANE = vim.uv.os_environ().TMUX_PANE
 
 local SEP = "\30"
@@ -27,7 +25,9 @@ local PANE_FMT = table.concat({
 
 local index_of = util.once(index_m.new)
 
-local M = {}
+local M = {
+  source = "tmux",
+}
 
 ---@param settings config.Settings
 ---@param exclude string?
@@ -173,7 +173,7 @@ M.matcher = util.batched(function(settings, ctx)
   local raw = index_of(settings).search { match_before = ctx.match_before }
 
   for hit in util.shape(settings, ctx, raw) do
-    local item = util.item(settings, SOURCE, {
+    local item = util.item(settings, M.source, {
       word = hit.item.word,
       kind = "Text",
       filter = hit.item.word,
@@ -186,6 +186,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
-M.new = util.threaded_module(SOURCE)
+M.new = util.threaded_module(M.source)
 
 return M
