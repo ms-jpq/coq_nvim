@@ -87,7 +87,7 @@ local resolve_range = function(buf, encoding, cursor_row, cursor_line, range)
     return
   end
 
-  return start_line, end_line, { start_row = s.line, start_col = start_col, end_row = e.line, end_col = end_col }
+  return start_line, end_line, { start_row = s.line, start_col = start_col, end_row = e.line, end_col = end_col - 1 }
 end
 
 ---@param preview boolean
