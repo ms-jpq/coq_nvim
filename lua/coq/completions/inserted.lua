@@ -41,20 +41,10 @@ end
 ---@param ctx ctx.full
 ---@param resolver completions.Resolver
 ---@param meta completions.ItemMeta
----@return lsp.TextEdit? main_edit
----@return lsp.TextEdit[] addn_edits
----@return string? snippet
 ---@return completions.ItemLspMeta? resolved
 M._resolve = function(settings, ctx, resolver, meta)
   local timeout_ms = math.floor(settings.clients.lsp.resolve_timeout * 1000)
-  local resolved = resolver.resolve(ctx, meta, timeout_ms)
-
-  local meta_item = meta.lsp and meta.lsp.item
-  local main_edit = resolved and lsp_util.main_edit(resolved.item) or lsp_util.main_edit(meta_item)
-  local addn_edits = resolved and lsp_util.addn_edits(resolved.item) or lsp_util.addn_edits(meta_item)
-  local snippet = resolved and lsp_util.snippet(resolved.item) or lsp_util.snippet(meta_item)
-
-  return main_edit, addn_edits, snippet, resolved
+  return resolver.resolve(ctx, meta, timeout_ms) or meta.lsp
 end
 
 ---@param buf integer
@@ -237,14 +227,16 @@ end
 ---@param i completions.Item
 ---@param main lsp.TextEdit?
 ---@return lsp.TextEdit
+---@return integer trailing_chars
 M._main_edit = function(ctx, i, main)
   local span, e_ctx, replace_text = M.span(false, ctx, i, main)
   local end_line = span.end_row == e_ctx.cursor_row and e_ctx.cursor_line or e_ctx.end_line
 
   local start_col = math.min(span.start_col, #e_ctx.start_line)
   local end_col = math.min(span.end_col, #end_line)
+  local trailing_chars = vim.str_utfindex(string.sub(end_line, end_col + 1), e_ctx.encoding)
 
-  return {
+  local edit = {
     range = {
       start = {
         line = span.start_row,
@@ -257,17 +249,21 @@ M._main_edit = function(ctx, i, main)
     },
     newText = replace_text,
   }
+  return edit, trailing_chars
 end
 
 ---@param ctx ctx.full
 ---@param i completions.Item
 ---@param main lsp.TextEdit?
 ---@param additional_edits lsp.TextEdit[]
+---@return lsp.TextEdit
+---@return integer trailing_chars
 M._apply_edits = function(ctx, i, main, additional_edits)
   local enc = lsp_util.encoding(i)
-  local edit = M._main_edit(ctx, i, main)
+  local edit, trailing_chars = M._main_edit(ctx, i, main)
   local all_edits = vim.list_extend({ edit }, additional_edits)
   apply_text_edits(all_edits, ctx.buf, enc)
+  return edit, trailing_chars
 end
 
 ---@param ctx ctx.full
@@ -294,17 +290,24 @@ M._apply_snippet = function(ctx, body)
 end
 
 -- https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/completion.lua
+---@class completions.EditShift
+---@field before lsp.Position
+---@field after lsp.Position
+
 ---@param ctx ctx.full
 ---@param i completions.Item
+---@return completions.EditShift shift
 M.apply = function(ctx, i)
   local item = i.meta.lsp and i.meta.lsp.item
   local main = lsp_util.main_edit(item)
   local addn_edits = lsp_util.addn_edits(item)
   local snippet = lsp_util.snippet(item)
+  local encoding = lsp_util.encoding(i)
+  local line_count = vim.api.nvim_buf_line_count(ctx.buf)
 
   debug.notify(vim.inspect { main = main, addn_edits = addn_edits, snippet = snippet })
   debug.buf(ctx.buf, "pre-apply_edits")
-  M._apply_edits(ctx, i, main, addn_edits)
+  local edit, trailing_chars = M._apply_edits(ctx, i, main, addn_edits)
   debug.buf(ctx.buf, "post-apply_edits")
 
   if snippet then
@@ -312,28 +315,62 @@ M.apply = function(ctx, i)
     debug.buf(ctx.buf, "post-snippet.expand")
   end
 
-  if i.meta.lsp and i.meta.lsp.item and i.meta.lsp.item.command then
+  local before = (main or edit).range["end"]
+  local after = before
+  if #addn_edits == 0 then
+    local row = edit.range["end"].line + vim.api.nvim_buf_line_count(ctx.buf) - line_count
+    local line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, row, row + 1, true))
+    after = { line = row, character = vim.str_utfindex(line, encoding) - trailing_chars }
+  end
+
+  if item and item.command then
     lsp_util.exec_command(ctx, i.meta.lsp)
     debug.buf(ctx.buf, "post-command")
   end
+  return { before = before, after = after }
+end
+
+---@param edits lsp.TextEdit[]
+---@param shift completions.EditShift
+---@return lsp.TextEdit[]
+M._shift_edits = function(edits, shift)
+  local shifted = vim.deepcopy(edits)
+  for _, edit in ipairs(shifted) do
+    local start = edit.range.start
+    local follows = start.line > shift.before.line
+      or (start.line == shift.before.line and start.character >= shift.before.character)
+    if follows then
+      for _, pos in pairs(edit.range) do
+        if pos.line == shift.before.line then
+          pos.character = pos.character + shift.after.character - shift.before.character
+        end
+        pos.line = pos.line + shift.after.line - shift.before.line
+      end
+    end
+  end
+  return shifted
 end
 
 ---@param settings config.Settings
 ---@param ctx ctx.full
 ---@param resolver completions.Resolver
 ---@param i completions.Item
-M.resolve = function(settings, ctx, resolver, i)
-  local _, addn_edits, _, resolved = M._resolve(settings, ctx, resolver, i.meta)
+---@param shift completions.EditShift
+M.resolve = function(settings, ctx, resolver, i, shift)
+  local resolved = M._resolve(settings, ctx, resolver, i.meta)
   atools.scheduled()
   if not context.still_valid(ctx) then
     return
   end
 
   local original = i.meta.lsp and i.meta.lsp.item
+  local item = resolved and resolved.item
+  local addn_edits = lsp_util.addn_edits(item)
   if #lsp_util.addn_edits(original) == 0 and #addn_edits > 0 then
-    apply_text_edits(addn_edits, ctx.buf, lsp_util.encoding(i))
+    local shifted = M._shift_edits(addn_edits, shift)
+    apply_text_edits(shifted, ctx.buf, lsp_util.encoding(i))
   end
-  if resolved and resolved.item and resolved.item.command and not (original and original.command) then
+  if resolved and item and item.command and not (original and original.command) then
     lsp_util.exec_command(ctx, resolved)
   end
 end

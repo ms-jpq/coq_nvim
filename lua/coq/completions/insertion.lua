@@ -24,12 +24,12 @@ M.bind = function(n, settings, resolver, statsd)
       end
 
       ---@cast user_data completions.Item
-      inserted.apply(context.full(), user_data)
+      local shift = inserted.apply(context.full(), user_data)
       statsd.inserted(user_data)
       if user_data.meta.lsp then
         local ctx = context.full()
         n.spawn(function()
-          inserted.resolve(settings, ctx, resolver, user_data)
+          inserted.resolve(settings, ctx, resolver, user_data, shift)
         end)
       end
     end),

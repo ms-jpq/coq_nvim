@@ -3,6 +3,32 @@ local TH = require "coq.lib.test_helpers"
 local inserted = require "coq.completions.inserted"
 local lsp_util = require "coq.producers.lsp.util"
 
+T.describe({ "inserted._shift_edits" }, function(test)
+  for _, case in ipairs {
+    { "identity", { 2, 4 }, { 1, 2 }, { 2, 4 } },
+    { "before replacement", { 0, 1 }, { 2, 3 }, { 0, 1 } },
+    { "at replacement end", { 1, 2 }, { 2, 3 }, { 2, 3 } },
+    { "same-line suffix", { 1, 4 }, { 2, 3 }, { 2, 5 } },
+    { "following line", { 3, 4 }, { 2, 3 }, { 4, 4 } },
+    { "shorter replacement", { 1, 4 }, { 1, 0 }, { 1, 2 } },
+  } do
+    test({ case[1] }, function()
+      local position = function(pair)
+        return { line = pair[1], character = pair[2] }
+      end
+      local edits = {
+        { newText = "fido", range = { start = position(case[2]), ["end"] = position(case[2]) } },
+      }
+      local original = vim.deepcopy(edits)
+      local shifted = inserted._shift_edits(edits, { before = position { 1, 2 }, after = position(case[3]) })
+      T.eq(shifted, {
+        { newText = "fido", range = { start = position(case[4]), ["end"] = position(case[4]) } },
+      })
+      T.eq(edits, original)
+    end)
+  end
+end)
+
 -- `word_range` runs AFTER `complete()` has already inserted the chosen word, so
 -- the fixtures describe the post-insert buffer: `line` is what's on screen,
 -- `col` is the (0-based byte) cursor sitting just after `word`.
@@ -721,7 +747,9 @@ T.describe({ "inserted._resolve" }, function(test)
       return nil
     end)
     async.scope(function()
-      local _, addn = inserted._resolve(settings_of(), ctx, resolver, item.meta)
+      local resolved = inserted._resolve(settings_of(), ctx, resolver, item.meta)
+      T.eq(resolved, item.meta.lsp)
+      local addn = lsp_util.addn_edits(resolved and resolved.item)
       T.eq(#addn, 1)
     end)
     T.eq(called, true)
@@ -743,14 +771,15 @@ T.describe({ "inserted._resolve" }, function(test)
       } --[[@as completions.ItemLspMeta]]
     end)
     async.scope(function()
-      local _, addn = inserted._resolve(settings_of(), ctx, resolver, item.meta)
+      local resolved = inserted._resolve(settings_of(), ctx, resolver, item.meta)
+      local addn = lsp_util.addn_edits(resolved and resolved.item)
       T.eq(#addn, 1)
       T.eq(addn[1].newText, "y")
     end)
     T.eq(captured_timeout, 1000)
   end)
 
-  test({ "returns nil mains when lsp carries no textEdit" }, function()
+  test({ "empty LSP metadata has no main edit" }, function()
     local ctx, _ = make_ctx { "" }
     ---@diagnostic disable-next-line: missing-fields
     local item = {
@@ -760,10 +789,10 @@ T.describe({ "inserted._resolve" }, function(test)
     local resolver = fake_resolver(function()
       return nil
     end)
-    local main_val
+    local resolved
     async.scope(function()
-      main_val, _ = inserted._resolve(settings_of(), ctx, resolver, item.meta)
+      resolved = inserted._resolve(settings_of(), ctx, resolver, item.meta)
     end)
-    T.eq(main_val, nil)
+    T.eq(lsp_util.main_edit(resolved and resolved.item), nil)
   end)
 end)

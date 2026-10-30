@@ -18,7 +18,7 @@ local check = function(fn)
     end
   end
 end
-local additional = {
+local additional = case.additional or {
   { newText = "import", range = { start = { line = 0, character = 0 }, ["end"] = { line = 0, character = 0 } } },
 }
 local item = {
@@ -27,7 +27,7 @@ local item = {
 }
 if not case.plain then
   item.meta.lsp = {
-    position_encoding = "utf-8",
+    position_encoding = case.encoding or "utf-8",
     item = {
       label = "fido",
       insertTextFormat = case.snippet and 2 or 1,
@@ -40,7 +40,7 @@ if not case.plain then
   }
 end
 
-vim.api.nvim_buf_set_lines(0, 0, -1, true, { "", "fi" })
+vim.api.nvim_buf_set_lines(0, 0, -1, true, case.initial or { "", "fi" })
 vim.api.nvim_win_set_cursor(0, { 2, 1 })
 vim.keymap.set("i", "<CR>", function()
   return vim.fn.pumvisible() == 1 and "<C-y>" or "<CR>"
@@ -73,7 +73,7 @@ vim.api.nvim_create_autocmd("InsertEnter", {
     end))
   end,
 })
-vim.api.nvim_input "A"
+vim.api.nvim_input "a"
 ]]
 
 T.describe({ "completion acceptance" }, function(test)
@@ -106,6 +106,57 @@ T.describe({ "completion acceptance" }, function(test)
       expected = { "import", "fido" },
     },
     { name = "stale resolved edit is skipped", resolved = true, keys = ":", expected = { "", "fido:" } },
+    {
+      name = "resolved edit below multiline snippet",
+      initial = { "", "fi", "tail" },
+      snippet = "fido(\n)$0",
+      resolved = true,
+      additional = {
+        { newText = "end", range = { start = { line = 2, character = 0 }, ["end"] = { line = 2, character = 4 } } },
+      },
+      keys = "<C-y>",
+      expected = { "", "fido(", ")", "end" },
+    },
+    {
+      name = "resolved edit after completion on same line",
+      initial = { "", "fi tail" },
+      resolved = true,
+      additional = {
+        { newText = "end", range = { start = { line = 1, character = 3 }, ["end"] = { line = 1, character = 7 } } },
+      },
+      keys = "<C-y>",
+      expected = { "", "fido end" },
+    },
+    {
+      name = "resolved edit on snippet ending line",
+      initial = { "", "fi;tail" },
+      snippet = "fido(\n)$0",
+      resolved = true,
+      additional = {
+        { newText = "end", range = { start = { line = 1, character = 3 }, ["end"] = { line = 1, character = 7 } } },
+      },
+      keys = "<C-y>",
+      expected = { "", "fido(", ");end" },
+    },
+    {
+      name = "resolved edit after UTF-16 snippet",
+      initial = { "", "fi tail" },
+      snippet = "fido\240\159\144\182$0",
+      encoding = "utf-16",
+      resolved = true,
+      additional = {
+        { newText = "end", range = { start = { line = 1, character = 3 }, ["end"] = { line = 1, character = 7 } } },
+      },
+      keys = "<C-y>",
+      expected = { "", "fido\240\159\144\182 end" },
+    },
+    {
+      name = "resolved import above multiline snippet",
+      snippet = "fido(\n)$0",
+      resolved = true,
+      keys = "<C-y>",
+      expected = { "import", "fido(", ")" },
+    },
     {
       name = "known additional edit is not applied twice",
       known = true,
