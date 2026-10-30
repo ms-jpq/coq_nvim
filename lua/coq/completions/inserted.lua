@@ -44,6 +44,7 @@ end
 ---@return lsp.TextEdit? main_edit
 ---@return lsp.TextEdit[] addn_edits
 ---@return string? snippet
+---@return completions.ItemLspMeta? resolved
 M._resolve = function(settings, ctx, resolver, meta)
   local timeout_ms = math.floor(settings.clients.lsp.resolve_timeout * 1000)
   local resolved = resolver.resolve(ctx, meta, timeout_ms)
@@ -53,7 +54,7 @@ M._resolve = function(settings, ctx, resolver, meta)
   local addn_edits = resolved and lsp_util.addn_edits(resolved.item) or lsp_util.addn_edits(meta_item)
   local snippet = resolved and lsp_util.snippet(resolved.item) or lsp_util.snippet(meta_item)
 
-  return main_edit, addn_edits, snippet
+  return main_edit, addn_edits, snippet, resolved
 end
 
 ---@param buf integer
@@ -87,7 +88,7 @@ local resolve_range = function(buf, encoding, cursor_row, cursor_line, range)
     return
   end
 
-  return start_line, end_line, { start_row = s.line, start_col = start_col, end_row = e.line, end_col = end_col - 1 }
+  return start_line, end_line, { start_row = s.line, start_col = start_col, end_row = e.line, end_col = end_col }
 end
 
 ---@param preview boolean
@@ -293,17 +294,13 @@ M._apply_snippet = function(ctx, body)
 end
 
 -- https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/completion.lua
----@param settings config.Settings
 ---@param ctx ctx.full
----@param resolver completions.Resolver
 ---@param i completions.Item
----@return true?
-M.apply = function(settings, ctx, resolver, i)
-  local main, addn_edits, snippet = M._resolve(settings, ctx, resolver, i.meta)
-  atools.scheduled()
-  if not context.still_valid(ctx) then
-    return
-  end
+M.apply = function(ctx, i)
+  local item = i.meta.lsp and i.meta.lsp.item
+  local main = lsp_util.main_edit(item)
+  local addn_edits = lsp_util.addn_edits(item)
+  local snippet = lsp_util.snippet(item)
 
   debug.notify(vim.inspect { main = main, addn_edits = addn_edits, snippet = snippet })
   debug.buf(ctx.buf, "pre-apply_edits")
@@ -319,8 +316,26 @@ M.apply = function(settings, ctx, resolver, i)
     lsp_util.exec_command(ctx, i.meta.lsp)
     debug.buf(ctx.buf, "post-command")
   end
+end
 
-  return true
+---@param settings config.Settings
+---@param ctx ctx.full
+---@param resolver completions.Resolver
+---@param i completions.Item
+M.resolve = function(settings, ctx, resolver, i)
+  local _, addn_edits, _, resolved = M._resolve(settings, ctx, resolver, i.meta)
+  atools.scheduled()
+  if not context.still_valid(ctx) then
+    return
+  end
+
+  local original = i.meta.lsp and i.meta.lsp.item
+  if #lsp_util.addn_edits(original) == 0 and #addn_edits > 0 then
+    apply_text_edits(addn_edits, ctx.buf, lsp_util.encoding(i))
+  end
+  if resolved and resolved.item and resolved.item.command and not (original and original.command) then
+    lsp_util.exec_command(ctx, resolved)
+  end
 end
 
 return M

@@ -1,9 +1,10 @@
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
-local events = require "coq.completions.events"
+local errs = require "coq.lib.errs"
 local ghost = require "coq.completions.ghost"
 local inserted = require "coq.completions.inserted"
 local item = require "coq.completions.item"
+local lib = require "coq.lib"
 local statsd_m = require "coq.lib.index.rank.statsd"
 local topk_m = require "coq.lib.index.rank.topk"
 
@@ -13,25 +14,26 @@ local M = {}
 ---@param settings config.Settings
 ---@param resolver completions.Resolver
 ---@param statsd index.Statsd
----@param pum channels.Broadcast<completions.PumEvent>
-M.bind = function(n, settings, resolver, statsd, pum)
-  events.subscribe_latest(n, pum, function(ev)
-    atools.scheduled()
+M.bind = function(n, settings, resolver, statsd)
+  vim.api.nvim_create_autocmd("CompleteDone", {
+    group = lib.group,
+    callback = errs.with_reporting(function()
+      local user_data = vim.v.completed_item.user_data
+      if type(user_data) ~= "table" or not user_data.meta then
+        return
+      end
 
-    if ev.kind ~= "done" then
-      return
-    end
-    local user_data = ev.completed_item.user_data
-    if type(user_data) ~= "table" then
-      return
-    end
-
-    ---@cast user_data completions.Item
-    local ctx = context.full()
-    if inserted.apply(settings, ctx, resolver, user_data) then
+      ---@cast user_data completions.Item
+      inserted.apply(context.full(), user_data)
       statsd.inserted(user_data)
-    end
-  end)
+      if user_data.meta.lsp then
+        local ctx = context.full()
+        n.spawn(function()
+          inserted.resolve(settings, ctx, resolver, user_data)
+        end)
+      end
+    end),
+  })
 end
 
 ---@param ctx ctx.full
