@@ -26,6 +26,15 @@ local fresh = function()
 end
 
 T.describe({ "rank.statsd.inserted" }, function(test)
+  test({ "all filters record one acceptance" }, function()
+    local s = fresh()
+    local candidate = fido()
+    candidate.meta.filter = { "kennel/fido", "kennel", "fido" }
+    s.inserted(candidate)
+    T.eq(s.history(), { ["kennel/fido"] = 1, kennel = 1, fido = 1 })
+    T.eq(s.summary().BF.inserted, 1)
+  end)
+
   test({ "history records acceptance order and returned snapshots stay fixed" }, function()
     local s = fresh()
     s.inserted(fido())

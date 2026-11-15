@@ -36,6 +36,36 @@ local words = function(items)
 end
 
 T.describe({ "rank" }, function(test)
+  test({ "the best filter determines rank and the item appears once" }, function()
+    local candidate = item("kennel/dog", { meta = { filter = { "kennel/dog", "kennel", "dog" } } })
+    local p = context { locality = { dog = 2 } }
+    local measured = measure.batch(SETTINGS, p, { candidate })
+    T.eq(#measured[1].metrics, 3)
+    T.eq(measured[1].metrics[3], { prefix_matches = 3, edit_distance = 1, proximity = 2 })
+    local items = { item "dogs", candidate }
+    T.eq(words(rank.rank(SETTINGS, {}, p, items, 2)), { "kennel/dog", "dogs" })
+    T.eq(words(rank.rank(SETTINGS, {}, p, items, 1)), { "kennel/dog" })
+  end)
+
+  test({ "ranking keeps each alternative's metrics together" }, function()
+    local alternative = item("alternatives", { meta = { filter = { "dog", "rex" } } })
+    local balanced = item "balanced"
+    local ranker = rank.new(SETTINGS, {}, context())
+    ranker.add {
+      {
+        item = alternative,
+        metrics = {
+          { prefix_matches = 3, edit_distance = 0, proximity = 0 },
+          { prefix_matches = 0, edit_distance = 1, proximity = 0 },
+        },
+      },
+      { item = balanced, metrics = {
+        { prefix_matches = 2, edit_distance = 0.8, proximity = 0 },
+      } },
+    }
+    T.eq(words(ranker.rank(2)), { "balanced", "alternatives" })
+  end)
+
   test({ "candidate character selects context text" }, function()
     local p = context { symbol_before = "->", line_before = "  " }
     local measured = measure.batch(SETTINGS, p, { item "dogs", item "->field", item "  dog", item "" })

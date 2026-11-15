@@ -6,6 +6,7 @@ local fullpaths = require "coq.producers.fullpaths"
 local inserted = require "coq.completions.inserted"
 local lib = require "coq.lib"
 local parse = require "coq.producers.fullpaths.parse"
+local rank = require "coq.lib.index.rank"
 
 T.describe({ "fullpaths.partial" }, function(test)
   ---@type [string, integer?, string?][]
@@ -52,6 +53,42 @@ T.describe({ "fullpaths.partial custom symbol" }, function(test)
 end)
 
 T.describe({ "fullpaths.matcher" }, function(test)
+  test({ "path segments survive worker measurement and ranking" }, function()
+    lib.scope(function(defer)
+      local root = vim.fn.tempname()
+      vim.fn.mkdir(root .. "/src/m/a/i", "p")
+      defer(function()
+        vim.fn.delete(root, "rf")
+      end)
+      for _, name in ipairs { "src/main.lua", "src/m/a/i/n.lua" } do
+        vim.fn.writefile({}, root .. "/" .. name)
+      end
+      local settings = config.merged { clients = { fullpaths = { resolution = { "cwd" } } } }
+      local line = "see @src/main"
+      local ctx = TH.ctx_of {
+        cwd = root,
+        line_before = line,
+        keyword_before = "main",
+        pos = { 1, #line, #line, #line },
+      }
+      local source = fullpaths.new()
+      defer(source.close)
+      local close, iter = source.search(settings, ctx)
+      defer(close)
+      local ranker = rank.new(settings, {}, ctx)
+      for batch in iter do
+        for _, measured in ipairs(batch) do
+          T.eq(#measured.metrics, #measured.item.meta.filter)
+        end
+        ranker.add(batch)
+      end
+      local ranked = ranker.rank(10)
+      T.eq(#ranked, 2)
+      T.eq(ranked[1].word, "@src/main.lua")
+      T.eq(ranked[1].meta.filter, { "src/main.lua", "src", "main.lua" })
+    end)
+  end)
+
   test({ "searches full relative paths and applies an @ replacement" }, function()
     local root = vim.fn.tempname()
     vim.fn.mkdir(root .. "/kennel", "p")
