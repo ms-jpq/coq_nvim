@@ -47,7 +47,7 @@ local apply = function(opts)
   local item = {
     word = opts.word,
     abbr = opts.abbr,
-    meta = { uid = "x", source = "LSP", filter = opts.word or "", fuzzy = 0 },
+    meta = { uid = "x", source = "LSP", filter = { opts.word or "" }, fuzzy = 0 },
   }
   local lsp = opts.lsp or {}
   if opts.snippet then
@@ -237,7 +237,7 @@ local scenario = function(before, word, after, opts)
   local item = {
     word = word,
     abbr = opts.abbr,
-    meta = { uid = "x", source = "LSP", filter = word, fuzzy = 0 },
+    meta = { uid = "x", source = "LSP", filter = { word }, fuzzy = 0 },
   }
   local lsp = opts.lsp or {}
   if opts.snippet then
@@ -650,7 +650,7 @@ T.describe({ "inserted._apply_edits" }, function(test)
   test({ "plain word: replaces the trailing keyword span with item.word" }, function()
     local ctx, buf = make_ctx { "fid" }
     ---@diagnostic disable-next-line: missing-fields
-    local item = { word = "fido", meta = { uid = "x", source = "LSP", filter = "fid", fuzzy = 0 } } --[[@as completions.Item]]
+    local item = { word = "fido", meta = { uid = "x", source = "LSP", filter = { "fid" }, fuzzy = 0 } } --[[@as completions.Item]]
     inserted._apply_edits(ctx, item, nil, {})
     T.eq(lines_of(buf), { "fido" })
   end)
@@ -664,7 +664,7 @@ T.describe({ "inserted._apply_edits" }, function(test)
       meta = {
         uid = "x",
         source = "LSP",
-        filter = "fid",
+        filter = { "fid" },
         fuzzy = 0,
         ---@diagnostic disable-next-line: missing-fields
         lsp = { item = { insertTextFormat = 2, insertText = "fido($0)" } },
@@ -682,7 +682,7 @@ T.describe({ "inserted._apply_edits" }, function(test)
     ---@diagnostic disable-next-line: missing-fields
     local item = {
       word = "fido",
-      meta = { uid = "x", source = "LSP", filter = "fid", fuzzy = 0 },
+      meta = { uid = "x", source = "LSP", filter = { "fid" }, fuzzy = 0 },
     } --[[@as completions.Item]]
     ---@diagnostic disable-next-line: missing-fields
     local lsp = {
@@ -736,7 +736,7 @@ T.describe({ "inserted._resolve" }, function(test)
       meta = {
         uid = "x",
         source = "LSP",
-        filter = "fido",
+        filter = { "fido" },
         fuzzy = 0,
         ---@diagnostic disable-next-line: missing-fields
         lsp = { item = { additionalTextEdits = { { newText = "x", range = {} } } } },
@@ -761,7 +761,7 @@ T.describe({ "inserted._resolve" }, function(test)
     ---@diagnostic disable-next-line: missing-fields
     local item = {
       word = "fido",
-      meta = { uid = "x", source = "LSP", filter = "fido", fuzzy = 0, lsp = {} },
+      meta = { uid = "x", source = "LSP", filter = { "fido" }, fuzzy = 0, lsp = {} },
     } --[[@as completions.Item]]
     local resolver = fake_resolver(function(_, _, timeout_ms)
       captured_timeout = timeout_ms
@@ -784,7 +784,7 @@ T.describe({ "inserted._resolve" }, function(test)
     ---@diagnostic disable-next-line: missing-fields
     local item = {
       word = "fido",
-      meta = { uid = "x", source = "LSP", filter = "fido", fuzzy = 0, lsp = {} },
+      meta = { uid = "x", source = "LSP", filter = { "fido" }, fuzzy = 0, lsp = {} },
     } --[[@as completions.Item]]
     local resolver = fake_resolver(function()
       return nil

@@ -16,7 +16,7 @@ local item = function(word, overrides)
   return vim.tbl_deep_extend("force", {
     word = word,
     kind = "",
-    meta = { uid = word, filter = word, source = "buffers", fuzzy = 0 },
+    meta = { uid = word, filter = { word }, source = "buffers", fuzzy = 0 },
   }, overrides or {})
 end
 
@@ -40,7 +40,7 @@ T.describe({ "rank" }, function(test)
     local p = context { symbol_before = "->", line_before = "  " }
     local measured = measure.batch(SETTINGS, p, { item "dogs", item "->field", item "  dog", item "" })
     local prefixes = vim.tbl_map(function(entry)
-      return entry.metrics.prefix_matches
+      return entry.metrics[1].prefix_matches
     end, measured)
     T.eq(prefixes, { 3, 2, 2, 0 })
     local custom = measure.batch(
@@ -48,7 +48,7 @@ T.describe({ "rank" }, function(test)
       context { iskeyword = "@,48-57,_,-", keyword_before = "-d", symbol_before = "-" },
       { item "-dog" }
     )
-    T.eq(custom[1].metrics.prefix_matches, 2)
+    T.eq(custom[1].metrics[1].prefix_matches, 2)
   end)
 
   test({ "common measurement covers both full and partial batches" }, function()
@@ -72,7 +72,7 @@ T.describe({ "rank" }, function(test)
         end
         table.insert(sizes, #batch)
         for _, candidate in ipairs(batch) do
-          T.eq(candidate.metrics, { prefix_matches = 3, edit_distance = 1, proximity = 0 })
+          T.eq(candidate.metrics, { { prefix_matches = 3, edit_distance = 1, proximity = 0 } })
         end
         collector.add(batch)
       end
@@ -120,7 +120,7 @@ T.describe({ "rank" }, function(test)
           require("coq.producers.util").batched(function()
             coroutine.yield {
               word = "DÖG",
-              meta = { uid = "dog", filter = "DÖG", source = "test", fuzzy = 0 },
+              meta = { uid = "dog", filter = { "DÖG" }, source = "test", fuzzy = 0 },
             }
           end)(settings, ctx)
         end,
@@ -129,7 +129,7 @@ T.describe({ "rank" }, function(test)
       local close, iter = source.search(SETTINGS, p)
       defer(close)
       local batch = assert(iter())
-      T.eq(batch[1].metrics, { prefix_matches = 1, edit_distance = 1 - 1 / 3, proximity = 2 })
+      T.eq(batch[1].metrics, { { prefix_matches = 1, edit_distance = 1 - 1 / 3, proximity = 2 } })
       T.eq(iter(), nil)
     end)
   end)
@@ -147,7 +147,7 @@ T.describe({ "rank" }, function(test)
           require("coq.producers.util").batched(function()
             coroutine.yield {
               word = "DOG",
-              meta = { uid = "dog", filter = "DOG", source = "test", fuzzy = 0 },
+              meta = { uid = "dog", filter = { "DOG" }, source = "test", fuzzy = 0 },
             }
           end)(settings, ctx)
         end,
@@ -155,7 +155,7 @@ T.describe({ "rank" }, function(test)
       defer(source.close)
       local close, iter = source.search(SETTINGS, context())
       defer(close)
-      T.eq(assert(iter())[1].metrics, { prefix_matches = 3, edit_distance = 1, proximity = 0 })
+      T.eq(assert(iter())[1].metrics, { { prefix_matches = 3, edit_distance = 1, proximity = 0 } })
       T.eq(iter(), nil)
     end)
   end)
@@ -207,6 +207,6 @@ T.describe({ "rank" }, function(test)
 
   test({ "empty match text has zero text metrics" }, function()
     local measured = measure.batch(SETTINGS, context { keyword_before = "" }, { item "dog" })
-    T.eq(measured[1].metrics, { prefix_matches = 0, edit_distance = 0, proximity = 0 })
+    T.eq(measured[1].metrics, { { prefix_matches = 0, edit_distance = 0, proximity = 0 } })
   end)
 end)

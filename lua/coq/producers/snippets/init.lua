@@ -138,7 +138,7 @@ M.matcher = util.batched(function(settings, ctx)
       word = hit.item.word,
       abbr = hit.item.label ~= "" and hit.item.label or hit.item.word,
       kind = "Snippet",
-      filter = hit.item.word,
+      filter = { hit.item.word },
       fuzzy = hit.fuzzy,
       doc = util.doc(ctx.filetype, doc_lines(hit.item)),
       lsp = {

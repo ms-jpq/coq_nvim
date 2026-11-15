@@ -13,7 +13,7 @@ local lsp_util = require "coq.producers.lsp.util"
 ---@class completions.ItemMeta
 ---@field uid string
 ---@field source string
----@field filter string
+---@field filter string[]
 ---@field fuzzy number
 ---@field always_on_top? boolean
 ---@field doc? completions.ItemDoc

@@ -113,9 +113,10 @@ M.new = function()
   local statsd = {} ---@type index.Statsd
 
   statsd.inserted = function(item)
-    local filter = item.meta.filter
     inserted = inserted + 1
-    recency[filter] = inserted
+    for _, filter in ipairs(item.meta.filter) do
+      recency[filter] = inserted
+    end
 
     buckets[item.meta.source].inserted = buckets[item.meta.source].inserted + 1
   end

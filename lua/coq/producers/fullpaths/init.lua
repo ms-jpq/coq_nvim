@@ -76,10 +76,12 @@ M.matcher = util.batched(function(settings, ctx)
 
     for _, m in iter do
       local word = symbol .. m.relative
+      local segments = vim.split(m.relative, cand.local_sep, { plain = true, trimempty = true })
+      local filters = vim.iter({ m.relative, unpack(segments) }):unique():totable()
       local item = util.item(settings, M.source, {
         word = word,
         kind = "File",
-        filter = m.relative,
+        filter = filters,
         fuzzy = m.fuzzy,
         path = m.full,
         lsp = {

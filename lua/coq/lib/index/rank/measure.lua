@@ -8,7 +8,7 @@ local M = {}
 
 ---@class rank.Measured
 ---@field item completions.Item
----@field metrics rank.Features
+---@field metrics rank.Features[]
 
 ---@param settings config.Settings
 ---@param ctx ctx.full
@@ -25,21 +25,26 @@ M.batch = function(settings, ctx, items)
   return vim
     .iter(items)
     :map(function(item)
-      local filter = item.meta.filter
-      local kind = charset[string.byte(filter)] or tokens.SYM
-      local match_text = texts[kind]
-      if not ctx.keyword_before_has_upper then
-        match_text = string.lower(match_text)
-        filter = string.lower(filter)
-      end
-      local metrics = match.metrics(settings.match.look_ahead, match_text, filter)
       return {
         item = item,
-        metrics = {
-          prefix_matches = metrics.prefix_matches,
-          edit_distance = metrics.edit_distance,
-          proximity = ctx.locality[item.meta.filter] or 0,
-        },
+        metrics = vim
+          .iter(item.meta.filter)
+          :map(function(filter)
+            local proximity = ctx.locality[filter] or 0
+            local kind = charset[string.byte(filter)] or tokens.SYM
+            local match_text = texts[kind]
+            if not ctx.keyword_before_has_upper then
+              match_text = string.lower(match_text)
+              filter = string.lower(filter)
+            end
+            local metrics = match.metrics(settings.match.look_ahead, match_text, filter)
+            return {
+              prefix_matches = metrics.prefix_matches,
+              edit_distance = metrics.edit_distance,
+              proximity = proximity,
+            }
+          end)
+          :totable(),
       }
     end)
     :totable()

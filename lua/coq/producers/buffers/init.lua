@@ -127,7 +127,7 @@ M.matcher = util.batched(function(settings, ctx)
     local item = util.item(settings, M.source, {
       word = hit.item.word,
       kind = "Text",
-      filter = hit.item.word,
+      filter = { hit.item.word },
       fuzzy = hit.fuzzy,
       doc = util.doc("", doc_iter(settings.clients.buffers, ctx, hit.item)),
     })

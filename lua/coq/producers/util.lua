@@ -85,7 +85,7 @@ end
 ---@field word string
 ---@field abbr? string
 ---@field kind string
----@field filter string
+---@field filter string[]
 ---@field fuzzy number
 ---@field doc? completions.ItemDoc
 ---@field path? string

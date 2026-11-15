@@ -31,20 +31,24 @@ M.new = function(settings, history, ctx)
   end
   local entries = {}
   local totals = { prefix_matches = 0, edit_distance = 0, recency = 0, proximity = 0 }
-  ---@param items rank.Measured[]
-  local add = function(items)
+
+  ---@diagnostic disable-next-line: missing-fields
+  local r = {} ---@type rank.Ranker
+
+  r.add = function(items)
     for _, measured in ipairs(items) do
-      local metrics = vim.tbl_extend("force", measured.metrics, { recency = history[measured.item.meta.filter] or 0 })
-      for key, value in pairs(metrics) do
-        totals[key] = totals[key] + value
+      for i, features in ipairs(measured.metrics) do
+        local filter = measured.item.meta.filter[i]
+        local metrics = vim.tbl_extend("force", features, { recency = history[filter] or 0 })
+        for key, value in pairs(metrics) do
+          totals[key] = totals[key] + value
+        end
+        table.insert(entries, { item = measured.item, filter = filter, metrics = metrics, index = #entries + 1 })
       end
-      table.insert(entries, { item = measured.item, metrics = metrics, index = #entries + 1 })
     end
   end
 
-  ---@param limit integer
-  ---@return completions.Item[]
-  local rank = function(limit)
+  r.rank = function(limit)
     assert(limit > 0)
     local divisors = {}
     for _, key in ipairs(FEATURES) do
@@ -71,8 +75,8 @@ M.new = function(settings, history, ctx)
         meta.lsp and -1 or 0,
         item.kind and item.kind ~= "" and -1 or 0,
         (meta.doc ~= nil or (lsp and lsp.documentation ~= nil)) and -1 or 0,
-        string.find(string.sub(meta.filter, 1, 1), "%w") and -1 or 0,
-        not ctx.keyword_before_has_upper and swapcase(meta.filter) or meta.filter,
+        string.find(string.sub(entry.filter, 1, 1), "%w") and -1 or 0,
+        not ctx.keyword_before_has_upper and swapcase(entry.filter) or entry.filter,
       }
     end
 
@@ -99,7 +103,8 @@ M.new = function(settings, history, ctx)
     end
     return ranked
   end
-  return { add = add, rank = rank }
+
+  return r
 end
 
 ---@class rank.Ranker

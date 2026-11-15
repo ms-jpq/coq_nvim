@@ -47,7 +47,7 @@ T.describe({ "producers.util.batched" }, function(test)
           local word = tostring(i)
           coroutine.yield {
             word = word,
-            meta = { uid = word, source = "test", filter = word, fuzzy = 0 },
+            meta = { uid = word, source = "test", filter = { word }, fuzzy = 0 },
           }
         end
       end)) --[[@as async.Bounce]]
@@ -171,7 +171,7 @@ T.describe({ "producers.util.item" }, function(test)
 
   test({ "wraps short_name in the configured brackets" }, function()
     T.eq(
-      util.item(with({ "「", "」" }, FAKE), "fake", { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 }).menu,
+      util.item(with({ "「", "」" }, FAKE), "fake", { word = "rex", kind = "Text", filter = { "rex" }, fuzzy = 0 }).menu,
       "「BF」"
     )
   end)
@@ -181,7 +181,7 @@ T.describe({ "producers.util.item" }, function(test)
       util.item(
         with({ "", "" }, { short_name = "TS" }),
         "fake",
-        { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 }
+        { word = "rex", kind = "Text", filter = { "rex" }, fuzzy = 0 }
       ).menu,
       "TS"
     )
@@ -189,11 +189,11 @@ T.describe({ "producers.util.item" }, function(test)
 
   test({ "meta.source is the source identifier, not the short_name" }, function()
     local item =
-      util.item(with({ "「", "」" }, FAKE), "fake", { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 })
+      util.item(with({ "「", "」" }, FAKE), "fake", { word = "rex", kind = "Text", filter = { "rex" }, fuzzy = 0 })
     T.eq(item.word, "rex")
     T.eq(item.kind, "Text")
     T.eq(item.menu, "「BF」")
-    T.eq(item.meta.filter, "rex")
+    T.eq(item.meta.filter, { "rex" })
     T.eq(item.meta.source, "fake")
     T.eq(item.meta.always_on_top, true)
     T.eq(type(item.meta["uid"]), "string")
@@ -202,8 +202,8 @@ T.describe({ "producers.util.item" }, function(test)
 
   test({ "every call mints a fresh uid" }, function()
     local s = with({ "", "" }, FAKE)
-    local a = util.item(s, "fake", { word = "spot", kind = "Text", filter = "spot", fuzzy = 0 })
-    local b = util.item(s, "fake", { word = "spot", kind = "Text", filter = "spot", fuzzy = 0 })
+    local a = util.item(s, "fake", { word = "spot", kind = "Text", filter = { "spot" }, fuzzy = 0 })
+    local b = util.item(s, "fake", { word = "spot", kind = "Text", filter = { "spot" }, fuzzy = 0 })
     T.eq(a.meta["uid"] ~= b.meta["uid"], true)
   end)
 
@@ -212,7 +212,7 @@ T.describe({ "producers.util.item" }, function(test)
     local item = util.item(with({ "", "" }, FAKE), "fake", {
       word = "fido",
       kind = "Snippet",
-      filter = "fido",
+      filter = { "fido" },
       fuzzy = 0,
       doc = doc,
       ---@diagnostic disable-next-line: missing-fields
@@ -226,7 +226,7 @@ T.describe({ "producers.util.item" }, function(test)
     local item = util.item(
       with({ "", "" }, { short_name = "TX" }),
       "fake",
-      { word = "lab", kind = "Text", filter = "lab", fuzzy = 0 }
+      { word = "lab", kind = "Text", filter = { "lab" }, fuzzy = 0 }
     )
     T.eq(item.meta.always_on_top, nil)
     T.eq(item.meta.doc, nil)

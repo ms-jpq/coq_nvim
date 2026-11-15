@@ -23,7 +23,7 @@ local additional = case.additional or {
 }
 local item = {
   word = "fido", abbr = case.bullet and (string.char(226, 128, 162) .. " fido") or "fido", kind = "",
-  meta = { uid = "test", source = "LSP", filter = "fi", fuzzy = 0 },
+  meta = { uid = "test", source = "LSP", filter = { "fi" }, fuzzy = 0 },
 }
 if not case.plain then
   item.meta.lsp = {

@@ -165,7 +165,7 @@ M.matcher = util.batched(function(settings, ctx)
     local item = util.item(settings, M.source, {
       word = hit.item.word,
       kind = capture_to_icon(hit.item.kind),
-      filter = hit.item.word,
+      filter = { hit.item.word },
       fuzzy = hit.fuzzy,
       doc = { lines = lines, filetype = ctx.filetype },
     })

@@ -63,7 +63,7 @@ local item_of = function(word)
   ---@diagnostic disable-next-line: missing-fields
   return {
     word = word,
-    meta = { uid = "x", source = "buffers", filter = word, fuzzy = 0 },
+    meta = { uid = "x", source = "buffers", filter = { word }, fuzzy = 0 },
   } --[[@as completions.Item]]
 end
 
@@ -219,7 +219,7 @@ T.describe({ "ghost.show" }, function(test)
       meta = {
         uid = "x",
         source = "snippets",
-        filter = "fido",
+        filter = { "fido" },
         fuzzy = 0,
         ---@diagnostic disable-next-line: missing-fields
         lsp = { item = { insertTextFormat = 2, insertText = "fido(${1:bone})" } },
@@ -244,7 +244,7 @@ T.describe({ "ghost.show range-driven overlay" }, function(test)
       meta = {
         uid = "x",
         source = "LSP",
-        filter = newText,
+        filter = { newText },
         fuzzy = 0,
         lsp = {
           position_encoding = "utf-8",
@@ -312,7 +312,7 @@ T.describe({ "ghost.show multi-line range" }, function(test)
       meta = {
         uid = "x",
         source = "LSP",
-        filter = newText,
+        filter = { newText },
         fuzzy = 0,
         lsp = {
           position_encoding = "utf-8",
