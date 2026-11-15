@@ -46,7 +46,7 @@ M.new = function()
                 meta = {
                   uid = util.uid(),
                   filter = filter,
-                  fuzzy = match.score(ctx.keyword_before, filter),
+                  fuzzy = match.score(settings.match.look_ahead, ctx.keyword_before, filter),
                   source = M.source,
                   always_on_top = pinned[entry.client_name] == true,
                   lsp = {
@@ -60,7 +60,7 @@ M.new = function()
             end)
             :totable()
 
-          coroutine.yield(acc)
+          util.yield_measured(settings, ctx, acc)
         end
       end)
     end,

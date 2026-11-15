@@ -1,3 +1,4 @@
+local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local errs = require "coq.lib.errs"
@@ -342,7 +343,7 @@ M.bind = function(n, settings, ev)
 
     generation = generation + 1
     local ticket = generation
-    vim.schedule(function()
+    vim.schedule(async.entry(function()
       if ticket ~= generation or not vim.api.nvim_buf_is_valid(pum_ev.buf) then
         return
       end
@@ -364,7 +365,7 @@ M.bind = function(n, settings, ev)
       elseif ci.word and ci.word ~= "" then
         M.clear(pum_ev.buf)
       end
-    end)
+    end))
   end)
 end
 

@@ -76,7 +76,9 @@ T.describe({ "fullpaths.matcher" }, function(test)
         fullpaths.matcher(settings, ctx)
       end)
       for batch in pull do
-        vim.list_extend(items, batch)
+        for _, measured in ipairs(batch) do
+          table.insert(items, measured.item)
+        end
       end
       return items, ctx
     end
@@ -99,7 +101,7 @@ T.describe({ "fullpaths.matcher" }, function(test)
         vim.list_extend(threaded, batch)
       end
       T.eq(#threaded, 1)
-      T.eq(threaded[1].word, item.word)
+      T.eq(threaded[1].item.word, item.word)
     end)
 
     local buf = TH.scratch_buf { "see @" .. item.word }

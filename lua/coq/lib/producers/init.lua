@@ -5,10 +5,10 @@ local worker = require "coq.lib.worker"
 ---@field source string
 ---@field close fun()
 ---@field idle fun(settings: config.Settings, ctx: C)
----@field search fun(settings: config.Settings, ctx: C): fun(), lib.Iterator<completions.Item[]>
+---@field search fun(settings: config.Settings, ctx: C): fun(), lib.Iterator<rank.Measured[]>
 
 ---@alias producers.IdleFn<C> fun(settings: config.Settings?, idle_ctx: C)
----@alias producers.MatcherFn<C> fun(settings: config.Settings?, ctx: C)
+---@alias producers.MatcherFn<C> fun(settings: config.Settings, ctx: C)
 
 ---@class producers.Spec<C>
 ---@field source string

@@ -38,8 +38,11 @@ local defaults = require "coq.config.defaults"
 ---@field max_results integer
 ---@field exact_matches integer
 ---@field fuzzy_cutoff number
+---@field look_ahead integer
 
 ---@class config.Weights
+---@field prefix_matches number
+---@field edit_distance number
 ---@field recency number
 ---@field proximity number
 

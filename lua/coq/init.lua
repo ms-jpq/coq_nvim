@@ -117,7 +117,7 @@ M.setup = function(opts)
       local settings = config.merged(merged)
       transition.audit(merged)
 
-      local statsd = statsd_m.new(settings)
+      local statsd = statsd_m.new()
       local lord = timelord_m.new()
 
       local ps = vim

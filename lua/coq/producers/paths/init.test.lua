@@ -28,6 +28,7 @@ local ctx_of = function(ctx_overrides)
   local tokens = require "coq.lib.index.tokens"
   local iskeyword = "@,48-57,_,192-255"
   local base = {
+    locality = {},
     win = 0,
     buf = 0,
     pos = { 1, 0 },
@@ -74,7 +75,7 @@ local run_matcher = function(settings, ctx)
         break
       end
       for _, item in ipairs(batch) do
-        table.insert(items, item)
+        table.insert(items, item.item)
       end
     end
   end)

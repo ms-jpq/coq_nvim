@@ -47,13 +47,14 @@ end
 ---@field name string
 ---@field type string
 ---@field full string
----@field fuzzy integer
+---@field fuzzy number
 
+---@param opts config.MatchOptions
 ---@param ignores string[]
 ---@param dir string
 ---@param cand paths.parse.Candidate
 ---@return lib.Iterator<paths.Match>
-local scan_dir = function(ignores, dir, cand)
+local scan_dir = function(opts, ignores, dir, cand)
   return async.wrap(function()
     lib.scope(function(defer)
       local close, iter = atools.fs.scandir(dir)
@@ -61,9 +62,9 @@ local scan_dir = function(ignores, dir, cand)
       local links = {}
       for name, type in iter do
         local full = vim.fs.joinpath(dir, name)
-        local fuzzy = cand.partial == "" and 0 or match.score(cand.partial, name)
+        local fuzzy = cand.partial == "" and 0 or match.score(opts.look_ahead, cand.partial, name)
 
-        if (cand.partial == "" or fuzzy > 0) and not wildignore.is_ignored(ignores, name, full) then
+        if (cand.partial == "" or fuzzy >= opts.fuzzy_cutoff) and not wildignore.is_ignored(ignores, name, full) then
           local entry = {
             cand = cand,
             dir = dir,
@@ -109,7 +110,7 @@ local matches = function(settings, ctx)
       local iters = {}
       for dir in cand_dirs(bases, cand) do
         if atools.fs.is_dir(dir) then
-          table.insert(iters, scan_dir(ignores, dir, cand))
+          table.insert(iters, scan_dir(settings.match, ignores, dir, cand))
         end
       end
 

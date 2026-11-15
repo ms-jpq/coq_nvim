@@ -73,10 +73,11 @@ M.bind = function(n, settings, statsd, resolver, sup, events)
     end
 
     resolver.reset()
+    local history = statsd.history()
     lib.scope(function(defer)
       local close, iter = sup.search(settings, ctx)
       defer(close)
-      insertion.complete(ctx, settings, statsd, iter)
+      insertion.complete(ctx, settings, history, iter)
     end)
 
     prev = M._dedup_key(ctx)

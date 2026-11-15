@@ -11,6 +11,7 @@ local spec_with = function(cutoff)
       return ctx.token
     end,
     cutoff = cutoff,
+    look_ahead = 2,
   }
 end
 

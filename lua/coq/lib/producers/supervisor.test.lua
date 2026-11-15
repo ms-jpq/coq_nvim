@@ -26,7 +26,7 @@ local producer = function(spec)
         spec.idle(ctx)
       end
     end,
-    search = function(_, ctx)
+    search = function(_, _, ctx)
       local iter = async.wrap(function()
         if spec.matcher then
           spec.matcher(nil, ctx)

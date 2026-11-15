@@ -1,3 +1,4 @@
+local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local errs = require "coq.lib.errs"
@@ -5,8 +6,7 @@ local ghost = require "coq.completions.ghost"
 local inserted = require "coq.completions.inserted"
 local item = require "coq.completions.item"
 local lib = require "coq.lib"
-local statsd_m = require "coq.lib.index.rank.statsd"
-local topk_m = require "coq.lib.index.rank.topk"
+local rank = require "coq.lib.index.rank"
 
 local M = {}
 
@@ -17,7 +17,7 @@ local M = {}
 M.bind = function(n, settings, resolver, statsd)
   vim.api.nvim_create_autocmd("CompleteDone", {
     group = lib.group,
-    callback = errs.with_reporting(function()
+    callback = async.entry(errs.with_reporting(function()
       local user_data = vim.v.completed_item.user_data
       if type(user_data) ~= "table" or not user_data.meta then
         return
@@ -32,29 +32,21 @@ M.bind = function(n, settings, resolver, statsd)
           inserted.resolve(settings, ctx, resolver, user_data, shift)
         end)
       end
-    end),
+    end)),
   })
 end
 
 ---@param ctx ctx.full
 ---@param settings config.Settings
----@param statsd index.Statsd
----@param iter lib.Iterator<completions.Item[]>
-M.complete = function(ctx, settings, statsd, iter)
-  atools.scheduled()
-  local prepared = statsd.prepare(ctx)
-
-  local topk = topk_m.new(settings.match.max_results, item.dedup_key)
+---@param history table<string, integer>
+---@param iter lib.Iterator<rank.Measured[]>
+M.complete = function(ctx, settings, history, iter)
+  local ranker = rank.new(settings, history, ctx)
   for batch in iter do
-    for _, i in ipairs(batch) do
-      topk.push(i, statsd_m.score(prepared, i))
-    end
+    ranker.add(batch)
   end
 
-  local ranked = {}
-  for i in topk.iter() do
-    table.insert(ranked, i)
-  end
+  local ranked = ranker.rank(settings.match.max_results)
 
   atools.scheduled()
   if not context.still_valid(ctx) or string.sub(vim.api.nvim_get_mode().mode, 1, 1) ~= "i" then

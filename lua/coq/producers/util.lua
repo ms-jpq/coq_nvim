@@ -1,5 +1,6 @@
 local async = require "coq.lib.async"
 local fuzzy = require "coq.lib.index.fuzzy"
+local measure = require "coq.lib.index.rank.measure"
 local producer = require "coq.lib.producers"
 local trie = require "coq.lib.index.trie"
 
@@ -39,6 +40,7 @@ M.word_search = function(settings)
       child = function()
         return fuzzy.new {
           cutoff = settings.match.fuzzy_cutoff,
+          look_ahead = settings.match.look_ahead,
           insert_key = word_key,
           query_key = query_of,
         }
@@ -127,25 +129,30 @@ M.shape = function(settings, ctx, iter, keep_exact)
       return hit.item.word ~= ctx.match_before
     end)
   end
-  shaped = shaped
-    :unique(function(hit)
-      return hit.item.word
-    end)
-    :take(settings.match.max_results)
+  shaped = shaped:unique(function(hit)
+    return hit.item.word
+  end)
   return function()
     return shaped:next()
   end
 end
 
+---@param settings config.Settings
+---@param ctx ctx.full
+---@param batch completions.Item[]
+---@return boolean
+M.yield_measured = function(settings, ctx, batch)
+  return not not coroutine.yield(measure.batch(settings, ctx, batch))
+end
+
 M.BATCH = 420
----@param fn function
----@return function batched
+---@param fn fun(settings: config.Settings, ctx: ctx.full)
+---@return fun(settings: config.Settings, ctx: ctx.full) batched
 M.batched = function(fn)
-  return function(...)
-    local argv = { ... }
+  return function(settings, ctx)
     ---@diagnostic disable-next-line: unused-vararg
     local iter = async.wrap(function(...)
-      fn(unpack(argv))
+      fn(settings, ctx)
     end)
 
     local batch, more = {}, true
@@ -156,7 +163,7 @@ M.batched = function(fn)
       end
       table.insert(batch, item)
       if #batch >= M.BATCH then
-        more = coroutine.yield(batch)
+        more = M.yield_measured(settings, ctx, batch)
         if not more then
           iter(false)
           return
@@ -165,7 +172,7 @@ M.batched = function(fn)
         async.sleep(0)
       end
     end
-    coroutine.yield(batch)
+    M.yield_measured(settings, ctx, batch)
   end
 end
 

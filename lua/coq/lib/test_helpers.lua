@@ -25,6 +25,7 @@ end
 ---@return ctx.full
 M.ctx_of = function(overrides)
   local base = {
+    locality = {},
     win = 0,
     buf = 0,
     pos = { 1, 0, 0, 0 },

@@ -211,10 +211,13 @@ local M = {
   match = {
     exact_matches = 2,
     fuzzy_cutoff = 0.6,
+    look_ahead = 2,
     max_results = 33,
   },
 
   weights = {
+    prefix_matches = 2.0,
+    edit_distance = 1.5,
     proximity = 0.5,
     recency = 1.0,
   },

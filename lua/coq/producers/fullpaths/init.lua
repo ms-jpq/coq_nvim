@@ -1,7 +1,7 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local lib = require "coq.lib"
-local match = require "coq.lib.index.rank.match"
+local match = require "coq.lib.index.rank.hybrid"
 local parse = require "coq.producers.fullpaths.parse"
 local path = require "coq.lib.path"
 local util = require "coq.producers.util"
@@ -30,7 +30,7 @@ local scan_root = function(root, ignores, cand)
         local relative = vim.fs.relpath(root, full)
         if kind == "file" and relative and not wildignore.is_ignored(ignores, vim.fs.basename(full), full) then
           local rel = string.gsub(relative, "/", cand.local_sep)
-          local score = cand.partial == "" and 0 or match.score(cand.partial, rel)
+          local score = cand.partial == "" and 0 or (match.score(cand.partial, rel) or 0)
           if cand.partial == "" or score > 0 then
             coroutine.yield { full = full, relative = rel, fuzzy = score }
           end

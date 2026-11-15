@@ -1,8 +1,6 @@
 local T = require "coq.lib.test"
 local statsd = require "coq.lib.index.rank.statsd"
 
-local DEFAULT_ISKEYWORD = "@,48-57,_,192-255"
-
 ---@param meta { filter: string, source: string, fuzzy: integer, always_on_top: boolean? }
 ---@return completions.Item
 local item = function(meta)
@@ -18,87 +16,32 @@ local item = function(meta)
   } --[[@as completions.Item]]
 end
 
-local WEIGHTS = { proximity = 1.0, recency = 0.5 }
-
----@param overrides? table
----@return index.Prepared
-local prep = function(overrides)
-  local p = { token = "", locality = {}, recency = {}, source_bias = {}, weights = WEIGHTS }
-  for k, v in pairs(overrides or {}) do
-    p[k] = v
-  end
-  return p
-end
-
 local fido = function(extra)
   return item(vim.tbl_extend("force", { filter = "fido", source = "BF", fuzzy = 0 }, extra or {}))
 end
 
 ---@return index.Statsd
 local fresh = function()
-  ---@diagnostic disable-next-line: missing-fields
-  return statsd.new { clients = {}, weights = WEIGHTS }
+  return statsd.new()
 end
 
-T.describe({ "rank.score" }, function(test)
-  test({ "with no signals the score is the fuzzy score" }, function()
-    T.eq(statsd.score(prep(), fido { fuzzy = 7 }), 7)
-  end)
-
-  test({ "proximity multiplies the locality count by weights.proximity * WEIGHT_SCALE" }, function()
-    local base = statsd.score(prep(), fido())
-    local boosted = statsd.score(prep { locality = { fido = 2 } }, fido())
-    T.eq(boosted - base, 2 * WEIGHTS.proximity * statsd.WEIGHT_SCALE)
-  end)
-
-  test({ "recency multiplies the recency count by weights.recency * WEIGHT_SCALE" }, function()
-    T.eq(statsd.score(prep { recency = { fido = 3 } }, fido()), 3 * WEIGHTS.recency * statsd.WEIGHT_SCALE)
-  end)
-
-  test({ "custom weights override the multipliers" }, function()
-    local p = prep { locality = { fido = 1 }, recency = { fido = 1 }, weights = { proximity = 3, recency = 5 } }
-    T.eq(statsd.score(p, fido()), (3 + 5) * statsd.WEIGHT_SCALE)
-  end)
-
-  test({ "source bias multiplies the score" }, function()
-    T.eq(statsd.score(prep { source_bias = { BF = 2 } }, fido { fuzzy = 5 }), 10)
-  end)
-
-  test({ "source bias defaults to 1 when the source is absent" }, function()
-    T.eq(statsd.score(prep { source_bias = { other = 9 } }, fido { fuzzy = 5 }), 5)
-  end)
-
-  test({ "always_on_top adds the ALWAYS_TOP tier last (after bias)" }, function()
-    T.eq(
-      statsd.score(prep { source_bias = { BF = 2 } }, fido { fuzzy = 1, always_on_top = true }),
-      2 + statsd.ALWAYS_TOP
-    )
-  end)
-
-  test({ "combines (fuzzy + prox + recen) * bias + tier" }, function()
-    local p = prep { locality = { fido = 2 }, recency = { fido = 1 }, source_bias = { BF = 2 } }
-    local expected = (3 + (2 * WEIGHTS.proximity + 1 * WEIGHTS.recency) * statsd.WEIGHT_SCALE) * 2 + statsd.ALWAYS_TOP
-    T.eq(statsd.score(p, fido { fuzzy = 3, always_on_top = true }), expected)
-  end)
-end)
-
 T.describe({ "rank.statsd.inserted" }, function(test)
+  test({ "history records acceptance order and returned snapshots stay fixed" }, function()
+    local s = fresh()
+    s.inserted(fido())
+    s.inserted(fido())
+    local before = s.history()
+    s.inserted(fido { filter = "rex" })
+    local after = s.history()
+    T.eq(before, { fido = 2 })
+    T.eq(after, { fido = 2, rex = 3 })
+  end)
+
   test({ "inserted(item) bumps recency keyed by filter" }, function()
     local s = fresh()
     s.inserted(fido())
     s.inserted(fido())
-    -- recency is internal, but observable through summary().inserted under the source bucket
-    -- and through the prepare() output's recency map.
-    T.eq(
-      ---@diagnostic disable-next-line: missing-fields
-      s.prepare({
-        iskeyword = DEFAULT_ISKEYWORD,
-        keyword_before = "",
-        buf = 0,
-        linesep = "\n",
-      } --[[@as ctx.full]]).recency.fido,
-      2
-    )
+    T.eq(s.history().fido, 2)
   end)
 
   test({ "inserted(item) bumps the per-source inserted counter" }, function()
@@ -118,17 +61,11 @@ T.describe({ "rank.statsd.inserted" }, function(test)
       s.inserted(fido { filter = "new_" .. i })
     end
 
-    ---@diagnostic disable-next-line: missing-fields
-    local recency = s.prepare({
-      iskeyword = DEFAULT_ISKEYWORD,
-      keyword_before = "",
-      buf = 0,
-      linesep = "\n",
-    } --[[@as ctx.full]]).recency
+    local recency = s.history()
 
     T.eq(recency.old, nil)
-    T.eq(recency.new_1, 1)
-    T.eq(recency["new_" .. statsd.RECENCY_CAP], 1)
+    T.eq(recency.new_1, 2)
+    T.eq(recency["new_" .. statsd.RECENCY_CAP], statsd.RECENCY_CAP + 1)
   end)
 end)
 

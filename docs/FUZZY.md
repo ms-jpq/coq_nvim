@@ -60,6 +60,16 @@ For word searching, how many exact prefix characters is required.
 2
 ```
 
+#### `coq_settings.match.look_ahead`
+
+For word searching, how many characters to look ahead, in case of typos.
+
+**default:**
+
+```json
+2
+```
+
 #### `coq_settings.match.fuzzy_cutoff`
 
 What is the minimum similarity score, for a word to be proposed by the algorithm.
@@ -73,6 +83,26 @@ What is the minimum similarity score, for a word to be proposed by the algorithm
 ---
 
 ### coq_settings.weights
+
+#### `coq_settings.weights.prefix_matches`
+
+Relative weight adjustment of exact prefix matches.
+
+**default:**
+
+```json
+2.0
+```
+
+#### `coq_settings.weights.edit_distance`
+
+Relative weight adjustment of [Damerau–Levenshtein distance](https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance), normalized and adjusted for look-aheads.
+
+**default:**
+
+```json
+1.5
+```
 
 #### `coq_settings.weights.recency`
 

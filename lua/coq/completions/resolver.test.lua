@@ -11,7 +11,10 @@ local CTX = { win = 0, buf = 0, pos = { 0, 0 }, line = "", changedtick = 0, file
 
 ---@return completions.Item
 local lsp_item = function(tag)
-  return { word = tag, meta = { uid = tag, source = "LSP", filter = tag, fuzzy = 0, lsp = { tag = tag } } } --[[@as completions.Item]]
+  return {
+    word = tag,
+    meta = { uid = tag, source = "LSP", filter = tag, fuzzy = 0, lsp = { tag = tag } },
+  } --[[@as completions.Item]]
 end
 
 T.describe({ "resolver" }, function(test)

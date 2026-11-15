@@ -23,14 +23,14 @@ local lstrip = function(line, prefix)
   return vim.trim(string.sub(line, #prefix + 1))
 end
 
-local CUTOFF = 2 ^ 24
+local CUTOFF = 0.6
 
 ---@param start string
 ---@return string?
 local did_you_mean = function(start)
   local best, best_score = nil, CUTOFF
   for _, legal in pairs(LEGAL_STARTS) do
-    local score = match.score(start, legal)
+    local score = match.score(2, start, legal)
     if score > best_score then
       best, best_score = legal, score
     end

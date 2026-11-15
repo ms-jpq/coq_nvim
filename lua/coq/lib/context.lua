@@ -1,4 +1,7 @@
+local buffers = require "coq.lib.buffers"
+local itertools = require "coq.lib.itertools"
 local lib = require "coq.lib"
+local tokens = require "coq.lib.index.tokens"
 
 ---@class ctx.base
 ---@field win integer
@@ -21,6 +24,7 @@ local lib = require "coq.lib"
 ---@field keyword_before_has_upper boolean
 ---@field symbol_before string
 ---@field match_before string
+---@field locality table<string, integer>
 
 local M = {}
 
@@ -59,8 +63,6 @@ end
 ---@param opts? ctx.FullOpts
 ---@return ctx.full
 M.full = function(opts)
-  local tokens = require "coq.lib.index.tokens"
-
   local ctx = M.base()
   ---@cast ctx ctx.full
   ctx.manual = (opts and opts.manual) or false
@@ -89,6 +91,9 @@ M.full = function(opts)
     ctx.keyword_before_has_upper = string.find(ctx.keyword_before, "%u") ~= nil
     ctx.symbol_before = tokens.trailing_symbol_before(kw, ctx.line_before)
     ctx.match_before = ctx.keyword_before ~= "" and ctx.keyword_before or ctx.symbol_before
+    local text =
+      itertools.intersperse(ctx.linesep, vim.iter(buffers.lines_around_cursor(ctx.buf)) --[[@as lib.Iterator<string>]])
+    ctx.locality = tokens.locality(kw, text)
   end
 
   return ctx

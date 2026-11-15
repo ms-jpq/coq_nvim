@@ -1,15 +1,5 @@
-local buffers = require "coq.lib.buffers"
 local default_dict = require "coq.lib.default_dict"
-local itertools = require "coq.lib.itertools"
 local lru = require "coq.lib.lru"
-local tokens = require "coq.lib.index.tokens"
-
----@class index.Prepared
----@field token string
----@field locality table<string, integer>
----@field recency table<string, integer>
----@field source_bias table<string, number>
----@field weights config.Weights
 
 ---@class statsd.Recording
 ---@field tally fun(count: integer)
@@ -34,32 +24,15 @@ local tokens = require "coq.lib.index.tokens"
 
 ---@class index.Statsd
 ---@field inserted fun(item: completions.Item)
----@field prepare fun(ctx: ctx.full): index.Prepared
+---@field history fun(): table<string, integer>
 ---@field record fun(source: string): statsd.Recording
 ---@field summary fun(): table<string, statsd.Summary>
 
 local M = {}
 
-M.ALWAYS_TOP = 1e9
-M.WEIGHT_SCALE = 100
-
 local SAMPLE_CAP = 200
 
-M.RECENCY_CAP = 888
-
----@param prepared index.Prepared
----@param item completions.Item
----@return number
-M.score = function(prepared, item)
-  local meta = item.meta
-  local prox = prepared.locality[meta.filter] or 0
-  local recen = prepared.recency[meta.filter] or 0
-  local bias = prepared.source_bias[meta.source] or 1
-  local tier = meta.always_on_top and M.ALWAYS_TOP or 0
-  local w = prepared.weights
-
-  return (meta.fuzzy + prox * w.proximity * M.WEIGHT_SCALE + recen * w.recency * M.WEIGHT_SCALE) * bias + tier
-end
+M.RECENCY_CAP = 100
 
 ---@class statsd.Bucket
 ---@field samples statsd.Sample[]
@@ -127,44 +100,32 @@ local summarize = function(bucket)
   }
 end
 
----@param settings config.Settings
 ---@return index.Statsd
-M.new = function(settings)
-  local source_bias = {}
-  for name, client in pairs(settings.clients) do
-    source_bias[name] = 1 + (client.weight_adjust or 0)
-  end
-
+M.new = function()
   ---@type lib.DefaultDict<string, statsd.Bucket>
   local buckets = default_dict.new(new_bucket)
 
   ---@type lib.LRU
   local recency = lru.new(M.RECENCY_CAP)
+  local inserted = 0
 
   ---@diagnostic disable-next-line: missing-fields
   local statsd = {} ---@type index.Statsd
 
   statsd.inserted = function(item)
     local filter = item.meta.filter
-    recency[filter] = (recency[filter] or 0) + 1
+    inserted = inserted + 1
+    recency[filter] = inserted
 
     buckets[item.meta.source].inserted = buckets[item.meta.source].inserted + 1
   end
 
-  statsd.prepare = function(ctx)
-    return {
-      token = ctx.keyword_before,
-      locality = tokens.locality(
-        tokens.parse_charset(ctx.iskeyword),
-        itertools.intersperse(
-          ctx.linesep,
-          vim.iter(buffers.lines_around_cursor(ctx.buf)) --[[@as lib.Iterator<string>]]
-        )
-      ),
-      recency = recency,
-      source_bias = source_bias,
-      weights = settings.weights,
-    }
+  statsd.history = function()
+    local h = {}
+    for key, value in lru.pairs(recency) do
+      h[key] = value
+    end
+    return h
   end
 
   statsd.record = function(source)

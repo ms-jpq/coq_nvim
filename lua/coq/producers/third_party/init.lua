@@ -60,7 +60,7 @@ local item_of = function(settings, ctx, raw, encoding)
     abbr = label,
     kind = kind,
     filter = filter,
-    fuzzy = match.score(ctx.keyword_before, filter),
+    fuzzy = match.score(settings.match.look_ahead, ctx.keyword_before, filter),
     lsp = {
       item = raw,
       position_encoding = encoding,
@@ -72,7 +72,7 @@ end
 ---@param ctx ctx.full
 ---@param entry third_party.Source
 ---@param arg third_party.Args
----@return lib.Iterator<completions.Item[]>
+---@return lib.Iterator<rank.Measured[]>
 local query_1 = function(settings, ctx, entry, arg)
   return async.wrap(function()
     atools.scheduled()
@@ -94,7 +94,7 @@ local query_1 = function(settings, ctx, entry, arg)
       end)
       :totable()
     if #batch > 0 then
-      coroutine.yield(batch)
+      util.yield_measured(settings, ctx, batch)
     end
   end)
 end

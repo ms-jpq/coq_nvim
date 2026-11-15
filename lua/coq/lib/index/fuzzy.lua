@@ -5,6 +5,7 @@ local match = require "coq.lib.index.rank.match"
 ---@field insert_key fun(item: T): string
 ---@field query_key fun(ctx: C): string?
 ---@field cutoff number
+---@field look_ahead integer
 
 local M = {}
 
@@ -12,13 +13,13 @@ local M = {}
 ---@param spec index.FuzzySpec<T>
 ---@return index.Searcher<C, T>
 M.new = function(spec)
-  ---@type table<string, { item: any, precomputed: hybrid.Precomputed? }>
+  ---@type table<string, any>
   local items = {}
   local fuzzy = {}
 
   fuzzy.insert = function(item)
     local key = spec.insert_key(item)
-    items[key] = { item = item, precomputed = match.precompute(key) }
+    items[key] = item
   end
 
   fuzzy.prune = function(_)
@@ -31,9 +32,9 @@ M.new = function(spec)
       local token = spec.query_key(ctx) or ""
 
       for key, entry in pairs(items) do
-        local score = match.score(token, key, entry.precomputed)
+        local score = match.score(spec.look_ahead, token, key)
         if token == "" or score >= spec.cutoff then
-          coroutine.yield { item = entry.item, fuzzy = score }
+          coroutine.yield { item = entry, fuzzy = score }
         end
       end
     end)

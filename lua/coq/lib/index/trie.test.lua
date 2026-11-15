@@ -20,6 +20,7 @@ local spec = {
         return ctx.prefix
       end,
       cutoff = 0, -- exercise the trie, not the fuzzy filter
+      look_ahead = 2,
     }
   end,
 }

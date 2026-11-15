@@ -1,5 +1,6 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
+local helpers = require "coq.lib.test_helpers"
 local util = require "coq.producers.util"
 
 ---@param items table[]
@@ -28,12 +29,11 @@ end
 
 local settings = function(max)
   ---@diagnostic disable-next-line: missing-fields
-  return { match = { max_results = max } } --[[@as config.Settings]]
+  return { match = { max_results = max, look_ahead = 2 } } --[[@as config.Settings]]
 end
 
 local ctx = function(prefix)
-  ---@diagnostic disable-next-line: missing-fields
-  return { keyword_before = prefix or "", match_before = prefix or "" } --[[@as ctx.full]]
+  return helpers.ctx_of { keyword_before = prefix or "", match_before = prefix or "" }
 end
 
 T.describe({ "producers.util.batched" }, function(test)
@@ -44,15 +44,22 @@ T.describe({ "producers.util.batched" }, function(test)
     async.scope(function()
       local pull = async.wrap(util.batched(function()
         for i = 1, count do
-          coroutine.yield(i)
+          local word = tostring(i)
+          coroutine.yield {
+            word = word,
+            meta = { uid = word, source = "test", filter = word, fuzzy = 0 },
+          }
         end
-      end))
-      while true do
-        local batch = pull(true)
-        if batch == nil then
-          break
-        end
-        table.insert(batches, batch)
+      end)) --[[@as async.Bounce]]
+      local batch = pull(settings(33), ctx())
+      while batch ~= nil do
+        table.insert(
+          batches,
+          vim.tbl_map(function(item)
+            return tonumber(item.item.word)
+          end, batch)
+        )
+        batch = pull(true)
       end
     end)
     return batches
@@ -84,11 +91,11 @@ T.describe({ "producers.util.batched" }, function(test)
 end)
 
 T.describe({ "producers.util.shape" }, function(test)
-  test({ "dedups by word then caps" }, function()
+  test({ "dedups without truncating candidates before ranking" }, function()
     local out = drain(
       util.shape(settings(2), ctx(), from { { word = "spot" }, { word = "spot" }, { word = "fido" }, { word = "rex" } })
     )
-    T.eq(#out, 2)
+    T.eq(#out, 3)
     T.eq(out[1].item.word, "spot")
     T.eq(out[2].item.word, "fido")
   end)
@@ -114,8 +121,8 @@ T.describe({ "producers.util.shape" }, function(test)
     T.eq(#out, 2)
   end)
 
-  test({ "max = 0 yields nothing" }, function()
-    T.eq(drain(util.shape(settings(0), ctx(), from { { word = "spot" } })), {})
+  test({ "display limit does not affect source eligibility" }, function()
+    T.eq(#drain(util.shape(settings(0), ctx(), from { { word = "spot" } })), 1)
   end)
 
   test({ "items without a word field pass through (treesitter-style)" }, function()
@@ -230,7 +237,7 @@ end)
 T.describe({ "producers.util.word_search" }, function(test)
   local ws_settings = function(exact)
     ---@diagnostic disable-next-line: missing-fields
-    return { match = { exact_matches = exact or 2, fuzzy_cutoff = 0 } } --[[@as config.Settings]]
+    return { match = { exact_matches = exact or 2, fuzzy_cutoff = 0, look_ahead = 2 } } --[[@as config.Settings]]
   end
 
   local seed = function(words)
