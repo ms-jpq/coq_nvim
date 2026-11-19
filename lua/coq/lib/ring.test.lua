@@ -38,7 +38,7 @@ T.describe({ "ring" }, function(test)
     r.push "lil"
     r.push "spot"
     r.push "fido"
-    r.push "rex" -- evicts "lil"
+    r.push "rex"
     T.eq(sorted(r.items()), { "fido", "rex", "spot" })
   end)
 
@@ -51,7 +51,6 @@ T.describe({ "ring" }, function(test)
     table.sort(snapshot)
     T.eq(snapshot, { 1, 2, 3 })
 
-    -- ring is unaffected by the sort above
     r.push(0)
     T.eq(sorted(r.items()), { 0, 1, 2 })
   end)

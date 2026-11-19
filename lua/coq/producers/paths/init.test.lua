@@ -52,7 +52,6 @@ local ctx_of = function(ctx_overrides)
     utf32_col = 0,
   }
   local merged = vim.tbl_deep_extend("force", base, ctx_overrides)
-  -- derive keyword_before from line_before unless explicitly overridden
   if ctx_overrides.keyword_before == nil then
     merged.keyword_before = tokens.trailing_keyword_before(tokens.parse_charset(iskeyword), merged.line_before)
   end
@@ -65,7 +64,6 @@ end
 local run_matcher = function(settings, ctx)
   local items = {}
   async.scope(function()
-    -- paths.matcher is util.batched(...), so each pull is an item[] batch.
     local pull = async.wrap(function(...)
       paths.matcher(settings, ctx)
     end)
@@ -150,9 +148,6 @@ T.describe({ "paths.matcher" }, function(test)
   end)
 
   test({ "a non-matching prefix in an existing dir yields nothing, not root" }, function()
-    -- "b" matches nothing in dir. The parser also emits a bare "/" candidate
-    -- (start 1); without the existing-dir guard the matcher would fall through
-    -- to it and list root entries like "bin/". The guard commits to dir.
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
 
@@ -174,8 +169,6 @@ T.describe({ "paths.matcher" }, function(test)
   end)
 
   test({ "~ expands to home" }, function()
-    -- Point HOME at a controlled dir; listing the live home is racy (it churns
-    -- between the matcher's scandir and the assertion).
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
     vim.fn.mkdir(dir .. "/fido")
@@ -273,7 +266,6 @@ T.describe({ "paths.matcher" }, function(test)
     local edit = lsp.item.textEdit
     T.eq(edit.range.start.line, 0)
     T.eq(edit.range.start.character, 0)
-    -- range.end covers the post-PUM cursor: pre-PUM col 4 + #word 8 - #kw 2 = 10.
     T.eq(edit.range["end"].character, 10)
     T.eq(edit.newText, "./spot.txt")
   end)

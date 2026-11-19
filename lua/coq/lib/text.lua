@@ -143,9 +143,6 @@ M.lstrip = function(s)
   return (string.gsub(s, "^%s+", ""))
 end
 
----Right-pad `text` with spaces until it occupies at least `width` display
----columns. Uses `strdisplaywidth` so multi-byte content pads to the
----correct visual width, not its byte length.
 ---@param text string
 ---@param width integer
 ---@return string

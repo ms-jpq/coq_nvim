@@ -129,9 +129,6 @@ T.describe({ "supervisor" }, function(test)
   end)
 
   test({ "new search cancels in-flight idle" }, function()
-    -- pcall(sleep) returning false IS the proof idle's sleep was cancelled.
-    -- If search hadn't cancelled idle, sleep would complete naturally and
-    -- pcall would return true.
     local idle_started = async.future()
     local idle_cancelled = async.future()
     async.scope(function(n)
@@ -274,8 +271,6 @@ T.describe({ "supervisor" }, function(test)
       }
       local sup = supervisor.new { p }
 
-      -- mimic subscribe_latest: consume a search, then cancel the consuming
-      -- coroutine mid-flight WITHOUT calling iter.close().
       local searcher = n.spawn(function()
         local _, iter = sup.search(SETTINGS, {})
         for _ in iter do
@@ -293,9 +288,6 @@ T.describe({ "supervisor" }, function(test)
   end)
 
   test({ "two consecutive searches without intervening idle" }, function()
-    -- Real-world pattern: subscribe_latest fires two searches back-to-back.
-    -- The second must produce items just like the first — searching must not
-    -- latch on, and matcher state must not leak between searches.
     local items_a, items_b = {}, {}
     async.scope(function()
       local sup = supervisor.new { yields("lil", "spot") }
@@ -319,13 +311,9 @@ T.describe({ "supervisor" }, function(test)
   end)
 
   test({ "second search proceeds after first's consumer is cancelled" }, function()
-    -- subscribe_latest dispatches the next search before the previous one's
-    -- consumer fully drains. The supervisor's `searching` flag must reset
-    -- via the on_cancel hook so the second search's matcher is reachable.
     async.scope(function(n)
       local sup = supervisor.new { yields "lil" }
 
-      -- Start the first search inside a cancellable task without draining.
       local searcher = n.spawn(function()
         local _, iter = sup.search(SETTINGS, {})
         for _ in iter do
@@ -335,7 +323,6 @@ T.describe({ "supervisor" }, function(test)
       async.sleep(5 * T.SLOW)
       searcher.cancel()
 
-      -- Second search must produce items — `searching` flag must have reset.
       local close, iter = sup.search(SETTINGS, {})
       local got = {}
       for v in iter do

@@ -171,10 +171,8 @@ T.describe({ "index.indexed" }, function(test)
     idx.insert { word = "lil", filetype = "lua", buf = 1 }
     idx.insert { word = "spot", filetype = "python", buf = 2 }
 
-    -- buf 1 drains the lua child (dropped); python survives → not empty
     T.eq(idx.prune { buf = 1 }, false)
     T.eq(collect(idx.search { filetype = "lua" }), {})
-    -- buf 2 drains the last child → index reports empty
     T.eq(idx.prune { buf = 2 }, true)
   end)
 
@@ -233,7 +231,6 @@ T.describe({ "index.empty" }, function(test)
     end
     T.eq(got, {})
 
-    -- these should not error
     search.empty.insert { word = "lil" }
     search.empty.prune {}
   end)

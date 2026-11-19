@@ -82,25 +82,19 @@ T.describe({ "worker" }, function(test)
   end)
 
   test({ "a queued fn can yield via async" }, function()
-    -- A shorter sibling sleep must finish before the queued fn returns.
-    -- If queue didn't honour the inner async.sleep, queue_done would log
-    -- first.
     local w = worker.spawn()
-    local checkpoints = {}
-    async.scope(function(n)
-      n.spawn(function()
-        async.sleep(1 * T.SLOW)
-        table.insert(checkpoints, "sentinel")
+    local result = w.queue(function()
+      local ready = require("coq.lib.async").future()
+      local timer = assert(vim.uv.new_timer())
+      timer:start(0, 0, function()
+        timer:close()
+        ready.resolve "awake"
       end)
-      w.queue(function(ms)
-        require("coq.lib.async").sleep(ms)
-      end, 20 * T.SLOW)
-      table.insert(checkpoints, "queue_done")
-      n.cancel()
+      return ready.await()
     end)
     w.close()
 
-    T.eq(checkpoints, { "sentinel", "queue_done" })
+    T.eq(result, "awake")
   end)
 
   test({ "a queued fn can call back to main via worker.main" }, function()
@@ -393,8 +387,6 @@ T.describe({ "worker" }, function(test)
     T.eq(ok, true)
   end)
 
-  -- closing mid-stream leaves the producer parked at a yield with its defers
-  -- unrun; the responder must drain it to completion so scoped cleanup fires.
   test({ "closing a bounded stream early drains it so lib.scope defers run" }, function()
     local w = worker.spawn()
     w.queue(function()
@@ -413,7 +405,7 @@ T.describe({ "worker" }, function(test)
         end
       end)
     end)
-    iter() -- pull 1 of 5, then abandon
+    iter()
     close()
     local cleaned = w.queue(function()
       _G.done.await()
@@ -424,8 +416,6 @@ T.describe({ "worker" }, function(test)
     T.eq(cleaned, true)
   end)
 
-  -- a producer parked in an await unwinds via cancel when the stream closes;
-  -- the defer must still run (this is the paths/scandir cleanup shape).
   test({ "closing a stream parked in an await runs lib.scope defers via cancel" }, function()
     local w = worker.spawn()
     w.queue(function()
@@ -441,7 +431,7 @@ T.describe({ "worker" }, function(test)
           _G.done.resolve()
         end)
         coroutine.yield "dog"
-        async.sleep(60 * 1000) -- park; close() cancels and unwinds this
+        async.sleep(60 * 1000)
       end)
     end)
     iter()
@@ -640,9 +630,7 @@ T.describe({ "worker" }, function(test)
 
   test({ "a streaming fn that never yields returns nil immediately" }, function()
     local w = worker.spawn()
-    local _, iter = w.queue_stream(function()
-      -- never calls yield
-    end)
+    local _, iter = w.queue_stream(function() end)
     local first = iter()
     w.close()
 

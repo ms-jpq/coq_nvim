@@ -1,5 +1,3 @@
--- Worker IPC wire protocol: newline-delimited JSON.
-
 local json = require "coq.lib.json"
 
 local M = {}

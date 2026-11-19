@@ -127,8 +127,6 @@ T.describe({ "async" }, function(test)
   end)
 
   test({ "sleep yields for the requested duration" }, function()
-    -- Order assertion: a shorter sibling sleep must finish before the
-    -- longer one. If sleep returned immediately, "main" would log first.
     local checkpoints = {}
     async.scope(function(n)
       n.spawn(function()

@@ -27,9 +27,6 @@ end
 local cancel_tests = function(name, factory)
   T.describe({ "producer " .. name .. " :: cancel" }, function(test)
     test({ "ambient cancel wakes a sleeping matcher" }, function()
-      -- If cancel correctly wakes the matcher, its sleep raises before
-      -- matcher_completed is set. If cancel didn't wake it, the matcher would
-      -- sleep its full 200ms and set the flag.
       local h = handle.new()
       local matcher_completed = false
       local n = nursery.new()

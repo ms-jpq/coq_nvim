@@ -21,7 +21,6 @@ end
 ---@param overrides? table
 ---@return ctx.full
 local ctx_of = function(overrides)
-  -- Use a fresh scratch buf each time so the incomplete buf-var doesn't leak.
   return TH.ctx_of(vim.tbl_extend("force", {
     buf = TH.scratch_buf(),
     pos = { 3, 8, 8, 8 },

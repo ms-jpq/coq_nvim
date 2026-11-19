@@ -100,8 +100,6 @@ T.describe({ "handle" }, function(test)
     T.eq(fired, { "outer", "inner" })
   end)
 
-  -- Watchers are invoked synchronously by cancel(). A watcher must not await:
-  -- it can only kick off detached, fire-and-forget async work.
   test({ "cancel stays synchronous when a watcher spawns detached async work" }, function()
     local h = handle.new()
     local f = async.future()
@@ -122,10 +120,6 @@ T.describe({ "handle" }, function(test)
     T.eq(order, { "after-cancel", "async-work" })
   end)
 
-  -- Awaiting directly inside a watcher only "works" when cancel() happens to be
-  -- driven from a coroutine, and even then it is a trap: the await suspends
-  -- cancel() itself. From a synchronous caller it errors outright (yield
-  -- outside a coroutine).
   test({ "awaiting directly in a watcher suspends cancel" }, function()
     local h = handle.new()
     local order = {}

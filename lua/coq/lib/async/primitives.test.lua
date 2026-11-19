@@ -125,8 +125,6 @@ end)
 
 T.describe({ "sleep cancel" }, function(test)
   test({ "returns immediately when handle already cancelled" }, function()
-    -- Pre-cancel the handle, then call sleep. The pcall raises cancel — if
-    -- sleep actually waited, the sentinel sibling would log first.
     local h = handle.new()
     local checkpoints = {}
     async.scope(function(outer)
@@ -148,8 +146,6 @@ T.describe({ "sleep cancel" }, function(test)
   end)
 
   test({ "throws cancel when cancelled mid-sleep" }, function()
-    -- pcall flagging the cancel error IS the proof; if the cancel didn't
-    -- interrupt, pcall would return ok=true.
     local h = handle.new()
     local ok, err
 

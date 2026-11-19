@@ -34,8 +34,6 @@ T.describe({ "resolver" }, function(test)
     T.eq(calls, 1)
   end)
 
-  -- nvim deep-copies item.user_data through VimL, so highlight and commit see
-  -- DISTINCT tables with identical content. The cache must key on content.
   test({ "shares cache across distinct tables of equal content" }, function()
     local calls = 0
     async.scope(function(n)
@@ -96,9 +94,6 @@ T.describe({ "resolver" }, function(test)
     T.eq(calls, 2)
   end)
 
-  -- reset() starts a new cycle with its own cache. A previous cycle's in-flight
-  -- fetch that fails/cancels AFTER the reset must clean up against its OWN
-  -- (discarded) cache, never the new cycle's live one.
   test({ "a stale cycle's failed fetch does not evict the new cycle's entry" }, function()
     local calls = 0
     async.scope(function(n)
@@ -111,26 +106,22 @@ T.describe({ "resolver" }, function(test)
           hold = false
           started.resolve()
           release.await()
-          error(cancel.new(), 0) -- cycle-1 fetch cancels in-flight
+          error(cancel.new(), 0)
         end
         return meta.lsp
       end)
       local item = lsp_item "fido"
 
-      -- cycle 1: kick off a fetch and leave it parked in-flight
       n.spawn(function()
         r.resolve(CTX, item.meta)
       end)
       started.await()
 
-      -- new cycle; its fetch succeeds and caches under the same uid
       r.reset()
       r.resolve(CTX, item.meta)
 
-      -- now let cycle-1's fetch unwind; its cleanup must not touch cycle 2
       release.resolve()
 
-      -- cycle 2's entry survives → no third fetch
       r.resolve(CTX, item.meta)
     end)
     T.eq(calls, 2)

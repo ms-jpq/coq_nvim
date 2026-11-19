@@ -21,7 +21,7 @@ T.describe({ "inflight" }, function(test)
 
   test({ "resolve on an unknown id is a no-op" }, function()
     local p = inflight.new()
-    p.resolve(99, "ghost") -- must not throw
+    p.resolve(99, "ghost")
   end)
 
   test({ "concurrent ids don't collide and resolve independently" }, function()
@@ -54,7 +54,6 @@ T.describe({ "inflight" }, function(test)
     T.eq(p.has(id), true)
     unwatch()
     T.eq(p.has(id), false)
-    -- subsequent resolve is a no-op (cb is gone)
     p.resolve(id, "anything")
   end)
 
@@ -70,7 +69,6 @@ T.describe({ "inflight" }, function(test)
     p.drain "shutdown"
     table.sort(got)
     T.eq(got, { "shutdown", "shutdown" })
-    -- After drain the entries are gone.
     T.eq(p.has(1), false)
     T.eq(p.has(2), false)
   end)
@@ -78,8 +76,6 @@ T.describe({ "inflight" }, function(test)
   test({ "cb reserved during drain is not lost (drain snapshots first)" }, function()
     local p = inflight.new()
     p.reserve(function()
-      -- This callback fires during drain. Reserving inside it must not
-      -- be visited by the same drain pass — the new entry survives.
       p.reserve(function() end, 100)
     end)
     p.drain "tick"

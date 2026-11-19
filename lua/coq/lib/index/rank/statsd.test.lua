@@ -107,7 +107,6 @@ T.describe({ "rank.statsd.record" }, function(test)
     end
     local sum = s.summary().BF
     T.eq(sum.avg_items, 55)
-    -- Q50 of 1..10 mapped *10 → ~50–60 range depending on quantile rounding.
     assert(sum.q50_items >= 50 and sum.q50_items <= 60, "Q50 should be midband")
     assert(sum.q99_items >= 90, "Q99 should be near the top")
   end)

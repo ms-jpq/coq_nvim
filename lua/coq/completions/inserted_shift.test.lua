@@ -59,7 +59,6 @@ T.describe({ "edit shift equivalence" }, function(test)
                       offset(completed, edit.range["end"], encoding),
                       edit.newText
                     )
-                    -- Right-to-left string splices use only original byte offsets.
                     local expected = before and splice(completed, start, stop, edit.newText)
                       or splice(splice(text, start, stop, edit.newText), first, last, replacement)
                     local case = { first, last, replacement, start, stop }

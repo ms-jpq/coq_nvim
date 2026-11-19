@@ -96,7 +96,6 @@ T.describe({ "wildignore vs vim.fn.glob2regpat parity" }, function(test)
 
   ---@type [string, string, string][]
   local CASES = {
-    -- Within our supported subset: literals, *, ?
     { "fido", "fido", "/var/dogs/fido" },
     { "fido", "rex", "/var/dogs/rex" },
     { "fido", "fidolicious", "/var/dogs/fidolicious" },
@@ -110,7 +109,6 @@ T.describe({ "wildignore vs vim.fn.glob2regpat parity" }, function(test)
     { "*/node_modules/*", "react.js", "/var/dogs/node_modules/react.js" },
     { "*/node_modules/*", "react.js", "/var/dogs/react.js" },
     { "*node_modules*", "react.js", "/var/dogs/node_modules/react.js" },
-    -- Regex metacharacters in literal positions
     { "fido+", "fido+", "/var/fido+" },
     { "fido+", "fidooo", "/var/fidooo" },
     { "fido.bak", "fidoXbak", "/var/fidoXbak" },

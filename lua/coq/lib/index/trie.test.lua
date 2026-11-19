@@ -19,7 +19,7 @@ local spec = {
       query_key = function(ctx)
         return ctx.prefix
       end,
-      cutoff = 0, -- exercise the trie, not the fuzzy filter
+      cutoff = 0,
       look_ahead = 2,
     }
   end,
@@ -49,13 +49,11 @@ T.describe({ "trie" }, function(test)
   test({ "buckets by the first two chars: a longer prefix yields the whole bucket" }, function()
     local t = trie.new(vim.tbl_extend("force", spec, { prefix = 2 }))
     t.insert { word = "labrador" }
-    t.insert { word = "lazy" } -- same "la" bucket, diverges at char 3
-    t.insert { word = "lily" } -- "li" bucket
+    t.insert { word = "lazy" }
+    t.insert { word = "lily" }
 
-    -- a query past two chars does not narrow within the bucket (fuzzy)
     T.eq(collect(t.search { prefix = "labr" }), { "labrador", "lazy" })
     T.eq(collect(t.search { prefix = "la" }), { "labrador", "lazy" })
-    -- a single char fans across every two-char bucket beneath it
     T.eq(collect(t.search { prefix = "l" }), { "labrador", "lazy", "lily" })
   end)
 
@@ -65,14 +63,13 @@ T.describe({ "trie" }, function(test)
     one.insert { word = "lily" }
     one.insert { word = "spot" }
 
-    -- prefix = 1: a single "l" bucket holds both l-words
     T.eq(collect(one.search { prefix = "lab" }), { "labrador", "lily" })
     T.eq(collect(one.search { prefix = "s" }), { "spot" })
 
     local three = trie.new(vim.tbl_extend("force", spec, { prefix = 3 }))
     three.insert { word = "labrador" }
-    three.insert { word = "label" } -- shares "lab"
-    three.insert { word = "lazy" } -- "laz", a distinct bucket at depth 3
+    three.insert { word = "label" }
+    three.insert { word = "lazy" }
 
     T.eq(collect(three.search { prefix = "labrador" }), { "label", "labrador" })
   end)
@@ -145,8 +142,8 @@ T.describe({ "trie" }, function(test)
 
   test({ "key bucketing is case insensitive in both directions" }, function()
     local t = trie.new(vim.tbl_extend("force", spec, { prefix = 2 }))
-    t.insert { word = "Labrador" } -- upper-cased word, lower-cased query
-    t.insert { word = "poodle" } -- lower-cased word, upper-cased query
+    t.insert { word = "Labrador" }
+    t.insert { word = "poodle" }
 
     T.eq(collect(t.search { prefix = "la" }), { "Labrador" })
     T.eq(collect(t.search { prefix = "PO" }), { "poodle" })

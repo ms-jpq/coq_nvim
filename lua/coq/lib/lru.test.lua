@@ -75,8 +75,8 @@ T.describe({ "lru" }, function(test)
     cache.a = 1
     cache.b = 2
     cache.c = 3
-    cache.d = 4 -- evicts a (LRU)
-    cache.e = 5 -- evicts b
+    cache.d = 4
+    cache.e = 5
 
     T.eq(snapshot(cache), { c = 3, d = 4, e = 5 })
   end)

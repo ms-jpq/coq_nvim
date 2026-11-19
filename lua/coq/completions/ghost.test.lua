@@ -6,10 +6,6 @@ local preview = require "coq.producers.snippets.preview"
 local NS = vim.api.nvim_create_namespace "coq.ghost"
 local DEFAULT_ISKEYWORD = "@,48-57,_,192-255"
 
--- `bind` wires up the stateful API (M.show, M.clear, etc.) plus event
--- subscriptions. Tests exercise `M.show` directly and inspect `_extmarks`,
--- so we hand bind inert stubs for the nursery and event channels — the
--- subscribers register but never fire.
 local stub_chan = {
   subscribe = function()
     return function() end, function()
@@ -67,12 +63,6 @@ local item_of = function(word)
   } --[[@as completions.Item]]
 end
 
--- The production renderer is a decoration provider — it recreates its
--- persistent extmarks from the current cursor position on every redraw.
--- Tests recompute by feeding `_extmarks` the cursor col captured at show time.
--- nvim normalizes some keys (eol + virt_text_win_col → "win_col"), so for
--- tests that care about the normalized form we round-trip through a
--- persistent extmark via mark_details.
 ---@param ghost_settings config.GhostText
 ---@param buf integer
 ---@param cursor_col integer
@@ -156,25 +146,20 @@ T.describe({ "ghost.show" }, function(test)
   end)
 
   test({ "cursor left of anchor: bail rather than paint at cursor" }, function()
-    -- show with anchor at col 4; query _extmarks at col 1 (cursor moved back).
     local buf, ctx = mk_ctx({ "./ft" }, 1, 4)
     ghost.show(ctx, item_of "ftplugin")
     local s = vim.b[buf].coq_ghost
     assert(s, "expected ghost state")
-    -- _extmarks called with a cursor_col before anchor_col → no mark.
     T.eq(ghost._extmarks(ghost_cfg, s, ctx.line, 1)(), nil)
   end)
 
   test({ "common-suffix: trims trailing chars already in the buffer" }, function()
-    -- cursor between paren chars: user typed "fido(", cursor before ")".
-    -- item word "fido()" — the trailing `)` is already in the buffer.
     local buf, ctx = mk_ctx({ "fido()" }, 1, 5)
     ghost.show(ctx, item_of "fido()")
     T.eq(mark_text(buf, ctx), nil)
   end)
 
   test({ "multibyte: CJK advances by codepoint, not byte" }, function()
-    -- "你好世界" — 4 codepoints, 12 bytes. Typed "你好" (6 bytes) → tail "世界".
     local buf, ctx = mk_ctx({ "你好" }, 1, 6)
     ghost.show(ctx, item_of "你好世界")
     local entry = mark_text(buf, ctx)
@@ -191,8 +176,6 @@ T.describe({ "ghost.show" }, function(test)
   end)
 
   test({ "subseq cutoff: typed diverges → subseq-stripped tail inline" }, function()
-    -- Subseq match consumes 'f'@1 and 'n'@3 in "function" → remaining "ction".
-    -- Display: "fn" + "ction" = "fnction".
     local buf, ctx = mk_ctx({ "fn" }, 1, 2)
     ghost.show(ctx, item_of "function")
     local entry = mark_text(buf, ctx)
@@ -332,14 +315,10 @@ T.describe({ "ghost.show multi-line range" }, function(test)
   end
 
   test({ "range N rows × newText K lines: emits min(N,K) per-row overlays" }, function()
-    -- Range spans 3 rows, newText has 3 lines → 3 overlay extmarks
-    -- (anchor at cursor col, others at col 0).
     local buf, ctx = mk_ctx({ "dog", "good", "fido" }, 1, 0)
     ghost.show(ctx, item_ml_range("puppy\nclever\nfido", 0, 0, 2, 4))
     local marks = vim.iter(ghost._extmarks(ghost_cfg, vim.b[buf].coq_ghost, ctx.line, ctx.pos[2])):totable()
     T.eq(#marks, 3)
-    -- Anchor is (0, 0); cursor col is 0 too. Marks 2+ overlay at col 0
-    -- on rows 1 and 2 (anchor_row + k - 1).
     T.eq(marks[1].opts.virt_text[1][1], "puppy")
     T.eq(marks[1].opts.virt_text_pos, "overlay")
     T.eq(marks[1].row, 0)
@@ -349,12 +328,10 @@ T.describe({ "ghost.show multi-line range" }, function(test)
     T.eq(marks[2].col, 0)
     T.eq(marks[3].opts.virt_text[1][1], "fido")
     T.eq(marks[3].row, 2)
-    -- No surplus virt_lines on the last mark.
     T.eq(marks[3].opts.virt_lines, nil)
   end)
 
   test({ "newText has more lines than range: surplus goes into virt_lines" }, function()
-    -- 2-row range, 4-line newText → 2 overlays, 2 surplus → virt_lines on mark 2
     local buf, ctx = mk_ctx({ "a", "b" }, 1, 0)
     ghost.show(ctx, item_ml_range("L1\nL2\nL3\nL4", 0, 0, 1, 1))
     local marks = vim.iter(ghost._extmarks(ghost_cfg, vim.b[buf].coq_ghost, ctx.line, ctx.pos[2])):totable()
@@ -367,7 +344,6 @@ T.describe({ "ghost.show multi-line range" }, function(test)
   end)
 
   test({ "range has more rows than newText: only emit row_overlays for newText lines" }, function()
-    -- 3-row range, 1-line newText → 1 mark (anchor), buffer rows 2,3 leak (limitation)
     local buf, ctx = mk_ctx({ "a", "b", "c" }, 1, 0)
     ghost.show(ctx, item_ml_range("once", 0, 0, 2, 1))
     local marks = vim.iter(ghost._extmarks(ghost_cfg, vim.b[buf].coq_ghost, ctx.line, ctx.pos[2])):totable()
@@ -376,12 +352,11 @@ T.describe({ "ghost.show multi-line range" }, function(test)
   end)
 
   test({ "single-line range, multi-line newText: anchor + virt_lines (no extra overlays)" }, function()
-    -- 1-row range stays as single overlay anchor; surplus lines as virt_lines.
     local buf, ctx = mk_ctx({ "fi" }, 1, 2)
     ghost.show(ctx, item_ml_range("fido\nbark", 0, 0, 0, 2))
     local marks = vim.iter(ghost._extmarks(ghost_cfg, vim.b[buf].coq_ghost, ctx.line, ctx.pos[2])):totable()
     T.eq(#marks, 1)
-    T.eq(marks[1].opts.virt_text[1][1], "do") -- "fi" prefix consumed
+    T.eq(marks[1].opts.virt_text[1][1], "do")
     assert(marks[1].opts.virt_lines, "expected virt_lines")
     T.eq(marks[1].opts.virt_lines[1][1][1], "bark")
   end)
@@ -425,7 +400,6 @@ T.describe({ "ghost._remaining" }, function(test)
     { name = "subseq skip in middle", typed = "fn", candidate = { "function" }, head = "ction", rest = {} },
     { name = "subseq with prefix gap", typed = "nvm", candidate = { "nvim_api_*" }, head = "_api_*", rest = {} },
     { name = "longer subseq match", typed = "fnt", candidate = { "function" }, head = "ion", rest = {} },
-    -- on bounded-subseq failure, fall back to dropping #typed bytes from the candidate.
     { name = "no chars match → drop #typed", typed = "xy", candidate = { "abc" }, head = "c", rest = {} },
     { name = "empty typed → full body", typed = "", candidate = { "function" }, head = "function", rest = {} },
     { name = "exact match → empty", typed = "while", candidate = { "while" }, head = "", rest = {} },
@@ -443,8 +417,6 @@ T.describe({ "ghost._remaining" }, function(test)
       head = "m_buf_get_var",
       rest = {},
     },
-    -- regression: candidate starts with multi-byte `‹` (3 bytes UTF-8).
-    -- byte-count fallback would slice mid-codepoint and surface as `<80><b9>`.
     {
       name = "fallback respects codepoint boundary",
       typed = "f",

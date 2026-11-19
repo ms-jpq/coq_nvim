@@ -19,9 +19,6 @@ T.describe({ "wait" }, function(test)
   end)
 
   test({ "does not wait beyond fn's completion when fn wins" }, function()
-    -- Order assertion: wait returns at ~5ms, then we cancel the sentinel
-    -- before its 100ms sleep elapses. If wait had stalled until the 200ms
-    -- timeout, the sentinel would log first.
     local checkpoints = {}
     async.scope(function(n)
       n.spawn(function()
@@ -39,9 +36,6 @@ T.describe({ "wait" }, function(test)
   end)
 
   test({ "does not wait beyond timeout when fn loses" }, function()
-    -- Order assertion: wait fires its 10ms timeout, then cancels sentinel
-    -- before its 200ms sleep. If wait had blocked on fn's 500ms sleep,
-    -- the sentinel would log first.
     local checkpoints = {}
     async.scope(function(n)
       n.spawn(function()

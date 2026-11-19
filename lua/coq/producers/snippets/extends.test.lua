@@ -10,7 +10,6 @@ T.describe({ "snippets.extends.denormalize" }, function(test)
   end)
 
   test({ "each filetype includes itself" }, function()
-    -- A → B; identity reflex means A is in its own closure too.
     local r = extends_m.denormalize(9, { { A = set { "B" } } })
     T.eq(r.A, set { "A", "B" })
   end)
@@ -24,7 +23,6 @@ T.describe({ "snippets.extends.denormalize" }, function(test)
   end)
 
   test({ "merges multiple maps before closing" }, function()
-    -- one source says A→B; another says B→C. The union gives A→B→C.
     local r = extends_m.denormalize(9, {
       { A = set { "B" } },
       { B = set { "C" } },
@@ -65,7 +63,6 @@ T.describe({ "snippets.extends.denormalize" }, function(test)
   end)
 
   test({ "depth caps how far the BFS walks — chain A→B→C→D at depth=1" }, function()
-    -- one hop only: A reaches B but not C/D.
     local r = extends_m.denormalize(1, {
       { A = set { "B" }, B = set { "C" }, C = set { "D" } },
     })
@@ -87,8 +84,6 @@ T.describe({ "snippets.extends.denormalize" }, function(test)
   end)
 
   test({ "does not invent entries for fts only mentioned as parents" }, function()
-    -- B appears only as a parent of A; B itself has no own row in the graph
-    -- and therefore no closure row in the result.
     local r = extends_m.denormalize(9, { { A = set { "B" } } })
     T.eq(r.B, nil)
   end)
@@ -124,7 +119,6 @@ T.describe({ "snippets.extends.traverse" }, function(test)
   end)
 
   test({ "deduplicates already-loaded filetypes" }, function()
-    -- A → B, A → C, B → C: C should not be processed twice.
     local counts = {}
     for _, t in pairs(sorted_seen("A", { A = { "B", "C" }, B = { "C" } })) do
       counts[t] = (counts[t] or 0) + 1
@@ -145,7 +139,6 @@ T.describe({ "snippets.extends.traverse" }, function(test)
   end)
 
   test({ "implicit entries follow their own extends" }, function()
-    -- "*" extends "shared"; "shared" must appear in the visited set.
     T.eq(sorted_seen("foo", { ["*"] = { "shared" } }), { "*", "_", "foo", "shared" })
   end)
 
@@ -161,7 +154,6 @@ T.describe({ "snippets.extends.traverse" }, function(test)
   end)
 
   test({ "target deduped against implicit when they overlap" }, function()
-    -- if "*" is the target, it shouldn't be visited twice.
     local counts = {}
     for _, t in pairs(sorted_seen("*", {})) do
       counts[t] = (counts[t] or 0) + 1

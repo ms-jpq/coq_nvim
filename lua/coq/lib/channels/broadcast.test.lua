@@ -193,8 +193,6 @@ T.describe({ "broadcast" }, function(test)
       a.cancel()
     end)
 
-    -- the wake-all model has no per-waiter object to corrupt: a live subscriber
-    -- still receives the next value after another's await was cancelled.
     chan.replace "spot"
     T.eq(live(), "spot")
   end)

@@ -36,33 +36,26 @@ local SCREEN = { width = 120, height = 40 }
 
 T.describe({ "preview.show._pick_position" }, function(test)
   test({ "returns nil when no quadrant is enabled" }, function()
-    -- vim.tbl_deep_extend strips nil entries, so build the cfg directly.
     local p = cfg()
     p.positions = {}
     T.eq(show._pick_position(p, ev_of(), SCREEN, { "fido" }), nil)
   end)
 
   test({ "picks south when north has no room above the pum" }, function()
-    -- pum row = 1: only 0 rows above → north can't fit
     local p = cfg()
     local pos = show._pick_position(p, ev_of { row = 1, height = 2 }, SCREEN, { "fido" })
     assert(pos, "expected a position")
-    -- south sits two rows below the pum's bottom
-    T.eq(pos.row, 1 + 2 - 1 + 2) -- pum_s + 2
+    T.eq(pos.row, 1 + 2 - 1 + 2)
   end)
 
   test({ "picks north when there's room above" }, function()
-    -- north has rank 1 (preferred); plenty of room above row=20
     local p = cfg()
     local pos = show._pick_position(p, ev_of { row = 20, height = 4 }, SCREEN, { "fido", "spot", "rex" })
     assert(pos, "expected a position")
-    -- north's row sits above the pum
     assert(pos.row < 20, "expected north row to be above pum")
   end)
 
   test({ "rank wins when areas are equal" }, function()
-    -- single-line content fits in either quadrant with the same area; rank
-    -- breaks the tie, so north (rank 1) is picked over south (rank 2).
     local p = cfg { positions = { north = 1, south = 2 } }
     local pos = show._pick_position(p, ev_of { row = 20, height = 4 }, SCREEN, { "fido" })
     assert(pos, "expected a position")
@@ -70,9 +63,6 @@ T.describe({ "preview.show._pick_position" }, function(test)
   end)
 
   test({ "bigger area beats better rank" }, function()
-    -- 8-line content. North is tight (only 2 rows above) so its area = 2*w.
-    -- South has 35 rows below so its area = 8*w. South wins on area despite
-    -- north's better rank.
     local p = cfg { positions = { north = 1, south = 2 } }
     local lines = {}
     for _ = 1, 8 do
@@ -92,7 +82,6 @@ T.describe({ "preview.show._pick_position" }, function(test)
   end)
 
   test({ "border adds 1 cell padding per side to geometry" }, function()
-    -- with rounded border, b_w/b_h = 1; ns_w should shrink relative to none
     local p_none = cfg { border = "none" }
     local p_round = cfg { border = "rounded" }
     local ev = ev_of { row = 20 }
@@ -106,15 +95,10 @@ T.describe({ "preview.show._pick_position" }, function(test)
   end)
 
   test({ "tight screen with no room anywhere returns nil" }, function()
-    -- pum fills nearly the whole screen
     local tiny = { width = 30, height = 8 }
     local p = cfg()
-    -- pum spans rows 0..6 horizontally; south_row = 6+2 = 8 = screen.height
-    -- east/west are clamped to 0-width
     local ev = ev_of { row = 0, col = 0, width = 30, height = 7 }
     local pos = show._pick_position(p, ev, tiny, { string.rep("x", 200) })
-    -- not asserting nil specifically — geometry may still find one usable
-    -- quadrant. But if any pos comes back, dimensions must fit on screen.
     if pos then
       assert(pos.row + pos.height <= tiny.height, "pos overflows screen height")
       assert(pos.col + pos.width <= tiny.width, "pos overflows screen width")
@@ -122,7 +106,6 @@ T.describe({ "preview.show._pick_position" }, function(test)
   end)
 
   test({ "empty lines table — no width contribution, still returns a position" }, function()
-    -- cap_w would be 0 (no lines) but cap_h is clamped to >= 1.
     local p = cfg()
     local pos = show._pick_position(p, ev_of { row = 20 }, SCREEN, {})
     assert(pos, "expected a position even with no lines")

@@ -97,7 +97,8 @@ $(VAR)/opt/lua-language-server/bin/lua-language-server: | $(VAR)
 		exit 2
 		;;
 	esac
-	V_LUALS="$$($(CURL) -- 'https://api.github.com/repos/LuaLS/lua-language-server/releases/latest' | jq --raw-output --exit-status -- '.tag_name')"
+	RELEASE_URL="$$($(CURL) --output /dev/null --write-out '%{url_effective}' -- 'https://github.com/LuaLS/lua-language-server/releases/latest')"
+	V_LUALS="$${RELEASE_URL##*/}"
 	URI="https://github.com/LuaLS/lua-language-server/releases/download/$$V_LUALS/lua-language-server-$$V_LUALS-$$LUALS_OS-$$LUALS_ARCH.tar.gz"
 	mkdir -v -p -- '$(VAR)/opt/lua-language-server'
 	$(CURL) -- "$$URI" | tar --extract --gzip --file - --directory '$(VAR)/opt/lua-language-server'

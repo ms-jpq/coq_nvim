@@ -25,7 +25,6 @@ T.describe({ "path_fmt.fmt" }, function(test)
   end)
 
   test({ "does not expand $HOME / env in inputs" }, function()
-    -- $HOME should be left literal; without expansion it can't match HOME-prefix.
     T.eq(path_fmt.fmt("/home/lil/work", "$HOME/spot.txt"), "$HOME/spot.txt")
   end)
 

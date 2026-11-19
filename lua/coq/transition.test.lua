@@ -7,8 +7,6 @@ local find = function(opts)
   return vim.iter(transition.audit_findings(opts)):totable()
 end
 
----Sort findings by path so tests aren't order-sensitive (pairs has no
----guaranteed order, and audit_findings walks several tables).
 ---@param findings transition.Finding[]
 ---@return transition.Finding[]
 local sorted = function(findings)
@@ -115,7 +113,7 @@ T.describe({ "transition.audit_findings" }, function(test)
           buffers = {
             enabled = true,
             same_filetype = true,
-            match_syms = true, -- removed
+            match_syms = true,
           },
         },
       },

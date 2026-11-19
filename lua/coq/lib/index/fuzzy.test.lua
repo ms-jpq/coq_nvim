@@ -25,7 +25,6 @@ local collect = function(iter)
   return out
 end
 
--- "poodle" shares no ordered subsequence with "lab" -> match.score == 0.
 T.describe({ "fuzzy.cutoff" }, function(test)
   test({ "a zero cutoff yields every item, including non-matches" }, function()
     local f = fuzzy.new(spec_with(0))
@@ -40,7 +39,6 @@ T.describe({ "fuzzy.cutoff" }, function(test)
     f.insert { word = "labrador" }
     f.insert { word = "poodle" }
 
-    -- poodle scores 0 against "lab" and falls below the cutoff; labrador matches.
     T.eq(collect(f.search { token = "lab" }), { "labrador" })
   end)
 
@@ -49,7 +47,6 @@ T.describe({ "fuzzy.cutoff" }, function(test)
     f.insert { word = "labrador" }
     f.insert { word = "poodle" }
 
-    -- no keyword to match against -> the cutoff must not blank the list.
     T.eq(collect(f.search { token = "" }), { "labrador", "poodle" })
   end)
 end)

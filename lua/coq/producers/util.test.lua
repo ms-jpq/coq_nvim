@@ -37,8 +37,6 @@ local ctx = function(prefix)
 end
 
 T.describe({ "producers.util.batched" }, function(test)
-  -- drive util.batched through the async runtime (it awaits internally), the way
-  -- the worker pump does, collecting the item[] it yields
   local collect = function(count)
     local batches = {}
     async.scope(function()
@@ -65,7 +63,7 @@ T.describe({ "producers.util.batched" }, function(test)
     return batches
   end
 
-  local N = util.BATCH * 2 + 3 -- two full batches and a smaller remainder
+  local N = util.BATCH * 2 + 3
 
   test({ "flattening the batches recovers every item in order" }, function()
     local flat = {}
@@ -157,7 +155,6 @@ T.describe({ "producers.util.shape" }, function(test)
 end)
 
 T.describe({ "producers.util.item" }, function(test)
-  ---Build a partial config.Settings carrying just brackets + one client opts.
   ---@param brackets string[]
   ---@param client_opts table
   ---@return config.Settings
@@ -275,7 +272,6 @@ T.describe({ "producers.util.word_search" }, function(test)
 
   test({ "below exact_matches threshold falls back to fuzzy child" }, function()
     local s = seed { "labrador" }
-    -- "la" is 2 chars (= prefix); "l" is below, should still match via fuzzy
     T.eq(words(s.search { match_before = "l" }), { "labrador" })
   end)
 

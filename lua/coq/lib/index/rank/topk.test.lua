@@ -30,8 +30,8 @@ T.describe({ "topk" }, function(test)
     local h = topk.new(2)
     h.push("golden_retriever", 10)
     h.push("poodle", 5)
-    h.push("labrador", 5) -- equal to floor: rejected
-    h.push("boxer", 1) -- below floor: rejected
+    h.push("labrador", 5)
+    h.push("boxer", 1)
 
     T.eq(vim.iter(h.iter()):totable(), { "golden_retriever", "poodle" })
   end)
@@ -63,8 +63,8 @@ T.describe({ "topk" }, function(test)
     end)
     h.push("labrador", 5)
     h.push("poodle", 5)
-    h.push("labrador", 5) -- same score, no change
-    h.push("poodle", 9) -- upgraded, keeps seq=2
+    h.push("labrador", 5)
+    h.push("poodle", 9)
 
     T.eq(vim.iter(h.iter()):totable(), { "poodle", "labrador" })
   end)

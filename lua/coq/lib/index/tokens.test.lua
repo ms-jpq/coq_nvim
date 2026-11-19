@@ -5,14 +5,12 @@ local itertools = require "coq.lib.itertools"
 local tokens = require "coq.lib.index.tokens"
 
 local CORPUS = {
-  -- prose
   "the quick brown fox jumps over the lazy dog",
   "she sells seashells by the seashore",
   "",
   "   leading and trailing whitespace   ",
   "\t\ttabs\tand\tspaces  mixed\t",
 
-  -- identifiers
   "foo_bar = baz123 + qux42",
   "camelCase PascalCase snake_case SCREAMING_SNAKE",
   "kebab-case dash-separated multi-word-name",
@@ -21,7 +19,6 @@ local CORPUS = {
   "a b c d e f g h i j k l m n o p q r s t u v w x y z",
   "A1B2C3 0xDEADBEEF 0b1010 1_000_000 3.14e-10",
 
-  -- punctuation and operators
   "obj.field->ptr::method(arg).chain()",
   "tag1 #anchor @mention $var %record &ref *deref",
   "let x = 42; const NAME = 'literal'",
@@ -32,7 +29,6 @@ local CORPUS = {
   "x?y:z ??coalesce !!truthy ===strict",
   "<<<heredoc >>output |>pipe <|reverse",
 
-  -- code shapes
   "def fetch(url, *, timeout=30, retries=3): pass",
   "function* gen(): AsyncIterator<string> { yield 'a' }",
   "fn add<T: Add>(a: T, b: T) -> T { a + b }",
@@ -42,12 +38,10 @@ local CORPUS = {
   "SELECT * FROM users WHERE id = 42 AND active = true;",
   "git@github.com:user/repo.git refs/heads/main^{tree}",
 
-  -- paths & urls
   "/usr/local/bin/zsh ./relative/path file.tar.gz",
   "https://example.com:8080/path?q=1&r=2#frag",
   "C:\\Users\\foo\\AppData ~/.config/nvim/init.lua",
 
-  -- edge cases
   "...",
   "------",
   "______",
@@ -58,14 +52,12 @@ local CORPUS = {
   "key=value;other=thing,nested[0].field",
   "line one\nstill line one for our purposes",
 
-  -- common english with contractions and punctuation tails
   "it's John's dog -- isn't it?",
   "don't can't won't shouldn't",
   "Mr. Dr. Sr. Jr. e.g. i.e. etc.",
   "2026-05-30T12:34:56Z +0000",
   "v1.2.3-beta+build.42",
 
-  -- multibyte: the dog is the same in every script
   "café señor jalapeño naïve résumé Zürich",
   "der schnelle braune Hund Über Größe",
   "быстрая коричневая собака перепрыгнула",
@@ -109,7 +101,6 @@ local probe = function(ft)
       :map(function(m)
         return m.text
       end)
-      -- M.keywords drops runs shorter than MIN_LEN; mirror that here.
       :filter(function(w)
         return #w >= tokens.MIN_LEN
       end)
@@ -127,8 +118,6 @@ T.test({ "tokens.parity across all filetypes" }, function()
     local iskeyword, expected = probe(ft)
     local kw = tokens.parse_charset(iskeyword)
     local lines = vim.iter(CORPUS) --[[@as lib.Iterator<string>]]
-    -- M.keywords also yields `<symbol><keyword>` forms; filter to pure-keyword
-    -- runs for parity against vim's `\k+`.
     local actual = vim
       .iter(tokens.keywords(kw, itertools.intersperse("\n", lines)))
       :filter(function(w)

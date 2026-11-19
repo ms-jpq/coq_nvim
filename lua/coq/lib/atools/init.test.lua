@@ -36,9 +36,6 @@ T.describe({ "atools.spawn" }, function(test)
   end)
 
   test({ "ambient cancel kills the child before it finishes naturally" }, function()
-    -- pcall returning ok=false IS the proof the child was killed. If
-    -- cancel didn't propagate, atools.spawn would wait the full `sleep 60`
-    -- and pcall would return ok=true.
     local child_ok
     async.scope(function(n)
       n.spawn(function()

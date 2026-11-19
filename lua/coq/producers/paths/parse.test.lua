@@ -246,12 +246,10 @@ T.describe({ "paths.parse.candidates" }, function(test)
 
   test({ "mid-word @ (name@domain) — no bare-@ candidate" }, function()
     local cs = strip(parse.candidates("name@domain", opts))
-    -- no head pattern matches (no sep), no bare-@ either (prev=`e` is a word char)
     T.eq(#cs, 0)
   end)
 
   test({ "underscore-glued @ (_@foo) — no bare-@ candidate" }, function()
-    -- underscore is treated as a word boundary inhibitor (same as %w)
     local cs = strip(parse.candidates("_@foo", opts))
     T.eq(#cs, 0)
   end)

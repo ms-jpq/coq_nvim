@@ -37,7 +37,6 @@ T.describe({ "default_dict" }, function(test)
     end)
     d["spot"] = 1
     d["fido"] = 2
-    -- touching .lil via __index would seed it; we don't, so pairs ignores it.
     local keys = {}
     for k in pairs(d) do
       table.insert(keys, k)
@@ -50,7 +49,6 @@ T.describe({ "default_dict" }, function(test)
     local d = default_dict.new(function()
       return 0
     end)
-    -- First access seeds 0; right-hand reads 0; left-hand writes 1.
     d["lil"] = d["lil"] + 1
     d["lil"] = d["lil"] + 1
     d["spot"] = d["spot"] + 5

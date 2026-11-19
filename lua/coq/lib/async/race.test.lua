@@ -14,9 +14,6 @@ T.describe({ "race" }, function(test)
   end)
 
   test({ "returns as soon as winner finishes, not waiting for losers" }, function()
-    -- Race-with-cancel means the loser's sleep raises before it can set the
-    -- flag. If race waited for the loser instead, the flag would be true.
-    -- No wall-clock budget — the assertion is on cancellation reaching loser.
     local loser_completed = false
     async.race {
       function()
@@ -34,7 +31,6 @@ T.describe({ "race" }, function(test)
   test({ "forwards multiple return values" }, function()
     local idx, a, b, c = async.race {
       function()
-        -- race forwards all of a winner's values; the single-T return type can't express it.
         ---@diagnostic disable-next-line: redundant-return-value
         return "lil", "fido", "spot"
       end,

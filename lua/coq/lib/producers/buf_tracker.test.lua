@@ -144,8 +144,6 @@ T.describe({ "buf_tracker" }, function(test)
     T.eq(trace.reindexes, {})
   end)
 
-  -- a run cancelled during index must NOT advance state, so the carried-over buf
-  -- is recomputed (and re-indexed) on the next run rather than skipped forever.
   test({ "a cancelled index leaves state uncommitted so the buf is recomputed" }, function()
     local prev_ticks, fail = {}, true
     local tracker = buf_tracker.new {
@@ -169,11 +167,10 @@ T.describe({ "buf_tracker" }, function(test)
     }
 
     async.scope(function()
-      pcall(tracker, idle_ctx { 7 }) -- index throws → state[7] not committed
-      tracker(idle_ctx { 7 }) -- retried (the idle carry re-delivers buf 7)
+      pcall(tracker, idle_ctx { 7 })
+      tracker(idle_ctx { 7 })
     end)
 
-    -- run 2's compare sees prev=0: the cancelled run advanced nothing
     T.eq(prev_ticks, { 0, 0 })
   end)
 end)

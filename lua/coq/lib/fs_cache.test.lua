@@ -86,9 +86,6 @@ T.describe({ "fs_cache.new" }, function(test)
   end)
 
   test({ "fetch with mtime <= 0 busts the cache" }, function()
-    -- Caller signals "no live sources backing this key" by passing mtime=0.
-    -- The store must recompute so a deleted source doesn't keep returning
-    -- the prior cached value.
     local computes = 0
     local store = fs_cache.new {
       fs_root = tmpdir(),

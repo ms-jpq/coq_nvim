@@ -148,9 +148,6 @@ T.describe({ "nursery" }, function(test)
     local n = nursery.new()
     local join_ok, join_err
 
-    -- Spot's error triggers n.h.cancel, which fires on_cancel watchers —
-    -- a deterministic signal that errors has been populated. Awaiting it
-    -- before outer.cancel removes the wall-clock race against spot's sleep.
     local spot_errored = runtime.future()
     local _ = n.on_cancel(spot_errored.resolve)
 
@@ -163,8 +160,6 @@ T.describe({ "nursery" }, function(test)
           error "spot ran off"
         end)
 
-        -- cancel=false keeps block parked past n.h.cancel cascading, so
-        -- pending stays non-empty when the joiner enters n.join.
         n.spawn(function()
           local block = async.future()
           block.await { cancel = false }

@@ -101,7 +101,6 @@ T.describe({ "atools.fs._drainable" }, function(test)
   end)
 
   test({ "drain waits non-cancellably for the pending callback" }, function()
-    -- Simulate libuv: cb fires after a vim.schedule tick.
     local fake = function(cb)
       vim.schedule(function()
         cb "fido"
@@ -113,16 +112,12 @@ T.describe({ "atools.fs._drainable" }, function(test)
       local call, drain = fs._drainable(fake)
 
       local h = n.spawn(function()
-        -- this await will be cancelled before fake's vim.schedule fires
         call()
       end)
 
-      -- Cancel the spawn before the cb has a chance to resolve, then drain.
       h.cancel()
 
-      -- drain must wait for vim.schedule to flush, then for the cb to fire.
       drain()
-      -- pending should now be nil; second drain is noop and doesn't error
       drained_value = "drained"
       drain()
     end)
@@ -145,8 +140,6 @@ T.describe({ "atools.fs._drainable" }, function(test)
       end)
       h.cancel()
 
-      -- Even though the parent scope's handle is being torn down, drain
-      -- must complete (cancel = false on its inner await).
       drain()
       survived = true
     end)
