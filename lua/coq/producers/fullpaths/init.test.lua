@@ -53,6 +53,50 @@ T.describe({ "fullpaths.partial custom symbol" }, function(test)
 end)
 
 T.describe({ "fullpaths.matcher" }, function(test)
+  for _, case in ipairs {
+    { name = "full relative path", query = "kennel/lil", file = "kennel/lil.txt", accepted = true },
+    { name = "directory segment", query = "kennel", file = "kennel/lil.txt", accepted = true },
+    { name = "basename segment", query = "lil", file = "kennel/lil.txt", accepted = true },
+    { name = "unrelated query", query = "zzz", file = "kennel/lil.txt", accepted = false },
+    { name = "empty query", query = "", file = "kennel/lil.txt", accepted = true },
+    { name = "below cutoff", query = "lix", file = "kennel/lil.txt", cutoff = 0.7, accepted = false },
+    { name = "above cutoff", query = "lix", file = "kennel/lil.txt", cutoff = 0.6, accepted = true },
+    { name = "with look ahead", query = "lil", file = "kennel/lxxil.txt", look_ahead = 2, accepted = true },
+    { name = "without look ahead", query = "lil", file = "kennel/lxxil.txt", look_ahead = 0, accepted = false },
+  } do
+    test({ case.name }, function()
+      lib.scope(function(defer)
+        local root = vim.fn.tempname()
+        vim.fn.mkdir(root .. "/kennel", "p")
+        defer(function()
+          vim.fn.delete(root, "rf")
+        end)
+        vim.fn.writefile({}, root .. "/" .. case.file)
+        local settings = config.merged {
+          clients = { fullpaths = { resolution = { "cwd" } } },
+          match = { fuzzy_cutoff = case.cutoff or 0.6, look_ahead = case.look_ahead or 2 },
+        }
+        local line = "@" .. case.query
+        local ctx = TH.ctx_of {
+          cwd = root,
+          line_before = line,
+          keyword_before = case.query,
+          pos = { 1, #line, #line, #line },
+        }
+        local items = {}
+        local pull = async.wrap(function()
+          fullpaths.matcher(settings, ctx)
+        end)
+        for batch in pull do
+          for _, measured in ipairs(batch) do
+            table.insert(items, measured.item.word)
+          end
+        end
+        T.eq(items, case.accepted and { "@" .. case.file } or {})
+      end)
+    end)
+  end
+
   test({ "path segments survive worker measurement and ranking" }, function()
     lib.scope(function(defer)
       local root = vim.fn.tempname()
@@ -120,7 +164,7 @@ T.describe({ "fullpaths.matcher" }, function(test)
       return items, ctx
     end
 
-    local items, ctx = collect "see @kll"
+    local items, ctx = collect "see @lil"
     T.eq(#items, 1)
     local item = items[1]
     T.eq(item.word, "@kennel/lil.txt")
@@ -171,7 +215,7 @@ T.describe({ "fullpaths.matcher" }, function(test)
     T.eq(collect("@lil", root .. "/kennel/current.lua"), {})
     settings.clients.fullpaths.resolution = { "cwd" }
     settings.clients.fullpaths.symbol = "%"
-    local custom, custom_ctx = collect "see %kll"
+    local custom, custom_ctx = collect "see %lil"
     T.eq(#custom, 1)
     T.eq(custom[1].word, "%kennel/lil.txt")
     local custom_buf = TH.scratch_buf { "see %" .. custom[1].word }
@@ -180,7 +224,7 @@ T.describe({ "fullpaths.matcher" }, function(test)
     inserted._apply_edits(custom_ctx, custom[1], custom[1].meta.lsp.item.textEdit, {})
     T.eq(vim.api.nvim_buf_get_lines(custom_buf, 0, -1, true), { "see %kennel/lil.txt" })
     vim.api.nvim_buf_delete(custom_buf, { force = true })
-    T.eq(collect "@kll", {})
+    T.eq(collect "@lil", {})
     vim.fn.delete(root, "rf")
   end)
 end)

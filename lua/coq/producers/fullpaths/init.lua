@@ -1,7 +1,7 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local lib = require "coq.lib"
-local match = require "coq.lib.index.rank.hybrid"
+local match = require "coq.lib.index.rank.match"
 local parse = require "coq.producers.fullpaths.parse"
 local path = require "coq.lib.path"
 local util = require "coq.producers.util"
@@ -14,13 +14,15 @@ local M = {
 ---@class fullpaths.Match
 ---@field full string
 ---@field relative string
+---@field filter string[]
 ---@field fuzzy number
 
+---@param opts config.MatchOptions
 ---@param root string
 ---@param ignores string[]
 ---@param cand fullpaths.parse.Candidate
 ---@return lib.Iterator<fullpaths.Match>
-local scan_root = function(root, ignores, cand)
+local scan_root = function(opts, root, ignores, cand)
   return async.wrap(function()
     lib.scope(function(defer)
       local close, files = atools.fs.walk(root)
@@ -30,9 +32,14 @@ local scan_root = function(root, ignores, cand)
         local relative = vim.fs.relpath(root, full)
         if kind == "file" and relative and not wildignore.is_ignored(ignores, vim.fs.basename(full), full) then
           local rel = string.gsub(relative, "/", cand.local_sep)
-          local score = cand.partial == "" and 0 or (match.score(cand.partial, rel) or 0)
-          if cand.partial == "" or score > 0 then
-            coroutine.yield { full = full, relative = rel, fuzzy = score }
+          local segments = vim.split(rel, cand.local_sep, { plain = true, trimempty = true })
+          local filters = vim.iter({ rel, unpack(segments) }):unique():totable()
+          local score = 0
+          for _, filter in ipairs(filters) do
+            score = math.max(score, match.score(opts.look_ahead, cand.partial, filter))
+          end
+          if cand.partial == "" or score >= opts.fuzzy_cutoff then
+            coroutine.yield { full = full, relative = rel, filter = filters, fuzzy = score }
           end
         end
         if i % util.BATCH == 0 then
@@ -54,7 +61,7 @@ local matches = function(settings, ctx, cand)
     .iter(path.bases(settings.clients.fullpaths.resolution, ctx))
     :unique()
     :map(function(root)
-      return scan_root(root, ignores, cand)
+      return scan_root(settings.match, root, ignores, cand)
     end)
     :totable()
   return async.merge(walks)
@@ -76,12 +83,10 @@ M.matcher = util.batched(function(settings, ctx)
 
     for _, m in iter do
       local word = symbol .. m.relative
-      local segments = vim.split(m.relative, cand.local_sep, { plain = true, trimempty = true })
-      local filters = vim.iter({ m.relative, unpack(segments) }):unique():totable()
       local item = util.item(settings, M.source, {
         word = word,
         kind = "File",
-        filter = filters,
+        filter = m.filter,
         fuzzy = m.fuzzy,
         path = m.full,
         lsp = {
